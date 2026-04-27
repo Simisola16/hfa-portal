@@ -214,40 +214,27 @@ export default function ApplicationsPage({ openNew }) {
             <table>
               <thead>
                 <tr>
-                  <th>Reference No.</th>
+                  <th>App Number</th>
                   <th>Type</th>
                   <th>Category</th>
                   <th>Site Name</th>
-                  <th>Submitted</th>
+                  <th>Date</th>
                   <th>Status</th>
-                  <th>Action</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(app => (
-                  <tr key={app._id} style={{ transition: 'background 0.15s' }}>
+                  <tr key={app._id}>
+                    <td className="font-bold text-primary">{app.application_number}</td>
+                    <td><span className="badge badge-gray capitalize">{app.application_type}</span></td>
+                    <td className="truncate" style={{ maxWidth: 200 }}>{app.category}</td>
+                    <td>{app.site_name}</td>
+                    <td>{new Date(app.created_at).toLocaleDateString()}</td>
+                    <td><span className={`badge ${STATUS_BADGE[app.status]}`}>{app.status?.replace(/_/g, ' ')}</span></td>
                     <td>
-                      <div style={{ display:'inline-block', background:'#f1f5f9', border:'1px solid #e2e8f0', borderRadius:6, padding:'3px 10px', fontSize:12, fontWeight:800, color:'#334155', letterSpacing:'0.02em' }}>
-                        {app.application_number}
-                      </div>
-                    </td>
-                    <td><span className="badge badge-gray capitalize" style={{ fontSize:11 }}>{app.application_type}</span></td>
-                    <td className="truncate" style={{ maxWidth: 180, fontSize:13 }}>{app.category}</td>
-                    <td style={{ fontWeight:600, fontSize:13 }}>{app.site_name || '—'}</td>
-                    <td style={{ fontSize:12, color:'#94a3b8', fontWeight:700 }}>{new Date(app.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}</td>
-                    <td>
-                      <span className={`badge ${STATUS_BADGE[app.status]}`} style={{ fontSize:11, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.05em' }}>
-                        {app.status?.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td>
-                      <Link
-                        to={`/applications/${app._id}`}
-                        style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:8, background:'#f0fdf4', color:'#16a34a', border:'1px solid #bbf7d0', fontSize:12, fontWeight:700, textDecoration:'none', transition:'all 0.15s', whiteSpace:'nowrap' }}
-                        onMouseEnter={e => { e.currentTarget.style.background='#dcfce7'; e.currentTarget.style.color='#15803d'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background='#f0fdf4'; e.currentTarget.style.color='#16a34a'; }}
-                      >
-                        <Eye size={14} /> View Details
+                      <Link to={`/applications/${app._id}`} className="btn btn-ghost btn-sm">
+                        <Eye size={14} /> View
                       </Link>
                     </td>
                   </tr>
