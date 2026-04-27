@@ -33,7 +33,7 @@ export default function LoginPage() {
       <div className="auth-sidebar">
         <div className="auth-sidebar-content">
           <div className="auth-logo-section">
-            <div className="auth-logo-badge">🕌</div>
+            <img src="/logo.png" alt="Logo" style={{ width: 40, height: 40, objectFit: 'contain' }} />
             <span className="auth-logo-text">Halal Food Authority</span>
           </div>
 
@@ -72,7 +72,7 @@ export default function LoginPage() {
               <input
                 type="email"
                 className="auth-input"
-                placeholder="oluwayomi.obadina@eatngo-africa.com"
+                placeholder="Enter your email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
