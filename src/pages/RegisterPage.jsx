@@ -67,10 +67,10 @@ export default function RegisterPage() {
         <div className="auth-sidebar-content">
           <div className="auth-logo-section">
             <div className="auth-logo-badge">🕌</div>
-            <span className="auth-logo-text">Halal Certification Authority</span>
+            <span className="auth-logo-text">Halal Food Authority</span>
           </div>
 
-          <h1>Welcome to HDI Certification Portal</h1>
+          <h1>Welcome to HFA Portal</h1>
           <p>Register your account as Halal Food Authority Applicant to enjoy our service. Track your application and download certificates instantly.</p>
           
           <div className="user-guide-card">

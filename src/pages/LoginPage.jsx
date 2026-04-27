@@ -34,11 +34,11 @@ export default function LoginPage() {
         <div className="auth-sidebar-content">
           <div className="auth-logo-section">
             <div className="auth-logo-badge">🕌</div>
-            <span className="auth-logo-text">Halal Certification Authority</span>
+            <span className="auth-logo-text">Halal Food Authority</span>
           </div>
 
-          <h1>Welcome to HDI Certification Portal</h1>
-          <p>Register, apply, submit, track the progress of application and download your certificate through the HDI certification portal.</p>
+          <h1>Welcome to HFA Portal</h1>
+          <p>Register, apply, submit, track the progress of application and download your certificate through the HFA certification portal.</p>
           
           <div className="user-guide-card">
             <h4>User's Guide</h4>
