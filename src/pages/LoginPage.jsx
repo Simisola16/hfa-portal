@@ -32,16 +32,23 @@ export default function LoginPage() {
       {/* Left Sidebar */}
       <div className="auth-sidebar">
         <div className="auth-sidebar-content">
-          <div className="auth-logo-badge">🕌</div>
-          <h1>Halal Food Authority Certification Portal</h1>
-          <p>Welcome to HFA Certification Portal. Register, apply, submit, track the progress of application and download your certificate through the HFA certification portal.</p>
+          <div className="auth-logo-section">
+            <div className="auth-logo-badge">🕌</div>
+            <span className="auth-logo-text">Halal Certification Authority</span>
+          </div>
+
+          <h1>Welcome to HDI Certification Portal</h1>
+          <p>Register, apply, submit, track the progress of application and download your certificate through the HDI certification portal.</p>
           
-          <div className="user-guide-box">
-            <div className="user-guide-icon">📖</div>
-            <div className="user-guide-text">
-              <h4>Portal User's Guide</h4>
-              <p>Download our manual for help</p>
-            </div>
+          <div className="user-guide-card">
+            <h4>User's Guide</h4>
+            <button className="btn-user-guide">
+              <BookOpen size={18} /> Read User Guide
+            </button>
+          </div>
+
+          <div className="auth-sidebar-footer">
+            Developed by TheYoungPioneers
           </div>
         </div>
       </div>
@@ -56,16 +63,16 @@ export default function LoginPage() {
         <div className="auth-form-container">
           <div className="auth-form-header">
             <h2>Login to Your Account</h2>
-            <p>Enter your details to access your account</p>
+            <p>Enter your credentials to access the portal</p>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div className="auth-input-group">
-              <label>Email Address</label>
+              <label>E-Mail <span style={{ color: '#ef4444' }}>*</span></label>
               <input
                 type="email"
                 className="auth-input"
-                placeholder="your@email.com"
+                placeholder="oluwayomi.obadina@eatngo-africa.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
@@ -73,12 +80,12 @@ export default function LoginPage() {
             </div>
 
             <div className="auth-input-group">
-              <label>Password</label>
+              <label>Your Password <span style={{ color: '#ef4444' }}>*</span></label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   className="auth-input"
-                  placeholder="••••••••"
+                  placeholder="••••••"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
@@ -93,21 +100,21 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
-              <Link to="/forgot-password" style={{ color: 'var(--primary)', fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
+              <input type="checkbox" id="keep-logged" style={{ width: 16, height: 16 }} />
+              <label htmlFor="keep-logged" style={{ margin: 0, fontSize: 13, color: '#64748b', cursor: 'pointer' }}>Keep me logged in</label>
+            </div>
+
+            <button type="submit" className="auth-btn-primary" disabled={loading}>
+              {loading ? <span className="spinner-white" /> : <><LogIn size={18} /> Login</>}
+            </button>
+
+            <div style={{ marginTop: 24 }}>
+              <Link to="/forgot-password" style={{ color: '#1B7A7A', fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
                 Forgot password?
               </Link>
             </div>
-
-            <button type="submit" className="auth-btn-primary w-full" disabled={loading}>
-              {loading ? <span className="spinner-white" /> : <><LogIn size={18} /> Login</>}
-            </button>
           </form>
-        </div>
-
-        <div className="auth-footer">
-          <p style={{ marginBottom: 4 }}>HFA is a part of the Halal Food Foundation (Registered Charity Number: 1139457)</p>
-          <p>© {new Date().getFullYear()} Halal Food Authority. All rights reserved.</p>
         </div>
       </div>
     </div>
