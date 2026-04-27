@@ -809,21 +809,6 @@ select.form-control { cursor: pointer; }
   background: #155e5e;
   transform: translateY(-1px);
 }
-  font-size: 16px;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  transition: all 0.2s;
-  margin-top: 10px;
-}
-
-.auth-btn-primary:hover {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
-}
 
 .auth-btn-outline {
   background: white;
