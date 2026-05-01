@@ -2,7 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
-import { Plus, Search, Eye, RefreshCw, X, Upload, Check, ChevronRight, ChevronLeft, Trash2, ShieldCheck, FileText } from 'lucide-react';
+import { Plus, Search, Eye, RefreshCw, X, Upload, Check, ChevronRight, ChevronLeft, Trash2, ShieldCheck, FileText, CheckCircle } from 'lucide-react';
+
+const ALL_STATUSES = [
+  'APPLICATION RECEIVED','APPLICATION APPROVED/REJECT','PROPOSAL SENT',
+  'PROPOSAL ACCEPTED/REJECTED','INVOICE SENT','PAYMENT RECEIVED',
+  'PRODUCT APPROVAL FORMS RECEIVED','AUDIT-SESSION',
+  'APPLICATION SUCCESSFUL/UNSUCCESSFUL','AGREEMENT SENT',
+  'SIGNED COPY OF AGREEMENT SENT','INVOICE FOR FINAL PAYMENT SENT',
+  'FINAL PAYMENT RECEIVED','CERTIFICATE PROCESSING','SEND CERTIFICATE'
+];
 
 const CATEGORIES = [
   'Annual Certification – Food and General processing',
@@ -272,81 +281,121 @@ export default function ApplicationsPage({ openNew }) {
 
       {viewModal && selectedApp && (
         <div className="modal-overlay" onClick={() => { setViewModal(false); setSelectedApp(null); }}>
-          <div className="modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">Application #{selectedApp.application_number}</h2>
-              <button className="modal-close" onClick={() => { setViewModal(false); setSelectedApp(null); }}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="modal-body">
-              {/* Tab navigation */}
-              <div className="flex border-b mb-4">
-                <button className={`px-4 py-2 ${viewStep === 1 ? 'border-b-2 border-primary font-semibold' : ''}`} onClick={() => setViewStep(1)}>Details</button>
-                <button className={`px-4 py-2 ${viewStep === 2 ? 'border-b-2 border-primary font-semibold' : ''}`} onClick={() => setViewStep(2)}>Processing</button>
+          <div className="modal" style={{ maxWidth: 720 }} onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="modal-header" style={{ flexDirection:'column', alignItems:'flex-start', gap:12 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%' }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.08em', color:'var(--text-muted)', marginBottom:4 }}>My Application</div>
+                  <h2 className="modal-title">{selectedApp.application_number}</h2>
+                  <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:2 }}>{selectedApp.establishment_name} &middot; {new Date(selectedApp.created_at).toLocaleDateString('en-GB')}</div>
+                </div>
+                <button className="modal-close" onClick={() => { setViewModal(false); setSelectedApp(null); }}><X size={20}/></button>
               </div>
+              {/* Tabs */}
+              <div style={{ display:'flex', gap:0, borderBottom:'2px solid #f1f5f9', width:'100%', marginBottom:-20 }}>
+                {[{id:1,label:'View Application'},{id:2,label:'Track Processing'}].map(tab => (
+                  <button key={tab.id} onClick={() => setViewStep(tab.id)} style={{
+                    padding:'10px 20px', border:'none', background:'none', cursor:'pointer',
+                    fontSize:13, fontWeight:700,
+                    color: viewStep===tab.id ? 'var(--primary)' : '#94a3b8',
+                    borderBottom: viewStep===tab.id ? '2px solid var(--primary)' : '2px solid transparent',
+                    marginBottom:-2, transition:'all 0.15s'
+                  }}>{tab.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="modal-body" style={{ maxHeight:'65vh', overflowY:'auto' }}>
+
+              {/* ── VIEW APPLICATION TAB ── */}
               {viewStep === 1 && (
-                <div className="space-y-2">
-                  <p><strong>Company:</strong> {selectedApp.application_type}</p>
-                  <p><strong>Category:</strong> {selectedApp.category}</p>
-                  <p><strong>Site:</strong> {selectedApp.site_name}</p>
-                  <p><strong>Status:</strong> {selectedApp.status?.replace(/_/g, ' ')}</p>
+                <div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:20 }}>
+                    <div className="detail-item"><label>Application Type</label><div className="capitalize">{selectedApp.application_type} Certification</div></div>
+                    <div className="detail-item"><label>Category</label><div style={{ fontSize:13 }}>{selectedApp.category}</div></div>
+                    <div className="detail-item"><label>Establishment</label><div>{selectedApp.establishment_name}</div><div style={{ fontSize:12, color:'var(--text-muted)' }}>{selectedApp.establishment_address}</div></div>
+                    <div className="detail-item"><label>Site Name</label><div>{selectedApp.site_name || '—'}</div></div>
+                    <div className="detail-item"><label>Employees</label><div>{selectedApp.employee_count || '—'} staff</div></div>
+                    <div className="detail-item"><label>Schedule</label><div>{selectedApp.production_schedule || '—'}</div></div>
+                  </div>
+                  <div className="detail-item" style={{ marginBottom:20 }}>
+                    <label>Scope of Certification</label>
+                    <div style={{ background:'#f0fdf4', padding:14, borderRadius:10, border:'1px solid #dcfce7', fontStyle:'italic', color:'#166534', fontSize:13 }}>
+                      &ldquo;{selectedApp.scope || 'No scope defined'}&rdquo;
+                    </div>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:20 }}>
+                    <div className="detail-item"><label>Halal Coordinator</label><div>{selectedApp.halal_coordinator || '—'}</div></div>
+                    <div className="detail-item"><label>QA Manager</label><div>{selectedApp.qa_contact || '—'}</div></div>
+                    <div className="detail-item"><label>Finance</label><div>{selectedApp.finance_contact || '—'}</div></div>
+                  </div>
+                  <div style={{ display:'flex', gap:10, marginBottom:16 }}>
+                    <span className={`badge ${selectedApp.has_porcine ? 'badge-red' : 'badge-green'}`}>{selectedApp.has_porcine ? '⚠ Porcine Handling' : '✓ No Porcine'}</span>
+                    <span className={`badge ${selectedApp.has_intoxicants ? 'badge-red' : 'badge-green'}`}>{selectedApp.has_intoxicants ? '⚠ Intoxicants Used' : '✓ No Intoxicants'}</span>
+                  </div>
+                  {selectedApp.products?.length > 0 && (
+                    <div>
+                      <div style={{ fontWeight:700, fontSize:13, marginBottom:8 }}>Products ({selectedApp.products.length})</div>
+                      <div className="table-wrap" style={{ border:'1px solid #f1f5f9', borderRadius:10 }}>
+                        <table><thead><tr><th>Name</th><th>Brand</th></tr></thead>
+                          <tbody>{selectedApp.products.map((p,i) => <tr key={i}><td>{p.name}</td><td>{p.brand||'—'}</td></tr>)}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* ── TRACK PROCESSING TAB ── */}
               {viewStep === 2 && (
-                <div className="space-y-3">
-                  <div className="form-group">
-                    <label className="form-label">Update Status</label>
-                    <select className="form-control" value={selectedApp.status} onChange={e => setSelectedApp({ ...selectedApp, status: e.target.value })}>
-                      {Object.keys(STATUS_BADGE).map(s => (
-                        <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
-                      ))}
-                    </select>
+                <div>
+                  <div style={{ background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:12, padding:24, marginBottom:20 }}>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:10, marginBottom:32 }}>
+                      {ALL_STATUSES.map((step, idx) => {
+                        const currentIdx = ALL_STATUSES.indexOf(selectedApp.processing_status || selectedApp.status?.toUpperCase() || 'APPLICATION RECEIVED');
+                        const done = idx <= currentIdx;
+                        return (
+                          <div key={step} style={{ background: done?'#f0fdf4':'#f1f5f9', border:`1px solid ${done?'#bbf7d0':'#e2e8f0'}`, borderRadius:8, display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', padding:'12px 6px', minHeight:75 }}>
+                            <div style={{ width:'90%', height:8, background: done?'#22c55e':'#cbd5e1', borderRadius:4, marginBottom:10 }}/>
+                            <div style={{ fontSize:10, fontWeight:700, color: done?'#0f172a':'#64748b', textTransform:'uppercase', display:'flex', gap:4, alignItems:'center', lineHeight:'1.2' }}>
+                              {done && <CheckCircle size={12} style={{ color:'#22c55e', minWidth:12 }}/>}{step}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ border:'1px solid #e2e8f0', borderRadius:12, background:'white', padding:'32px', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                      <h3 style={{ textAlign:'center', fontSize:18, fontWeight:800, color:'#334155', marginBottom:24, textTransform:'uppercase', letterSpacing:'0.05em' }}>
+                        {selectedApp.processing_status || selectedApp.status?.replace(/_/g,' ').toUpperCase() || 'APPLICATION RECEIVED'}
+                      </h3>
+                      <table style={{ width:'100%', borderCollapse:'collapse', border:'1px solid #cbd5e1' }}>
+                        <tbody>
+                          {[['Application Number', selectedApp.application_number],['Date Submitted', new Date(selectedApp.created_at).toLocaleDateString('en-GB')],['Category', `${selectedApp.application_type} – ${selectedApp.category}`],['Current Status', selectedApp.status?.replace(/_/g,' ')],['Site', selectedApp.site_name||'—']].map(([k,v])=>(
+                            <tr key={k}>
+                              <td style={{ border:'1px solid #cbd5e1', padding:'12px 16px', fontWeight:600, fontSize:14, width:'35%', background:'#f8fafc', color:'#475569' }}>{k}:</td>
+                              <td style={{ border:'1px solid #cbd5e1', padding:'12px 16px', fontSize:14, color:'#0f172a' }}>{v}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Comments</label>
-                    <textarea className="form-control" rows={3} placeholder="Add processing comments..." />
-                  </div>
-                  <button className="btn btn-primary" onClick={async () => {
-                    try {
-                      await api.patch(`/api/applications/${selectedApp._id}`, { status: selectedApp.status });
-                      toast.success('Processing updated');
-                      fetchData();
-                      setViewModal(false);
-                      setSelectedApp(null);
-                    } catch (err) {
-                      toast.error('Failed to update processing');
-                    }
-                  }}>Processing Done</button>
                 </div>
               )}
             </div>
-            <div className="modal-footer flex justify-between mt-4">
-              <div>
-                <button className="btn btn-outline" onClick={() => {
-                  // placeholder for proposal view
-                  alert('View Proposal action');
-                }}>View Proposal</button>
-                <button className="btn btn-danger ml-2" onClick={async () => {
-                  if (window.confirm('Delete this application?')) {
-                    try {
-                      await api.delete(`/api/applications/${selectedApp._id}`);
-                      toast.success('Application deleted');
-                      fetchData();
-                      setViewModal(false);
-                      setSelectedApp(null);
-                    } catch (err) {
-                      toast.error('Delete failed');
-                    }
-                  }
-                }}>Delete</button>
-              </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => { setViewModal(false); setSelectedApp(null); }}>Close</button>
             </div>
           </div>
         </div>
       )}
 
-        <div className="modal-overlay">
+      {showModal && (
+        <div className="modal-overlay" onClick={e => e.target===e.currentTarget && setShowModal(false)}>
           <div className="modal" style={{ maxWidth: 800 }}>
             <div className="modal-header">
               <h2 className="modal-title">HFA Certification Application</h2>
