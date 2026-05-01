@@ -337,7 +337,7 @@ export default function ApplicationsPage({ openNew }) {
               </div>
               {/* Tabs */}
               <div style={{ display:'flex', gap:0, borderBottom:'2px solid #f1f5f9', width:'100%', marginBottom:-20 }}>
-                {[{id:1,label:'View Application'},{id:2,label:'Track Processing'}].map(tab => (
+                {[{id:1,label:'View Application'},{id:2,label:'Track Processing'},{id:3,label:'Proposal'}].map(tab => (
                   <button key={tab.id} onClick={() => setViewStep(tab.id)} style={{
                     padding:'10px 20px', border:'none', background:'none', cursor:'pointer',
                     fontSize:13, fontWeight:700,
@@ -423,14 +423,22 @@ export default function ApplicationsPage({ openNew }) {
                           ))}
                         </tbody>
                       </table>
-                      
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── PROPOSAL TAB ── */}
+              {viewStep === 3 && (
+                <div>
+                  <div style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:12, padding:24, marginBottom:20, minHeight: 300 }}>
                       {proposalLoading ? (
-                        <div style={{ padding: 20, textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
-                      ) : proposalData && (
-                        <div style={{ marginTop: 24, borderTop: '1px solid #e2e8f0', paddingTop: 24 }}>
-                          <h4 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16, color: '#1e293b' }}>Certification Proposal</h4>
+                        <div style={{ padding: 40, textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+                      ) : proposalData ? (
+                        <div>
+                          <h4 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, color: '#1e293b', textTransform: 'uppercase' }}>Certification Proposal</h4>
                           
-                          <div style={{ display: 'grid', gridTemplateColumns: proposalData.proposal_url ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 16 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: proposalData.proposal_url ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 20 }}>
                             {proposalData.proposal_url && (
                               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Proposal Document</div>
@@ -447,49 +455,50 @@ export default function ApplicationsPage({ openNew }) {
                             )}
                             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Estimated Cost</div>
-                              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)', marginTop: 4 }}>
+                              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--primary)', marginTop: 4 }}>
                                 {proposalData.currency || 'GBP'} {proposalData.amount || '—'}
                               </div>
                             </div>
                           </div>
 
                           {proposalData.details && !proposalData.proposal_url && (
-                            <div style={{ marginBottom: 16, background: '#f8fafc', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
-                              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 8 }}>Proposal Details</div>
-                              <div style={{ fontSize: 14, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                            <div style={{ marginBottom: 20, background: '#f8fafc', border: '1px solid #e2e8f0', padding: 20, borderRadius: 12 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 12 }}>Proposal Details</div>
+                              <div style={{ fontSize: 15, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
                                 {proposalData.details}
                               </div>
                             </div>
                           )}
 
                           {proposalData.status === 'rejected' && proposalData.client_comment && (
-                            <div style={{ background: '#fef2f2', padding: 16, borderRadius: 12, border: '1px solid #fecaca', marginBottom: 16 }}>
+                            <div style={{ background: '#fef2f2', padding: 20, borderRadius: 12, border: '1px solid #fecaca', marginBottom: 20 }}>
                               <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#dc2626', marginBottom: 8 }}>My Rejection Reason</div>
-                              <div style={{ fontSize: 14, color: '#991b1b' }}>{proposalData.client_comment}</div>
+                              <div style={{ fontSize: 15, color: '#991b1b' }}>{proposalData.client_comment}</div>
                             </div>
                           )}
                           
                           {proposalData.status === 'accepted' && (
-                            <div style={{ background: '#f0fdf4', padding: 16, borderRadius: 12, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 12 }}>
-                              <CheckCircle size={20} style={{ color: '#16a34a' }} />
+                            <div style={{ background: '#f0fdf4', padding: 20, borderRadius: 12, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 16 }}>
+                              <CheckCircle size={28} style={{ color: '#16a34a' }} />
                               <div>
-                                <div style={{ fontWeight: 700, color: '#166534', fontSize: 14 }}>Proposal Accepted</div>
-                                <div style={{ fontSize: 12, color: '#15803d' }}>You have approved this proposal. HFA will proceed with the next steps.</div>
+                                <div style={{ fontWeight: 800, color: '#166534', fontSize: 16 }}>Proposal Accepted</div>
+                                <div style={{ fontSize: 14, color: '#15803d', marginTop: 4 }}>You have approved this proposal. HFA will proceed with the next steps.</div>
                               </div>
                             </div>
                           )}
 
                           {proposalData.status === 'pending' && (
-                            <div style={{ display: 'flex', gap: 10, marginTop: 16, justifyContent: 'flex-end' }}>
+                            <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: 20 }}>
                               <button 
                                 className="btn btn-outline" 
-                                style={{ color: '#dc2626', borderColor: '#fecaca' }}
+                                style={{ color: '#dc2626', borderColor: '#fecaca', padding: '10px 24px' }}
                                 onClick={() => setShowRejectModal(true)}
                               >
                                 <XCircle size={16} /> Reject
                               </button>
                               <button 
                                 className="btn btn-primary"
+                                style={{ padding: '10px 24px' }}
                                 onClick={() => handleStatusUpdate(proposalData._id || proposalData.id, 'accepted')}
                               >
                                 <CheckCircle size={16} /> Accept Proposal
@@ -497,8 +506,15 @@ export default function ApplicationsPage({ openNew }) {
                             </div>
                           )}
                         </div>
+                      ) : (
+                        <div className="empty-state" style={{ padding: '60px 20px' }}>
+                          <FileText size={64} style={{ color: 'var(--primary)', opacity: 0.2, marginBottom: 20 }} />
+                          <h4 style={{ fontSize: 18, fontWeight: 800, color: '#1e293b' }}>No Proposal Yet</h4>
+                          <p style={{ color: '#64748b', marginTop: 8, maxWidth: 300, margin: '8px auto 0' }}>
+                            HFA has not sent a proposal for this application yet. You will be notified once it is ready for your review.
+                          </p>
+                        </div>
                       )}
-                    </div>
                   </div>
                 </div>
               )}
