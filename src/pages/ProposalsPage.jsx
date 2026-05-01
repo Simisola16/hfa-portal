@@ -135,19 +135,21 @@ export default function ProposalsPage() {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-                <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Proposal Document</div>
-                  <a 
-                    href={selected.proposal_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="btn btn-outline btn-sm"
-                    style={{ width: '100%', marginTop: 8, justifyContent: 'center' }}
-                  >
-                    <Download size={14} /> Download Proposal
-                  </a>
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: selected.proposal_url ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 24 }}>
+                {selected.proposal_url && (
+                  <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Proposal Document</div>
+                    <a 
+                      href={selected.proposal_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="btn btn-outline btn-sm"
+                      style={{ width: '100%', marginTop: 8, justifyContent: 'center' }}
+                    >
+                      <Download size={14} /> Download Proposal
+                    </a>
+                  </div>
+                )}
                 <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Estimated Cost</div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)', marginTop: 4 }}>
@@ -155,6 +157,15 @@ export default function ProposalsPage() {
                   </div>
                 </div>
               </div>
+
+              {selected.details && !selected.proposal_url && (
+                <div style={{ marginBottom: 24, background: '#fff', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 12 }}>Proposal Details</div>
+                  <div style={{ fontSize: 14, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                    {selected.details}
+                  </div>
+                </div>
+              )}
 
               {selected.status === 'rejected' && selected.client_comment && (
                 <div style={{ background: '#fef2f2', padding: 16, borderRadius: 12, border: '1px solid #fecaca', marginBottom: 24 }}>
