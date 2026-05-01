@@ -5,7 +5,7 @@ import {
   LayoutDashboard, FileText, Award, Package, Ship,
   MessageSquare, Users, MapPin, FileBarChart, Bell,
   LogOut, ChevronDown, ChevronRight, FileCheck, ClipboardList,
-  Settings, HelpCircle, RefreshCw, Menu, X
+  Settings, HelpCircle, RefreshCw, Menu, X, Ticket
 } from 'lucide-react';
 
 const navItems = [
@@ -13,33 +13,25 @@ const navItems = [
   {
     icon: FileText, label: 'Applications', path: '/applications',
     children: [
-      { label: 'Manage Application', path: '/applications' },
-      { label: 'New Application', path: '/applications?type=new' },
+      { label: 'All Applications', path: '/applications' },
+      { label: 'New Application', path: '/applications/new' },
       { label: 'Renewal Application', path: '/applications?type=renewal' },
       { label: 'Surveillance Application', path: '/applications?type=surveillance' },
-      {
-        label: 'In Progress', path: '/applications?status=in_progress',
-        children: [
-          { label: 'New In-Progress', path: '/applications?status=in_progress&type=new' },
-          { label: 'Renewal In-Progress', path: '/applications?status=in_progress&type=renewal' },
-          { label: 'Surveillance In-Progress', path: '/applications?status=in_progress&type=surveillance' },
-        ]
-      },
+      { label: 'In Progress', path: '/applications?status=audit_scheduled' },
       { label: 'Rejected / On-Hold', path: '/applications?status=rejected' },
     ]
   },
   {
-    icon: Package, label: 'Manage Product', path: '/products',
+    icon: Package, label: 'Manage Products', path: '/products',
     children: [
       { label: 'Product List', path: '/products' },
       { label: 'Add Product', path: '/products/new' },
-      { label: 'Add-On List', path: '/products/addons' },
     ]
   },
   {
-    icon: Award, label: 'Certificate', path: '/certificates',
+    icon: Award, label: 'Certificates', path: '/certificates',
     children: [
-      { label: 'Manage Certificate', path: '/certificates' },
+      { label: 'All Certificates', path: '/certificates' },
       { label: 'Active Certificates', path: '/certificates?status=active' },
       { label: 'Expired Certificates', path: '/certificates?status=expired' },
     ]
@@ -49,20 +41,25 @@ const navItems = [
     children: [
       { label: 'Manage Export Cert', path: '/export' },
       { label: 'Request Export Cert', path: '/export/new' },
-      { label: 'In-Progress', path: '/export?status=in_progress' },
-      { label: 'Export Drafts', path: '/export?status=draft' },
     ]
   },
   {
     icon: MessageSquare, label: 'Tickets', path: '/tickets',
     children: [
       { label: 'All Tickets', path: '/tickets' },
-      { label: 'Add New Ticket', path: '/tickets/new' },
+      { label: 'New Ticket', path: '/tickets' },
     ]
   },
-  { icon: Users, label: 'Manage User\'s', path: '/manage-users' },
+  {
+    icon: MessageSquare, label: 'Messages', path: '/messages',
+    children: [
+      { label: 'Inbox', path: '/messages/inbox' },
+      { label: 'Outbox', path: '/messages/outbox' },
+    ]
+  },
+  { icon: FileText, label: 'Proposals', path: '/proposals' },
+  { icon: Users, label: "Manage Users", path: '/manage-users' },
   { icon: MapPin, label: 'Manage Sites', path: '/sites' },
-  { icon: FileText, label: 'Forms', path: '/forms' },
   { icon: FileBarChart, label: 'Invoices', path: '/invoices' },
 ];
 
@@ -130,7 +127,7 @@ export default function Sidebar() {
                       <div className="nav-sub">
                         {item.children.map(child => (
                           <NavLink
-                            key={child.path}
+                            key={child.label}
                             to={child.path}
                             className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
                             onClick={() => setMobileOpen(false)}
@@ -159,11 +156,7 @@ export default function Sidebar() {
           <div className="nav-section-label" style={{ marginTop: 12 }}>Account</div>
           <NavLink to="/profile" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
             <Settings size={17} />
-            Profile & Settings
-          </NavLink>
-          <NavLink to="/help" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-            <HelpCircle size={17} />
-            Help & Support
+            Profile &amp; Settings
           </NavLink>
         </nav>
 

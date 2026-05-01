@@ -56,6 +56,7 @@ export default function App() {
             <Route path="/sites" element={<SitesPage />} />
             <Route path="/invoices" element={<InvoicesPage />} />
             <Route path="/tickets" element={<TicketsPage />} />
+            <Route path="/tickets/new" element={<TicketsPage openNew />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
 
