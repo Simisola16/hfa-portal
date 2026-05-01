@@ -3,7 +3,7 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { Plus, Search, Ship, X, Eye } from 'lucide-react';
 
-export default function ExportPage() {
+export default function ExportPage({ openNew }) {
   const [exports, setExports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -12,6 +12,10 @@ export default function ExportPage() {
 
   const fetch = () => { setLoading(true); api.get('/api/exports').then(d => setExports(d.data || [])).catch(() => toast.error('Failed to load')).finally(() => setLoading(false)); };
   useEffect(() => { fetch(); }, []);
+
+  useEffect(() => {
+    if (openNew) setShowModal(true);
+  }, [openNew]);
 
   const set = (k) => (e) => setForm(f => ({...f, [k]: e.target.value}));
 
@@ -48,7 +52,7 @@ export default function ExportPage() {
                 <thead><tr><th>Reference</th><th>Destination</th><th>Consignee</th><th>Shipment Date</th><th>Status</th></tr></thead>
                 <tbody>
                   {exports.map(e => (
-                    <tr key={e.id}>
+                    <tr key={e.id || e._id}>
                       <td style={{ fontWeight: 700 }}>{e.reference_number}</td>
                       <td>{e.destination_country}</td>
                       <td>{e.consignee_name || '—'}</td>

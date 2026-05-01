@@ -56,7 +56,7 @@ export default function CertificatesPage() {
                 </thead>
                 <tbody>
                   {filtered.map(cert => (
-                    <tr key={cert.id}>
+                    <tr key={cert.id || cert._id}>
                       <td style={{ fontWeight: 700 }}>{cert.certificate_number}</td>
                       <td>{cert.certificate_type}</td>
                       <td>{cert.sites?.name || '—'}</td>
@@ -73,9 +73,10 @@ export default function CertificatesPage() {
                         </span>
                       </td>
                       <td style={{ display: 'flex', gap: 6 }}>
-                        <Link to={`/certificates/${cert.id}`} className="btn btn-ghost btn-sm"><Eye size={13} /></Link>
                         {cert.status === 'active' && (
-                          <a href={`/api/certificates/${cert.id}/download`} className="btn btn-outline btn-sm"><Download size={13} /> Download</a>
+                          <a href={`${api.defaults?.baseURL || ''}/api/certificates/${cert.id || cert._id}/download`} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
+                            <Download size={13} /> Download
+                          </a>
                         )}
                       </td>
                     </tr>

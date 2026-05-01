@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, RefreshCw, Download, X } from 'lucide-react';
@@ -25,6 +25,7 @@ const OFFICIAL_FORMS = [
 
 export default function DashboardPage() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [data, setData] = useState({ applications: [], certificates: [], products: [], messages_count: 0 });
   const [loading, setLoading] = useState(true);
   const [showForms, setShowForms] = useState(false);
@@ -51,10 +52,10 @@ export default function DashboardPage() {
   const inProgressApps = data.applications.filter(a => a.status === 'audit_scheduled').length;
 
   const stats = [
-    { label: 'Total Applications', value: data.applications.length, icon: <FileText size={22} />, color: '#3b82f6', bg: '#dbeafe' },
-    { label: 'Active Certificates', value: activeCerts, icon: <Award size={22} />, color: '#15803d', bg: '#dcfce7' },
-    { label: 'Pending Review', value: pendingApps, icon: <Clock size={22} />, color: '#d97706', bg: '#fef3c7' },
-    { label: 'Products Registered', value: data.products.length, icon: <Package size={22} />, color: '#7c3aed', bg: '#f3e8ff' },
+    { label: 'Total Applications', value: data.applications.length, icon: <FileText size={22} />, color: '#3b82f6', bg: '#dbeafe', path: '/applications' },
+    { label: 'Active Certificates', value: activeCerts, icon: <Award size={22} />, color: '#15803d', bg: '#dcfce7', path: '/certificates' },
+    { label: 'Pending Review', value: pendingApps, icon: <Clock size={22} />, color: '#d97706', bg: '#fef3c7', path: '/applications' },
+    { label: 'Products Registered', value: data.products.length, icon: <Package size={22} />, color: '#7c3aed', bg: '#f3e8ff', path: '/products' },
   ];
 
   return (
@@ -77,7 +78,7 @@ export default function DashboardPage() {
       {/* Stats */}
       <div className="stats-grid">
         {stats.map(s => (
-          <div className="stat-card" key={s.label}>
+          <div className="stat-card" key={s.label} onClick={() => navigate(s.path)} style={{cursor: 'pointer'}}>
             <div className="stat-icon" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
             <div className="stat-info">
               <div className="stat-label">{s.label}</div>
@@ -115,8 +116,8 @@ export default function DashboardPage() {
                   </thead>
                   <tbody>
                     {recentApps.map(app => (
-                      <tr key={app.id}>
-                        <td><Link to={`/applications/${app.id}`} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', fontSize: 12 }}>{app.application_number}</Link></td>
+                      <tr key={app.id || app._id}>
+                        <td><Link to={`/applications?appId=${app.id || app._id}`} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', fontSize: 12 }}>{app.application_number}</Link></td>
                         <td style={{ fontSize: 12, maxWidth: 150 }}><span className="truncate" style={{ display: 'block' }}>{app.category}</span></td>
                         <td><span className={`badge ${STATUS_BADGE[app.status] || 'badge-gray'}`}>{app.status?.replace(/_/g, ' ')}</span></td>
                       </tr>

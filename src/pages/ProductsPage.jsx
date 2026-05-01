@@ -3,7 +3,7 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { Plus, Search, Package, Edit, Trash2, X } from 'lucide-react';
 
-export default function ProductsPage() {
+export default function ProductsPage({ openNew: openNewProp }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -15,6 +15,10 @@ export default function ProductsPage() {
   const fetch = () => { setLoading(true); api.get('/api/products').then(d => setProducts(d.data || [])).catch(() => toast.error('Failed to load')).finally(() => setLoading(false)); };
   useEffect(() => { fetch(); }, []);
 
+  useEffect(() => {
+    if (openNewProp) openNew();
+  }, [openNewProp]);
+
   const set = (k) => (e) => setForm(f => ({...f, [k]: e.target.value}));
 
   const openEdit = (p) => { setEditing(p); setForm(p); setShowModal(true); };
@@ -23,7 +27,7 @@ export default function ProductsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault(); setSubmitting(true);
     try {
-      if (editing) { await api.put(`/api/products/${editing.id}`, form); toast.success('Product updated'); }
+      if (editing) { await api.put(`/api/products/${editing.id || editing._id}`, form); toast.success('Product updated'); }
       else { await api.post('/api/products', form); toast.success('Product added'); }
       setShowModal(false); fetch();
     } catch (err) { toast.error(err.message); }
@@ -63,7 +67,7 @@ export default function ProductsPage() {
                 <thead><tr><th>Name</th><th>Category</th><th>Type</th><th>Barcode</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                   {filtered.map(p => (
-                    <tr key={p.id}>
+                    <tr key={p.id || p._id}>
                       <td style={{ fontWeight: 600 }}>{p.name}</td>
                       <td>{p.category || '—'}</td>
                       <td>{p.product_type || '—'}</td>
@@ -71,7 +75,7 @@ export default function ProductsPage() {
                       <td><span className={`badge ${p.status === 'approved' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-yellow'}`}>{p.status}</span></td>
                       <td style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}><Edit size={13} /></button>
-                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(p.id)}><Trash2 size={13} /></button>
+                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(p.id || p._id)}><Trash2 size={13} /></button>
                       </td>
                     </tr>
                   ))}

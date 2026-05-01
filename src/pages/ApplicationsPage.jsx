@@ -171,8 +171,33 @@ export default function ApplicationsPage({ openNew }) {
     return matchSearch && matchStatus && matchType;
   });
 
+  const [viewModal, setViewModal] = useState(false);
+  const [viewStep, setViewStep] = useState(1); // 1: Details, 2: Processing
+  const [selectedApp, setSelectedApp] = useState(null);
+
+  const handleOpen = app => {
+    setSelectedApp(app);
+    setViewModal(true);
+    setViewStep(1);
+  };
+
+  const handleClose = () => {
+    setShowModal(false);
+    setSelectedApp(null);
+  };
+
+  useEffect(() => {
+    const appId = searchParams.get('appId');
+    if (appId && apps.length > 0) {
+      const targetApp = apps.find(a => a._id === appId || a.id === appId);
+      if (targetApp) {
+        handleOpen(targetApp);
+      }
+    }
+  }, [apps, searchParams]);
+
   return (
-    <div className="page-content">
+    <div>
       <div className="toolbar">
         <div className="search-box">
           <Search size={15} className="search-icon" />
@@ -183,18 +208,18 @@ export default function ApplicationsPage({ openNew }) {
           {Object.keys(STATUS_BADGE).map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
         </select>
         <button className="btn btn-ghost btn-sm" onClick={fetchData}><RefreshCw size={14} /></button>
-        <button 
-          className="btn btn-primary ml-auto" 
-          onClick={() => {
-            if (sites.length === 0) {
-              toast.error('Please add a site in "Manage Sites" first.');
-              return;
-            }
-            setShowModal(true);
-          }}
-        >
-          <Plus size={15} /> New Application
-        </button>
+      <button className="btn btn-primary ml-auto" 
+        onClick={() => {
+          if (sites.length === 0) {
+            toast.error('Please add a site in "Manage Sites" first.');
+            return;
+          }
+          setShowModal(true);
+        }}
+      >
+        <Plus size={15} /> New Application
+      </button>
+
       </div>
 
       <div className="card">
@@ -232,11 +257,11 @@ export default function ApplicationsPage({ openNew }) {
                     <td>{app.site_name}</td>
                     <td>{new Date(app.created_at).toLocaleDateString()}</td>
                     <td><span className={`badge ${STATUS_BADGE[app.status]}`}>{app.status?.replace(/_/g, ' ')}</span></td>
-                    <td>
-                      <Link to={`/applications/${app._id}`} className="btn btn-ghost btn-sm">
-                        <Eye size={14} /> View
-                      </Link>
-                    </td>
+                      <td>
+                        <button className="btn btn-ghost btn-sm" onClick={() => handleOpen(app)} title="Open Actions">
+                          <Eye size={14} />
+                        </button>
+                      </td>
                   </tr>
                 ))}
               </tbody>
@@ -245,7 +270,82 @@ export default function ApplicationsPage({ openNew }) {
         </div>
       </div>
 
-      {showModal && (
+      {viewModal && selectedApp && (
+        <div className="modal-overlay" onClick={() => { setViewModal(false); setSelectedApp(null); }}>
+          <div className="modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Application #{selectedApp.application_number}</h2>
+              <button className="modal-close" onClick={() => { setViewModal(false); setSelectedApp(null); }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body">
+              {/* Tab navigation */}
+              <div className="flex border-b mb-4">
+                <button className={`px-4 py-2 ${viewStep === 1 ? 'border-b-2 border-primary font-semibold' : ''}`} onClick={() => setViewStep(1)}>Details</button>
+                <button className={`px-4 py-2 ${viewStep === 2 ? 'border-b-2 border-primary font-semibold' : ''}`} onClick={() => setViewStep(2)}>Processing</button>
+              </div>
+              {viewStep === 1 && (
+                <div className="space-y-2">
+                  <p><strong>Company:</strong> {selectedApp.application_type}</p>
+                  <p><strong>Category:</strong> {selectedApp.category}</p>
+                  <p><strong>Site:</strong> {selectedApp.site_name}</p>
+                  <p><strong>Status:</strong> {selectedApp.status?.replace(/_/g, ' ')}</p>
+                </div>
+              )}
+              {viewStep === 2 && (
+                <div className="space-y-3">
+                  <div className="form-group">
+                    <label className="form-label">Update Status</label>
+                    <select className="form-control" value={selectedApp.status} onChange={e => setSelectedApp({ ...selectedApp, status: e.target.value })}>
+                      {Object.keys(STATUS_BADGE).map(s => (
+                        <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Comments</label>
+                    <textarea className="form-control" rows={3} placeholder="Add processing comments..." />
+                  </div>
+                  <button className="btn btn-primary" onClick={async () => {
+                    try {
+                      await api.patch(`/api/applications/${selectedApp._id}`, { status: selectedApp.status });
+                      toast.success('Processing updated');
+                      fetchData();
+                      setViewModal(false);
+                      setSelectedApp(null);
+                    } catch (err) {
+                      toast.error('Failed to update processing');
+                    }
+                  }}>Processing Done</button>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer flex justify-between mt-4">
+              <div>
+                <button className="btn btn-outline" onClick={() => {
+                  // placeholder for proposal view
+                  alert('View Proposal action');
+                }}>View Proposal</button>
+                <button className="btn btn-danger ml-2" onClick={async () => {
+                  if (window.confirm('Delete this application?')) {
+                    try {
+                      await api.delete(`/api/applications/${selectedApp._id}`);
+                      toast.success('Application deleted');
+                      fetchData();
+                      setViewModal(false);
+                      setSelectedApp(null);
+                    } catch (err) {
+                      toast.error('Delete failed');
+                    }
+                  }
+                }}>Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 800 }}>
             <div className="modal-header">
