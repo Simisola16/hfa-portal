@@ -183,11 +183,53 @@ export default function ApplicationsPage({ openNew }) {
   const [viewModal, setViewModal] = useState(false);
   const [viewStep, setViewStep] = useState(1); // 1: Details, 2: Processing
   const [selectedApp, setSelectedApp] = useState(null);
+  const [proposalData, setProposalData] = useState(null);
+  const [proposalLoading, setProposalLoading] = useState(false);
+  const [rejectComment, setRejectComment] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
+
+  const fetchProposalForApp = async (appId) => {
+    setProposalLoading(true);
+    setProposalData(null);
+    try {
+      const res = await api.get(`/api/proposals/application/${appId}`);
+      if (res.data?.data) {
+        setProposalData(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load proposal', err);
+    } finally {
+      setProposalLoading(false);
+    }
+  };
+
+  const handleStatusUpdate = async (id, status, comment = '') => {
+    if (status === 'rejected' && !comment) {
+      toast.error('Please provide a reason for rejection');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await api.put(`/api/proposals/${id}`, { status, client_comment: comment });
+      // If accepted/rejected, update application status on backend
+      await api.put(`/api/applications/${selectedApp._id || selectedApp.id}/status`, { status: 'PROPOSAL ACCEPTED/REJECTED' });
+
+      toast.success(`Proposal ${status === 'accepted' ? 'accepted' : 'rejected'} successfully`);
+      setShowRejectModal(false);
+      fetchProposalForApp(selectedApp._id || selectedApp.id);
+      fetchData(); // Refresh app data
+    } catch (err) {
+      toast.error(err.message || 'Failed to update proposal');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleOpen = app => {
     setSelectedApp(app);
     setViewModal(true);
     setViewStep(1);
+    fetchProposalForApp(app._id || app.id);
   };
 
   const handleClose = () => {
@@ -381,6 +423,81 @@ export default function ApplicationsPage({ openNew }) {
                           ))}
                         </tbody>
                       </table>
+                      
+                      {proposalLoading ? (
+                        <div style={{ padding: 20, textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+                      ) : proposalData && (
+                        <div style={{ marginTop: 24, borderTop: '1px solid #e2e8f0', paddingTop: 24 }}>
+                          <h4 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16, color: '#1e293b' }}>Certification Proposal</h4>
+                          
+                          <div style={{ display: 'grid', gridTemplateColumns: proposalData.proposal_url ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 16 }}>
+                            {proposalData.proposal_url && (
+                              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Proposal Document</div>
+                                <a 
+                                  href={proposalData.proposal_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="btn btn-outline btn-sm"
+                                  style={{ width: '100%', marginTop: 8, justifyContent: 'center' }}
+                                >
+                                  <Download size={14} /> Download PDF
+                                </a>
+                              </div>
+                            )}
+                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Estimated Cost</div>
+                              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)', marginTop: 4 }}>
+                                {proposalData.currency || 'GBP'} {proposalData.amount || '—'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {proposalData.details && !proposalData.proposal_url && (
+                            <div style={{ marginBottom: 16, background: '#f8fafc', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 8 }}>Proposal Details</div>
+                              <div style={{ fontSize: 14, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                                {proposalData.details}
+                              </div>
+                            </div>
+                          )}
+
+                          {proposalData.status === 'rejected' && proposalData.client_comment && (
+                            <div style={{ background: '#fef2f2', padding: 16, borderRadius: 12, border: '1px solid #fecaca', marginBottom: 16 }}>
+                              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#dc2626', marginBottom: 8 }}>My Rejection Reason</div>
+                              <div style={{ fontSize: 14, color: '#991b1b' }}>{proposalData.client_comment}</div>
+                            </div>
+                          )}
+                          
+                          {proposalData.status === 'accepted' && (
+                            <div style={{ background: '#f0fdf4', padding: 16, borderRadius: 12, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <CheckCircle size={20} style={{ color: '#16a34a' }} />
+                              <div>
+                                <div style={{ fontWeight: 700, color: '#166534', fontSize: 14 }}>Proposal Accepted</div>
+                                <div style={{ fontSize: 12, color: '#15803d' }}>You have approved this proposal. HFA will proceed with the next steps.</div>
+                              </div>
+                            </div>
+                          )}
+
+                          {proposalData.status === 'pending' && (
+                            <div style={{ display: 'flex', gap: 10, marginTop: 16, justifyContent: 'flex-end' }}>
+                              <button 
+                                className="btn btn-outline" 
+                                style={{ color: '#dc2626', borderColor: '#fecaca' }}
+                                onClick={() => setShowRejectModal(true)}
+                              >
+                                <XCircle size={16} /> Reject
+                              </button>
+                              <button 
+                                className="btn btn-primary"
+                                onClick={() => handleStatusUpdate(proposalData._id || proposalData.id, 'accepted')}
+                              >
+                                <CheckCircle size={16} /> Accept Proposal
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -611,6 +728,40 @@ export default function ApplicationsPage({ openNew }) {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRejectModal && proposalData && (
+        <div className="modal-overlay" style={{ zIndex: 1200 }}>
+          <div className="modal" style={{ maxWidth: 450 }}>
+            <div className="modal-header">
+              <span className="modal-title">Reject Proposal</span>
+              <button className="modal-close" onClick={() => setShowRejectModal(false)}><X size={18} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Why are you rejecting this proposal? <span>*</span></label>
+                <textarea 
+                  className="form-control" 
+                  rows={4}
+                  value={rejectComment}
+                  onChange={e => setRejectComment(e.target.value)}
+                  placeholder="Please provide details on why you are rejecting this proposal so we can assist you better..."
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setShowRejectModal(false)}>Cancel</button>
+              <button 
+                className="btn btn-primary" 
+                style={{ background: '#dc2626' }}
+                disabled={!rejectComment || submitting}
+                onClick={() => handleStatusUpdate(proposalData._id || proposalData.id, 'rejected', rejectComment)}
+              >
+                {submitting ? 'Submitting...' : 'Confirm Rejection'}
+              </button>
             </div>
           </div>
         </div>
