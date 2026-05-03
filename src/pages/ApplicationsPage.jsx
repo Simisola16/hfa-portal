@@ -32,7 +32,9 @@ const STATUS_BADGE = {
   audit_completed:'badge-green',
   approved:'badge-green',
   rejected:'badge-red',
-  certificate_issued:'badge-green'
+  certificate_issued:'badge-green',
+  'PROPOSAL SENT': 'badge-purple',
+  'PROPOSAL ACCEPTED/REJECTED': 'badge-blue',
 };
 
 export default function ApplicationsPage({ openNew }) {
@@ -213,6 +215,9 @@ export default function ApplicationsPage({ openNew }) {
       await api.put(`/api/proposals/${id}`, { status, client_comment: comment });
       // If accepted/rejected, update application status on backend
       await api.put(`/api/applications/${selectedApp._id || selectedApp.id}/status`, { status: 'PROPOSAL ACCEPTED/REJECTED' });
+
+      // Immediately update the local selectedApp state so the UI reflects the new progress
+      setSelectedApp(prev => ({ ...prev, status: 'PROPOSAL ACCEPTED/REJECTED' }));
 
       toast.success(`Proposal ${status === 'accepted' ? 'accepted' : 'rejected'} successfully`);
       setShowRejectModal(false);
