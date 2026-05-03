@@ -90,7 +90,7 @@ export default function ProposalsPage() {
                     </td>
                     <td>{p.application_id?.application_number || '—'}</td>
                     <td style={{ fontWeight: 600 }}>{p.currency || 'GBP'} {p.amount || '—'}</td>
-                    <td>{new Date(p.created_at).toLocaleDateString('en-GB')}</td>
+                    <td>{new Date(p.createdAt).toLocaleDateString('en-GB')}</td>
                     <td>
                       <span className={`badge ${
                         p.status === 'accepted' ? 'badge-green' : 
