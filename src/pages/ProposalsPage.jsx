@@ -158,7 +158,7 @@ export default function ProposalsPage() {
                 </div>
               </div>
 
-              {selected.details && !selected.proposal_url && (
+              {selected.details && (
                 <div style={{ marginBottom: 24, background: '#fff', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 12 }}>Proposal Details</div>
                   <div style={{ fontSize: 14, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
