@@ -195,8 +195,8 @@ export default function ApplicationsPage({ openNew }) {
     setProposalData(null);
     try {
       const res = await api.get(`/api/proposals/application/${appId}`);
-      if (res.data?.data) {
-        setProposalData(res.data.data);
+      if (res.data) {
+        setProposalData(res.data);
       }
     } catch (err) {
       console.error('Failed to load proposal', err);
@@ -466,7 +466,7 @@ export default function ApplicationsPage({ openNew }) {
                             </div>
                           </div>
 
-                          {proposalData.details && !proposalData.proposal_url && (
+                          {proposalData.details && (
                             <div style={{ marginBottom: 20, background: '#f8fafc', border: '1px solid #e2e8f0', padding: 20, borderRadius: 12 }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 12 }}>Proposal Details</div>
                               <div style={{ fontSize: 15, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>

@@ -14,7 +14,7 @@ export default function ProposalsPage() {
   const fetch = () => { 
     setLoading(true); 
     api.get('/api/proposals')
-      .then(d => setProposals(d.data?.data || []))
+      .then(d => setProposals(d.data || []))
       .catch(() => toast.error('Failed to load proposals'))
       .finally(() => setLoading(false)); 
   };
