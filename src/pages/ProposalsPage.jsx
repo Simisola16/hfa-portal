@@ -4,17 +4,17 @@ import toast from 'react-hot-toast';
 import { ClipboardList, X, Download, CheckCircle, XCircle, FileText, MessageSquare } from 'lucide-react';
 
 /**
- * Fix PDF URLs from Cloudinary:
- *   - Cloudinary PDFs uploaded as "image" type use /image/upload/ — browsers can't open them.
- *   - Rewrite to /raw/upload/fl_attachment/ so the browser downloads the actual file.
- *   - Supabase URLs (new uploads) are returned unchanged.
+ * Fix PDF download for Cloudinary-stored files.
+ * Files were uploaded with resource_type 'auto' and stored under /image/upload/.
+ * Adding fl_attachment forces the browser to download the file instead of
+ * trying to render it inline (which fails for PDFs served as images).
+ * Supabase URLs (new uploads) are returned unchanged.
  */
 function getPdfUrl(url) {
   if (!url) return url;
   if (url.includes('res.cloudinary.com')) {
-    return url
-      .replace('/image/upload/', '/raw/upload/fl_attachment/')
-      .replace('/video/upload/', '/raw/upload/fl_attachment/');
+    // Inject fl_attachment flag right after /upload/ to force download
+    return url.replace('/upload/', '/upload/fl_attachment/');
   }
   return url; // Supabase or any other URL — use as-is
 }
