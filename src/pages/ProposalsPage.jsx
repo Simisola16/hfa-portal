@@ -3,6 +3,22 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { ClipboardList, X, Download, CheckCircle, XCircle, FileText, MessageSquare } from 'lucide-react';
 
+/**
+ * Fix PDF URLs from Cloudinary:
+ *   - Cloudinary PDFs uploaded as "image" type use /image/upload/ — browsers can't open them.
+ *   - Rewrite to /raw/upload/fl_attachment/ so the browser downloads the actual file.
+ *   - Supabase URLs (new uploads) are returned unchanged.
+ */
+function getPdfUrl(url) {
+  if (!url) return url;
+  if (url.includes('res.cloudinary.com')) {
+    return url
+      .replace('/image/upload/', '/raw/upload/fl_attachment/')
+      .replace('/video/upload/', '/raw/upload/fl_attachment/');
+  }
+  return url; // Supabase or any other URL — use as-is
+}
+
 export default function ProposalsPage() {
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -140,7 +156,7 @@ export default function ProposalsPage() {
                   <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Proposal Document</div>
                     <a 
-                      href={selected.proposal_url} 
+                      href={getPdfUrl(selected.proposal_url)} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="btn btn-outline btn-sm"
