@@ -3,21 +3,21 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { ClipboardList, X, Download, CheckCircle, XCircle, FileText, MessageSquare } from 'lucide-react';
 
-/**
- * Fix PDF download for Cloudinary-stored files.
- * Files were uploaded with resource_type 'auto' and stored under /image/upload/.
- * Adding fl_attachment forces the browser to download the file instead of
- * trying to render it inline (which fails for PDFs served as images).
- * Supabase URLs (new uploads) are returned unchanged.
- */
-function getPdfUrl(url) {
-  if (!url) return url;
-  if (url.includes('res.cloudinary.com')) {
-    // Inject fl_attachment flag right after /upload/ to force download
-    return url.replace('/upload/', '/upload/fl_attachment/');
+// Helper function to handle correct PDF download URL
+const getPdfUrl = (url) => {
+  if (!url) return '#';
+  if (url.startsWith('/api/files/')) {
+    const API_URL = import.meta.env.VITE_API_URL || 'https://hfa-portal-backend.vercel.app';
+    return `${API_URL}${url}`;
   }
-  return url; // Supabase or any other URL — use as-is
-}
+  // For old Cloudinary files that weren't migrated
+  if (url.includes('res.cloudinary.com')) {
+    if (url.includes('/upload/') && !url.includes('fl_attachment')) {
+      return url.replace('/upload/', '/upload/fl_attachment/');
+    }
+  }
+  return url;
+};
 
 export default function ProposalsPage() {
   const [proposals, setProposals] = useState([]);
