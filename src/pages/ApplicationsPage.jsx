@@ -4,6 +4,20 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { Plus, Search, Eye, RefreshCw, X, Upload, Check, ChevronRight, ChevronLeft, Trash2, ShieldCheck, FileText, CheckCircle, Download, XCircle } from 'lucide-react';
 
+const getPdfUrl = (url) => {
+  if (!url) return '#';
+  if (url.startsWith('/api/files/')) {
+    const API_URL = import.meta.env.VITE_API_URL || 'https://hfa-portal-backend.vercel.app';
+    return `${API_URL}${url}`;
+  }
+  if (url.includes('res.cloudinary.com')) {
+    if (url.includes('/upload/') && !url.includes('fl_attachment')) {
+      return url.replace('/upload/', '/upload/fl_attachment/');
+    }
+  }
+  return url;
+};
+
 const ALL_STATUSES = [
   'APPLICATION RECEIVED','APPLICATION APPROVED/REJECT','PROPOSAL SENT',
   'PROPOSAL ACCEPTED/REJECTED','INVOICE SENT','PAYMENT RECEIVED',
@@ -448,7 +462,7 @@ export default function ApplicationsPage({ openNew }) {
                               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Proposal Document</div>
                                 <a 
-                                  href={proposalData.proposal_url?.replace('/upload/', '/upload/fl_attachment/')} 
+                                  href={getPdfUrl(proposalData.proposal_url)}
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   className="btn btn-outline btn-sm"
