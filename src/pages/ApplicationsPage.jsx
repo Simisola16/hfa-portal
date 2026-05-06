@@ -434,7 +434,7 @@ export default function ApplicationsPage({ openNew }) {
                       </h3>
                       <table style={{ width:'100%', borderCollapse:'collapse', border:'1px solid #cbd5e1' }}>
                         <tbody>
-                          {[['Application Number', selectedApp.application_number],['Date Submitted', new Date(selectedApp.created_at).toLocaleDateString('en-GB')],['Category', `${selectedApp.application_type} – ${selectedApp.category}`],['Current Status', selectedApp.status?.replace(/_/g,' ')],['Site', selectedApp.site_name||'—']].map(([k,v])=>(
+                          {[['Application Number', selectedApp.application_number],['Registered Company', selectedApp.profiles?.company_name || '—'],['Date Submitted', new Date(selectedApp.created_at).toLocaleDateString('en-GB')],['Category', `${selectedApp.application_type} – ${selectedApp.category}`],['Current Status', selectedApp.status?.replace(/_/g,' ')],['Site', selectedApp.site_name||'—']].map(([k,v])=>(
                             <tr key={k}>
                               <td style={{ border:'1px solid #cbd5e1', padding:'12px 16px', fontWeight:600, fontSize:14, width:'35%', background:'#f8fafc', color:'#475569' }}>{k}:</td>
                               <td style={{ border:'1px solid #cbd5e1', padding:'12px 16px', fontSize:14, color:'#0f172a' }}>{v}</td>
