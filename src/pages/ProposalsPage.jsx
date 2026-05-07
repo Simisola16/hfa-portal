@@ -91,7 +91,7 @@ export default function ProposalsPage() {
                 <tr>
                   <th>Proposal Title</th>
                   <th>Application Ref</th>
-                  <th>Amount</th>
+                  <th>Est. Cost</th>
                   <th>Date Received</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -105,7 +105,7 @@ export default function ProposalsPage() {
                       <div style={{ fontSize: 11, color: '#64748b' }}>{p.reference_number || 'No Ref'}</div>
                     </td>
                     <td>{p.application_id?.application_number || '—'}</td>
-                    <td style={{ fontWeight: 600 }}>{p.currency || 'GBP'} {p.amount || '—'}</td>
+                    <td style={{ fontWeight: 600 }}>£{p.estimated_cost || p.amount || '—'}</td>
                     <td>{new Date(p.createdAt).toLocaleDateString('en-GB')}</td>
                     <td>
                       <span className={`badge ${
@@ -139,7 +139,14 @@ export default function ProposalsPage() {
             <div className="modal-body">
               <div style={{ marginBottom: 24 }}>
                 <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1e293b', marginBottom: 4 }}>{selected.title}</h3>
-                <div style={{ fontSize: 13, color: '#64748b' }}>Reference: {selected.reference_number || 'N/A'}</div>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                  <div style={{ fontSize: 13, color: '#64748b' }}>Reference: {selected.reference_number || 'N/A'}</div>
+                  {selected.estimated_cost && (
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#166534', background: '#f0fdf4', padding: '2px 8px', borderRadius: 6 }}>
+                      Estimated Cost: £{selected.estimated_cost}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {selected.admin_comment && (
