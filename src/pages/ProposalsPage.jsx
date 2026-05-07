@@ -47,11 +47,11 @@ export default function ProposalsPage() {
     try {
       await api.put(`/api/proposals/${id}`, { status, client_comment: comment });
       
-      // If accepted, update application status to PROPOSAL ACCEPTED
+      // Update application status
       if (status === 'accepted' && selected?.application_id?._id) {
         await api.put(`/api/applications/${selected.application_id._id}/status`, { status: 'PROPOSAL ACCEPTED/REJECTED' });
       } else if (status === 'rejected' && selected?.application_id?._id) {
-         await api.put(`/api/applications/${selected.application_id._id}/status`, { status: 'PROPOSAL ACCEPTED/REJECTED' });
+        await api.put(`/api/applications/${selected.application_id._id}/status`, { status: 'PROPOSAL REJECTED' });
       }
 
       toast.success(`Proposal ${status === 'accepted' ? 'accepted' : 'rejected'} successfully`);
