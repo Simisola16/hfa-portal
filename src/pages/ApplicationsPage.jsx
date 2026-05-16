@@ -204,6 +204,9 @@ export default function ApplicationsPage({ openNew }) {
   const [invoiceData, setInvoiceData] = useState(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceForm, setInvoiceForm] = useState({ title: '', amount: '', due_date: '', notes: '', file: null });
+  const [invoiceSubmitting, setInvoiceSubmitting] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
 
@@ -552,110 +555,34 @@ export default function ApplicationsPage({ openNew }) {
 
                           {proposalData.status === 'accepted' && (
                             <div>
-                              {/* Accepted banner */}
-                              <div style={{ background: '#f0fdf4', padding: 16, borderRadius: 12, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                                <CheckCircle size={24} style={{ color: '#16a34a', flexShrink: 0 }} />
-                                <div>
-                                  <div style={{ fontWeight: 800, color: '#166534', fontSize: 15 }}>Proposal Accepted</div>
-                                  <div style={{ fontSize: 13, color: '#15803d', marginTop: 2 }}>HFA will now process your invoice. Please check below for your invoice details.</div>
-                                </div>
-                              </div>
-
-                              {/* Invoice Section */}
-                              <div style={{ border: '2px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
-                                <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                                  <CreditCard size={18} style={{ color: '#7dd3fc' }} />
-                                  <div style={{ fontWeight: 800, fontSize: 14, color: 'white', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Invoice</div>
-                                  {invoiceData && (
-                                    <span className={`badge ${invoiceData.status === 'paid' ? 'badge-green' : 'badge-yellow'}`} style={{ marginLeft: 'auto', fontSize: 11 }}>
-                                      {invoiceData.status === 'paid' ? '✓ Paid' : '⏳ Unpaid'}
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div style={{ padding: 20 }}>
-                                  {invoiceLoading ? (
-                                    <div style={{ textAlign: 'center', padding: 30 }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
-                                  ) : invoiceData ? (
-                                    <div>
-                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                                        <div style={{ background: '#f8fafc', borderRadius: 10, padding: 14, border: '1px solid #e2e8f0' }}>
-                                          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Invoice No.</div>
-                                          <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>{invoiceData.invoice_number}</div>
-                                        </div>
-                                        <div style={{ background: invoiceData.status === 'paid' ? '#f0fdf4' : '#fefce8', borderRadius: 10, padding: 14, border: `1px solid ${invoiceData.status === 'paid' ? '#bbf7d0' : '#fde68a'}` }}>
-                                          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Amount Due</div>
-                                          <div style={{ fontWeight: 800, fontSize: 22, color: invoiceData.status === 'paid' ? '#16a34a' : '#b45309' }}>£{parseFloat(invoiceData.amount || 0).toFixed(2)}</div>
-                                        </div>
-                                      </div>
-
-                                      {invoiceData.due_date && (
-                                        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                          <AlertCircle size={14} style={{ color: '#ea580c', flexShrink: 0 }} />
-                                          <div style={{ fontSize: 13, color: '#9a3412', fontWeight: 600 }}>Due by: {new Date(invoiceData.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
-                                        </div>
-                                      )}
-
-                                      {invoiceData.notes && (
-                                        <div style={{ background: '#f8fafc', borderRadius: 8, padding: '12px 14px', marginBottom: 16, border: '1px solid #e2e8f0', fontSize: 13, color: '#475569' }}>
-                                          <strong>Note from HFA:</strong> {invoiceData.notes}
-                                        </div>
-                                      )}
-
-                                      {invoiceData.invoice_url && (
-                                        <a
-                                          href={getPdfUrl(invoiceData.invoice_url)}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="btn btn-outline btn-sm"
-                                          style={{ width: '100%', justifyContent: 'center', marginBottom: 16 }}
-                                        >
-                                          <Download size={14} /> Download Invoice PDF
-                                        </a>
-                                      )}
-
-                                      {invoiceData.status === 'paid' ? (
-                                        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                                          <CheckCircle size={20} style={{ color: '#16a34a' }} />
-                                          <div>
-                                            <div style={{ fontWeight: 800, color: '#166534', fontSize: 14 }}>Payment Confirmed</div>
-                                            <div style={{ fontSize: 12, color: '#15803d', marginTop: 2 }}>Paid on {invoiceData.paid_at ? new Date(invoiceData.paid_at).toLocaleDateString('en-GB') : 'N/A'}</div>
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <button
-                                          className="btn btn-primary"
-                                          style={{ width: '100%', padding: '12px', fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none' }}
-                                          disabled={paymentSubmitting}
-                                          onClick={async () => {
-                                            if (!window.confirm('Confirm that you have made payment for this invoice?')) return;
-                                            setPaymentSubmitting(true);
-                                            try {
-                                              await api.put(`/api/invoices/${invoiceData._id || invoiceData.id}/pay`, {});
-                                              toast.success('✅ Payment confirmed! Status updated to Payment Received.');
-                                              fetchInvoiceForApp(selectedApp._id || selectedApp.id);
-                                              fetchData();
-                                              setSelectedApp(prev => ({ ...prev, status: 'PAYMENT RECEIVED' }));
-                                            } catch (err) {
-                                              toast.error(err.message || 'Failed to confirm payment');
-                                            } finally {
-                                              setPaymentSubmitting(false);
-                                            }
-                                          }}
-                                        >
-                                          <CreditCard size={16} />
-                                          {paymentSubmitting ? 'Processing...' : 'Confirm Payment Made'}
-                                        </button>
-                                      )}
+                              {/* Accepted Proposal — Upload Invoice Banner */}
+                              <div style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #f7fef9 100%)', border: '1.5px solid #86efac', borderRadius: '12px', padding: '18px 24px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                                  <div style={{ width: 40, height: 40, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <CheckCircle size={20} style={{ color: '#16a34a' }} />
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight: 800, fontSize: 14, color: '#166534', marginBottom: 3 }}>
+                                      {invoiceData ? '✓ Invoice Uploaded' : 'Proposal Accepted — Upload Invoice'}
                                     </div>
-                                  ) : (
-                                    <div style={{ textAlign: 'center', padding: '30px 20px' }}>
-                                      <CreditCard size={40} style={{ color: '#94a3b8', opacity: 0.4, marginBottom: 12 }} />
-                                      <div style={{ fontWeight: 700, fontSize: 14, color: '#64748b', marginBottom: 6 }}>Invoice Not Yet Issued</div>
-                                      <div style={{ fontSize: 13, color: '#94a3b8' }}>HFA will upload your invoice shortly. You will be notified once it is ready.</div>
+                                    <div style={{ fontSize: 12, color: '#15803d', lineHeight: 1.4 }}>
+                                      {invoiceData
+                                        ? `Invoice ${invoiceData.invoice_number} sent · £${invoiceData.amount} · Status: ${invoiceData.status}`
+                                        : 'You have accepted the proposal. Please upload your invoice or proof of payment to proceed.'}
                                     </div>
-                                  )}
+                                  </div>
                                 </div>
+                                <button
+                                  type="button"
+                                  className="btn btn-primary"
+                                  style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', border: 'none', whiteSpace: 'nowrap', fontSize: 13, padding: '10px 20px' }}
+                                  onClick={() => {
+                                    setInvoiceForm({ title: `Invoice for ${selectedApp.application_number}`, amount: proposalData.estimated_cost || '', due_date: '', notes: '', file: null });
+                                    setShowInvoiceModal(true);
+                                  }}
+                                >
+                                  {invoiceData ? '↑ Resend Invoice' : '↑ Upload Invoice'}
+                                </button>
                               </div>
                             </div>
                           )}
@@ -950,6 +877,138 @@ export default function ApplicationsPage({ openNew }) {
                 onClick={() => handleStatusUpdate(proposalData._id || proposalData.id, 'rejected', rejectComment)}
               >
                 {submitting ? 'Submitting...' : 'Confirm Rejection'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Invoice Modal */}
+      {showInvoiceModal && selectedApp && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg, #f0fdf4, #fff)', borderBottom: '2px solid #86efac' }}>
+              <div>
+                <span className="modal-title" style={{ color: '#166534' }}>🧾 Upload Invoice</span>
+                <div style={{ fontSize: 12, color: '#15803d', marginTop: 4, fontWeight: 600 }}>
+                  {selectedApp.application_number}
+                </div>
+              </div>
+              <button className="modal-close" onClick={() => setShowInvoiceModal(false)}><X size={18} /></button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>
+                Upload your invoice or proof of payment for this application.
+              </p>
+
+              <div className="form-group">
+                <label className="form-label">Invoice Title <span>*</span></label>
+                <input
+                  className="form-control"
+                  value={invoiceForm.title}
+                  onChange={e => setInvoiceForm(f => ({ ...f, title: e.target.value }))}
+                  placeholder="e.g. Halal Certification Invoice 2024"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Amount (£) <span>*</span></label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="form-control"
+                    value={invoiceForm.amount}
+                    onChange={e => setInvoiceForm(f => ({ ...f, amount: e.target.value }))}
+                    placeholder="e.g. 850.00"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Date</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={invoiceForm.due_date}
+                    onChange={e => setInvoiceForm(f => ({ ...f, due_date: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Invoice Document (PDF) <span>*</span></label>
+                <div
+                  onClick={() => document.getElementById('invoice-file-input').click()}
+                  style={{
+                    border: '2px dashed #e2e8f0', padding: '28px 24px', borderRadius: '12px',
+                    textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s',
+                    background: invoiceForm.file ? '#f0fdf4' : '#fff'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.borderColor = '#16a34a'}
+                  onMouseOut={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+                >
+                  <FileText size={36} style={{ color: invoiceForm.file ? '#16a34a' : '#94a3b8', marginBottom: 10, margin: '0 auto' }} />
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#334155', marginTop: 8 }}>
+                    {invoiceForm.file ? invoiceForm.file.name : 'Click to upload invoice PDF'}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>PDF, DOCX accepted</div>
+                  <input
+                    id="invoice-file-input"
+                    type="file"
+                    hidden
+                    accept=".pdf,.doc,.docx"
+                    onChange={e => setInvoiceForm(f => ({ ...f, file: e.target.files[0] }))}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Notes (Optional)</label>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  value={invoiceForm.notes}
+                  onChange={e => setInvoiceForm(f => ({ ...f, notes: e.target.value }))}
+                  placeholder="e.g. Attached is the invoice for the certification."
+                />
+              </div>
+            </div>
+            <div className="modal-footer" style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+              <button className="btn btn-ghost" onClick={() => setShowInvoiceModal(false)}>Cancel</button>
+              <button
+                className="btn btn-primary"
+                style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', border: 'none' }}
+                disabled={invoiceSubmitting || !invoiceForm.title || !invoiceForm.amount || !invoiceForm.file}
+                onClick={async () => {
+                  setInvoiceSubmitting(true);
+                  try {
+                    const formData = new FormData();
+                    formData.append('title', invoiceForm.title);
+                    formData.append('amount', invoiceForm.amount);
+                    if (invoiceForm.due_date) formData.append('due_date', invoiceForm.due_date);
+                    if (invoiceForm.notes) formData.append('notes', invoiceForm.notes);
+                    if (invoiceForm.file) formData.append('invoice_file', invoiceForm.file);
+                    const appId = selectedApp._id || selectedApp.id;
+                    formData.append('application_id', appId);
+                    // Append client_id if available, though backend can also derive it from auth
+                    const clientId = selectedApp.client_id;
+                    if (clientId) formData.append('client_id', clientId);
+
+                    const res = await api.post('/api/invoices', formData, true);
+                    setInvoiceData(res.data);
+                    
+                    // Update local app state
+                    setSelectedApp(prev => ({ ...prev, status: 'INVOICE SENT' }));
+                    toast.success('🧾 Invoice uploaded successfully!');
+                    setShowInvoiceModal(false);
+                    fetchData();
+                  } catch (err) {
+                    toast.error(err.message || 'Failed to upload invoice');
+                  } finally {
+                    setInvoiceSubmitting(false);
+                  }
+                }}
+              >
+                {invoiceSubmitting ? 'Uploading...' : '🧾 Upload Invoice'}
               </button>
             </div>
           </div>
