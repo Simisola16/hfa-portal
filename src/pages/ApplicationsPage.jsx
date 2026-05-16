@@ -205,7 +205,7 @@ export default function ApplicationsPage({ openNew }) {
   const [invoiceData, setInvoiceData] = useState(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({ title: '', amount: '', due_date: '', notes: '', file: null });
   const [invoiceSubmitting, setInvoiceSubmitting] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
@@ -443,81 +443,81 @@ export default function ApplicationsPage({ openNew }) {
                         const done = idx <= currentIdx;
                         const isProposalRejected = step === 'PROPOSAL SENT' && (selectedApp.status === 'PROPOSAL REJECTED' || proposalData?.status === 'rejected');
                         const isInvoiceStep = step === 'INVOICE SENT';
-                        const isInvoiceActive = selectedApp.status === 'INVOICE SENT' || selectedApp.status === 'PROPOSAL ACCEPTED/REJECTED';
-                        const canUploadInvoice = isInvoiceStep && (selectedApp.status === 'PROPOSAL ACCEPTED/REJECTED' || selectedApp.status === 'INVOICE SENT');
+                        const isPaymentStep = step === 'PAYMENT RECEIVED';
+                        const canPayInvoice = isPaymentStep && invoiceData && invoiceData.status !== 'paid';
+
                         return (
                           <div
                             key={step}
                             onClick={() => {
-                              if (canUploadInvoice) {
-                                setInvoiceForm({ title: `Invoice for ${selectedApp.application_number}`, amount: proposalData?.estimated_cost || '', due_date: '', notes: '', file: null });
-                                setShowInvoiceModal(true);
+                              if (canPayInvoice) {
+                                setShowPaymentModal(true);
                               }
                             }}
-                            title={canUploadInvoice ? 'Click to upload invoice' : undefined}
+                            title={canPayInvoice ? 'Click to confirm payment' : undefined}
                             style={{ 
-                              background: isProposalRejected ? '#fef2f2' : isInvoiceStep && canUploadInvoice ? 'linear-gradient(135deg,#f0fdf4,#f7fee7)' : done?'#f0fdf4':'#f1f5f9', 
-                              border:`2px solid ${isProposalRejected ? '#fca5a5' : isInvoiceStep && canUploadInvoice ? '#86efac' : done?'#bbf7d0':'#e2e8f0'}`, 
+                              background: isProposalRejected ? '#fef2f2' : canPayInvoice ? 'linear-gradient(135deg,#f0fdf4,#f7fee7)' : done?'#f0fdf4':'#f1f5f9', 
+                              border:`2px solid ${isProposalRejected ? '#fca5a5' : canPayInvoice ? '#86efac' : done?'#bbf7d0':'#e2e8f0'}`, 
                               borderRadius:8, display:'flex', flexDirection:'column', alignItems:'center', 
                               textAlign:'center', padding:'12px 6px', minHeight:75, position:'relative',
-                              cursor: canUploadInvoice ? 'pointer' : 'default',
-                              boxShadow: isProposalRejected ? '0 0 0 3px rgba(239,68,68,0.12)' : canUploadInvoice ? '0 0 0 3px rgba(22,163,74,0.15)' : 'none',
+                              cursor: canPayInvoice ? 'pointer' : 'default',
+                              boxShadow: isProposalRejected ? '0 0 0 3px rgba(239,68,68,0.12)' : canPayInvoice ? '0 0 0 3px rgba(22,163,74,0.15)' : 'none',
                               transition: 'all 0.2s'
                             }}
                           >
-                            <div style={{ width:'90%', height:8, background: isProposalRejected?'#ef4444': isInvoiceStep && canUploadInvoice ? '#16a34a' : done?'#22c55e':'#cbd5e1', borderRadius:4, marginBottom:10 }}/>
-                            <div style={{ fontSize:10, fontWeight:700, color: isProposalRejected?'#dc2626': isInvoiceStep && canUploadInvoice ? '#166534' : done?'#0f172a':'#64748b', textTransform:'uppercase', display:'flex', gap:4, alignItems:'center', lineHeight:'1.2' }}>
+                            <div style={{ width:'90%', height:8, background: isProposalRejected?'#ef4444': canPayInvoice ? '#16a34a' : done?'#22c55e':'#cbd5e1', borderRadius:4, marginBottom:10 }}/>
+                            <div style={{ fontSize:10, fontWeight:700, color: isProposalRejected?'#dc2626': canPayInvoice ? '#166534' : done?'#0f172a':'#64748b', textTransform:'uppercase', display:'flex', gap:4, alignItems:'center', lineHeight:'1.2' }}>
                               {isProposalRejected ? <X size={12} style={{ color:'#ef4444', minWidth:12 }}/> : done && <CheckCircle size={12} style={{ color:'#22c55e', minWidth:12 }}/>}{step}
                             </div>
                             {isProposalRejected && <div style={{ position:'absolute', bottom:3, fontSize:'8px', fontWeight:800, color:'#ef4444', textTransform:'uppercase' }}>REJECTED</div>}
-                            {canUploadInvoice && !invoiceData && <div style={{ position:'absolute', bottom:3, fontSize:'8px', fontWeight:800, color:'#16a34a', textTransform:'uppercase', display:'flex', alignItems:'center', gap:2 }}><Upload size={8}/>CLICK TO UPLOAD</div>}
-                            {canUploadInvoice && invoiceData && <div style={{ position:'absolute', bottom:3, fontSize:'8px', fontWeight:800, color:'#15803d', textTransform:'uppercase' }}>✓ UPLOADED</div>}
+                            {canPayInvoice && <div style={{ position:'absolute', bottom:3, fontSize:'8px', fontWeight:800, color:'#16a34a', textTransform:'uppercase', display:'flex', alignItems:'center', gap:2 }}><Upload size={8}/>PAY NOW</div>}
+                            {step === 'PAYMENT RECEIVED' && invoiceData?.status === 'paid' && <div style={{ position:'absolute', bottom:3, fontSize:'8px', fontWeight:800, color:'#15803d', textTransform:'uppercase' }}>✓ PAID</div>}
                           </div>
                         );
                       })}
                     </div>
 
-                    {/* Invoice Action Banner — shown when proposal is accepted or invoice already uploaded */}
-                    {(selectedApp.status === 'PROPOSAL ACCEPTED/REJECTED' || selectedApp.status === 'INVOICE SENT') && (
-                      <div style={{ background: invoiceData ? 'linear-gradient(135deg,#f0fdf4,#f7fef9)' : 'linear-gradient(135deg,#fffbeb,#fefce8)', border: `1.5px solid ${invoiceData ? '#86efac' : '#fde68a'}`, borderRadius:12, padding:'16px 20px', marginBottom:20, display:'flex', alignItems:'center', justifyContent:'space-between', gap:16 }}>
+                    {/* Invoice Action Banner — shown when invoice is sent by admin */}
+                    {invoiceData && (
+                      <div style={{ background: invoiceData.status === 'paid' ? 'linear-gradient(135deg,#f0fdf4,#f7fef9)' : invoiceData.status === 'client_paid' ? 'linear-gradient(135deg,#eff6ff,#f8fafc)' : 'linear-gradient(135deg,#fffbeb,#fefce8)', border: `1.5px solid ${invoiceData.status === 'paid' ? '#86efac' : invoiceData.status === 'client_paid' ? '#bfdbfe' : '#fde68a'}`, borderRadius:12, padding:'16px 20px', marginBottom:20, display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
                         <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-                          <div style={{ width:40, height:40, background: invoiceData ? '#dcfce7' : '#fef3c7', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                            {invoiceData ? <CheckCircle size={20} style={{ color:'#16a34a' }} /> : <AlertCircle size={20} style={{ color:'#d97706' }} />}
+                          <div style={{ width:40, height:40, background: invoiceData.status === 'paid' ? '#dcfce7' : invoiceData.status === 'client_paid' ? '#dbeafe' : '#fef3c7', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                            {invoiceData.status === 'paid' ? <CheckCircle size={20} style={{ color:'#16a34a' }} /> : invoiceData.status === 'client_paid' ? <CheckCircle size={20} style={{ color:'#2563eb' }} /> : <AlertCircle size={20} style={{ color:'#d97706' }} />}
                           </div>
                           <div>
-                            <div style={{ fontWeight:800, fontSize:14, color: invoiceData ? '#166534' : '#92400e', marginBottom:3 }}>
-                              {invoiceData ? `✓ Invoice Uploaded — ${invoiceData.invoice_number}` : '📄 Action Required: Upload Your Invoice'}
+                            <div style={{ fontWeight:800, fontSize:14, color: invoiceData.status === 'paid' ? '#166534' : invoiceData.status === 'client_paid' ? '#1e3a8a' : '#92400e', marginBottom:3 }}>
+                              {invoiceData.status === 'paid' ? `✓ Payment Complete` : invoiceData.status === 'client_paid' ? '✓ Payment Pending Admin Verification' : '📄 Action Required: Pay Your Invoice'}
                             </div>
-                            <div style={{ fontSize:12, color: invoiceData ? '#15803d' : '#b45309', lineHeight:1.4 }}>
-                              {invoiceData
-                                ? `Amount: £${invoiceData.amount} · Submitted · Click the INVOICE SENT card above to resend`
-                                : 'Your proposal has been accepted. Click the "INVOICE SENT" step above to upload your invoice document.'}
+                            <div style={{ fontSize:12, color: invoiceData.status === 'paid' ? '#15803d' : invoiceData.status === 'client_paid' ? '#1d4ed8' : '#b45309', lineHeight:1.4 }}>
+                              Invoice: {invoiceData.invoice_number} · Amount: £{invoiceData.amount}
                             </div>
                           </div>
                         </div>
-                        {invoiceData ? (
-                          <a
-                            href={getPdfUrl(invoiceData.invoice_url)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-outline btn-sm"
-                            style={{ whiteSpace:'nowrap', borderColor:'#86efac', color:'#16a34a', fontSize:12 }}
-                          >
-                            <FileText size={13} /> View PDF
-                          </a>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn btn-primary"
-                            style={{ background:'linear-gradient(135deg,#16a34a,#15803d)', border:'none', whiteSpace:'nowrap', fontSize:13, padding:'10px 18px' }}
-                            onClick={() => {
-                              setInvoiceForm({ title: `Invoice for ${selectedApp.application_number}`, amount: proposalData?.estimated_cost || '', due_date: '', notes: '', file: null });
-                              setShowInvoiceModal(true);
-                            }}
-                          >
-                            <Upload size={14} /> Upload Invoice
-                          </button>
-                        )}
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          {invoiceData.invoice_url && (
+                            <a
+                              href={getPdfUrl(invoiceData.invoice_url)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-outline btn-sm"
+                              style={{ whiteSpace:'nowrap', borderColor: invoiceData.status === 'paid' ? '#86efac' : '#cbd5e1', color: invoiceData.status === 'paid' ? '#16a34a' : '#475569', fontSize:12 }}
+                            >
+                              <FileText size={13} /> View Invoice
+                            </a>
+                          )}
+                          {invoiceData.status !== 'paid' && invoiceData.status !== 'client_paid' && (
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              style={{ background:'linear-gradient(135deg,#16a34a,#15803d)', border:'none', whiteSpace:'nowrap', fontSize:13, padding:'10px 18px' }}
+                              onClick={() => {
+                                setShowPaymentModal(true);
+                              }}
+                            >
+                              <Upload size={14} /> Confirm Payment
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
 
@@ -944,61 +944,28 @@ export default function ApplicationsPage({ openNew }) {
         </div>
       )}
 
-      {/* Upload Invoice Modal */}
-      {showInvoiceModal && selectedApp && (
+      {/* Confirm Payment Modal */}
+      {showPaymentModal && invoiceData && (
         <div className="modal-overlay" style={{ zIndex: 1100 }}>
-          <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header" style={{ background: 'linear-gradient(135deg, #f0fdf4, #fff)', borderBottom: '2px solid #86efac' }}>
               <div>
-                <span className="modal-title" style={{ color: '#166534' }}>🧾 Upload Invoice</span>
+                <span className="modal-title" style={{ color: '#166534' }}>💰 Confirm Payment</span>
                 <div style={{ fontSize: 12, color: '#15803d', marginTop: 4, fontWeight: 600 }}>
-                  {selectedApp.application_number}
+                  Invoice {invoiceData.invoice_number}
                 </div>
               </div>
-              <button className="modal-close" onClick={() => setShowInvoiceModal(false)}><X size={18} /></button>
+              <button className="modal-close" onClick={() => setShowPaymentModal(false)}><X size={18} /></button>
             </div>
             <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
               <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>
-                Upload your invoice or proof of payment for this application.
+                Please confirm that you have made the payment of <strong>£{invoiceData.amount}</strong>. You can optionally upload a proof of payment receipt.
               </p>
 
               <div className="form-group">
-                <label className="form-label">Invoice Title <span>*</span></label>
-                <input
-                  className="form-control"
-                  value={invoiceForm.title}
-                  onChange={e => setInvoiceForm(f => ({ ...f, title: e.target.value }))}
-                  placeholder="e.g. Halal Certification Invoice 2024"
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div className="form-group">
-                  <label className="form-label">Amount (£) <span>*</span></label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="form-control"
-                    value={invoiceForm.amount}
-                    onChange={e => setInvoiceForm(f => ({ ...f, amount: e.target.value }))}
-                    placeholder="e.g. 850.00"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Date</label>
-                  <input
-                    type="date"
-                    className="form-control"
-                    value={invoiceForm.due_date}
-                    onChange={e => setInvoiceForm(f => ({ ...f, due_date: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Invoice Document (PDF) <span>*</span></label>
+                <label className="form-label">Proof of Payment Document (PDF/Image) <span>(Optional)</span></label>
                 <div
-                  onClick={() => document.getElementById('invoice-file-input').click()}
+                  onClick={() => document.getElementById('payment-proof-file-input').click()}
                   style={{
                     border: '2px dashed #e2e8f0', padding: '28px 24px', borderRadius: '12px',
                     textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s',
@@ -1009,74 +976,52 @@ export default function ApplicationsPage({ openNew }) {
                 >
                   <FileText size={36} style={{ color: invoiceForm.file ? '#16a34a' : '#94a3b8', marginBottom: 10, margin: '0 auto' }} />
                   <div style={{ fontSize: 14, fontWeight: 600, color: '#334155', marginTop: 8 }}>
-                    {invoiceForm.file ? invoiceForm.file.name : 'Click to upload invoice PDF'}
+                    {invoiceForm.file ? invoiceForm.file.name : 'Click to upload receipt'}
                   </div>
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>PDF, DOCX accepted</div>
                   <input
-                    id="invoice-file-input"
+                    id="payment-proof-file-input"
                     type="file"
                     hidden
-                    accept=".pdf,.doc,.docx"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                     onChange={e => setInvoiceForm(f => ({ ...f, file: e.target.files[0] }))}
                   />
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Notes (Optional)</label>
-                <textarea
-                  className="form-control"
-                  rows={3}
-                  value={invoiceForm.notes}
-                  onChange={e => setInvoiceForm(f => ({ ...f, notes: e.target.value }))}
-                  placeholder="e.g. Attached is the invoice for the certification."
-                />
-              </div>
             </div>
             <div className="modal-footer" style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', flexDirection:'column', gap:12, alignItems:'stretch' }}>
-              {/* Status update info */}
               <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#166534', display:'flex', alignItems:'center', gap:8 }}>
                 <CheckCircle size={14} style={{ color:'#16a34a', flexShrink:0 }} />
-                <span>Uploading will automatically update your application status to <strong>INVOICE SENT</strong> and notify the HFA admin team.</span>
+                <span>This will notify the HFA admin team to verify your payment.</span>
               </div>
               <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-                <button className="btn btn-ghost" onClick={() => setShowInvoiceModal(false)}>Cancel</button>
+                <button className="btn btn-ghost" onClick={() => setShowPaymentModal(false)}>Cancel</button>
                 <button
                   className="btn btn-primary"
                   style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', border: 'none', padding:'10px 24px' }}
-                  disabled={invoiceSubmitting || !invoiceForm.title || !invoiceForm.amount || !invoiceForm.file}
+                  disabled={invoiceSubmitting}
                   onClick={async () => {
                     setInvoiceSubmitting(true);
                     try {
                       const formData = new FormData();
-                      formData.append('title', invoiceForm.title);
-                      formData.append('amount', invoiceForm.amount);
-                      if (invoiceForm.due_date) formData.append('due_date', invoiceForm.due_date);
-                      if (invoiceForm.notes) formData.append('notes', invoiceForm.notes);
-                      if (invoiceForm.file) formData.append('invoice_file', invoiceForm.file);
-                      const appId = selectedApp._id || selectedApp.id;
-                      formData.append('application_id', appId);
-                      const clientId = selectedApp.client_id;
-                      if (clientId) formData.append('client_id', clientId);
+                      if (invoiceForm.file) formData.append('payment_proof', invoiceForm.file);
 
-                      const res = await api.post('/api/invoices', formData, true);
-                      setInvoiceData(res.data);
+                      const res = await api.put(`/api/invoices/${invoiceData._id || invoiceData.id}/pay`, formData, true);
+                      setInvoiceData(res.data.data || res.data);
 
-                      // Update local app state to INVOICE SENT
-                      setSelectedApp(prev => ({ ...prev, status: 'INVOICE SENT' }));
-                      toast.success('🧾 Invoice uploaded! Status updated to INVOICE SENT.');
-                      setShowInvoiceModal(false);
+                      toast.success('Payment confirmed! Admin will verify it shortly.');
+                      setShowPaymentModal(false);
                       fetchData();
                     } catch (err) {
-                      toast.error(err.message || 'Failed to upload invoice');
+                      toast.error(err.message || 'Failed to confirm payment');
                     } finally {
                       setInvoiceSubmitting(false);
                     }
                   }}
                 >
                   {invoiceSubmitting
-                    ? <><span className="spinner-white" style={{ width:14, height:14 }} /> Uploading...</>
-                    : <><Upload size={15} /> Submit Invoice &amp; Update Status</>
+                    ? <><span className="spinner-white" style={{ width:14, height:14 }} /> Confirming...</>
+                    : <><CheckCircle size={15} /> Confirm Payment</>
                   }
                 </button>
               </div>
