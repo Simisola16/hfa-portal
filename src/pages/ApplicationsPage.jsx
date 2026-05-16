@@ -707,45 +707,7 @@ export default function ApplicationsPage({ openNew }) {
             </div>
 
             <div className="modal-body" style={{ minHeight: 450 }}>
-                              {modalStep === 1 && (
-                  <div className="animate-fade-in">
-                    <h3 className="section-title">Step 1: Application Basics</h3>
-                    <div className="form-group">
-                      <label className="form-label">Select Site <span>*</span></label>
-                      <select className="form-control" value={form.site_id} onChange={e => handleSiteChange(e.target.value)} required>
-                        <option value="">-- Select Site --</option>
-                        {sites.map(s => <option key={s._id} value={s._id}>{s.name} ({s.city})</option>)}
-                      </select>
-                    </div>
-                    <div className="form-grid">
-                      <div className="form-group">
-                        <label className="form-label">Application Type <span>*</span></label>
-                        <select className="form-control" value={form.application_type} onChange={e => setForm(f => ({...f, application_type: e.target.value}))}>
-                          <option value="new">New Application</option>
-                          <option value="renewal">Renewal</option>
-                          <option value="surveillance">Surveillance</option>
-                          <option value="addon">Add-on</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Category <span>*</span></label>
-                        <select className="form-control" value={form.category} onChange={e => setForm(f => ({...f, category: e.target.value}))}>
-                          {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    {/* Category description */}
-                    {CATEGORY_DETAILS[form.category] && (
-                      <div className="category-description" style={{ marginTop: 12, padding: 12, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                        <p style={{ margin: 0, fontSize: 13, color: '#1B7A7A' }}>{CATEGORY_DETAILS[form.category]}</p>
-                      </div>
-                    )}
-                    <div className="form-group">
-                      <label className="form-label">Scope of Certification <span>*</span></label>
-                      <textarea className="form-control" rows={3} placeholder="Describe the activities to be certified (e.g., Slaughtering and processing of poultry...)" value={form.scope} onChange={e => setForm(f => ({...f, scope: e.target.value}))} required />
-                    </div>
-                  </div>
-                )}
+              {modalStep === 1 && (
                 <div className="animate-fade-in">
                   <h3 className="section-title">Step 1: Application Basics</h3>
                   <div className="form-group">
@@ -772,16 +734,14 @@ export default function ApplicationsPage({ openNew }) {
                       </select>
                     </div>
                   </div>
-                  <div className="form-group">
+                  {CATEGORY_DETAILS[form.category] && (
+                    <div style={{ marginTop: 12, padding: '14px 16px', background: '#f0fdf9', borderRadius: 8, border: '1px solid #99e6d3' }}>
+                      <p style={{ margin: 0, fontSize: 13, color: '#1B7A7A', lineHeight: 1.6 }}>{CATEGORY_DETAILS[form.category]}</p>
+                    </div>
+                  )}
+                  <div className="form-group" style={{ marginTop: 16 }}>
                     <label className="form-label">Scope of Certification <span>*</span></label>
-                    <textarea 
-                      className="form-control" 
-                      rows={3} 
-                      placeholder="Describe the activities to be certified (e.g., Slaughtering and processing of poultry...)"
-                      value={form.scope}
-                      onChange={e => setForm(f => ({...f, scope: e.target.value}))}
-                      required
-                    />
+                    <textarea className="form-control" rows={3} placeholder="Describe the activities to be certified (e.g., Slaughtering and processing of poultry...)" value={form.scope} onChange={e => setForm(f => ({...f, scope: e.target.value}))} required />
                   </div>
                 </div>
               )}
