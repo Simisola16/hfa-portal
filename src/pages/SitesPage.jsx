@@ -232,9 +232,9 @@ export default function SitesPage() {
                       <label className="form-label">Category</label>
                       <select className="form-control" value={form.client_category} onChange={set('client_category')}>
                         <option value="">Select Category</option>
-                        <option value="A">Category A</option>
-                        <option value="B">Category B</option>
-                        <option value="C">Category C</option>
+                        <option value="Annual Certification - Food and General processing">Annual Certification - Food and General processing</option>
+                        <option value="Annual Certification - Meat Processing">Annual Certification - Meat Processing</option>
+                        <option value="UAE/GSO Approved Halal Certification For Exporters To The UAE">UAE/GSO Approved Halal Certification For Exporters To The UAE</option>
                       </select>
                     </div>
                   </div>
