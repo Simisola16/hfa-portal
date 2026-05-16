@@ -210,6 +210,10 @@ export default function ApplicationsPage({ openNew }) {
   const [invoiceSubmitting, setInvoiceSubmitting] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [auditData, setAuditData] = useState(null);
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [auditForm, setAuditForm] = useState({ selectedDates: [], unavailable: false });
+  const [auditSubmitting, setAuditSubmitting] = useState(false);
 
   const fetchProposalForApp = async (appId) => {
     setProposalLoading(true);
@@ -234,6 +238,16 @@ export default function ApplicationsPage({ openNew }) {
       console.error('Failed to load invoice', err);
     } finally {
       setInvoiceLoading(false);
+    }
+  };
+
+  const fetchAuditForApp = async (appId) => {
+    setAuditData(null);
+    try {
+      const res = await api.get(`/api/audits/application/${appId}`);
+      if (res.data?.data) setAuditData(res.data.data);
+    } catch (err) {
+      console.error('Failed to load audit', err);
     }
   };
 
@@ -272,6 +286,7 @@ export default function ApplicationsPage({ openNew }) {
     const appId = app._id || app.id;
     fetchProposalForApp(appId);
     fetchInvoiceForApp(appId);
+    fetchAuditForApp(appId);
   };
 
   const handleClose = () => {
@@ -521,6 +536,124 @@ export default function ApplicationsPage({ openNew }) {
                       </div>
                     )}
 
+                    {/* Audit Action Banner */}
+                    {auditData && (
+                      <div style={{ marginBottom: 20 }}>
+                        {auditData.status === 'dates_proposed' && (
+                          <div style={{ background: 'linear-gradient(135deg,#fffbeb,#fefce8)', border: '1.5px solid #fde68a', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                              <div style={{ width: 40, height: 40, background: '#fef3c7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <AlertCircle size={20} style={{ color: '#d97706' }} />
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 800, fontSize: 14, color: '#92400e', marginBottom: 3 }}>
+                                  🗓️ Action Required: Audit Dates Proposed
+                                </div>
+                                <div style={{ fontSize: 12, color: '#b45309', lineHeight: 1.4 }}>
+                                  Admin has proposed 3 dates. Please select exactly 2, or mark as unavailable.
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              style={{ background: 'linear-gradient(135deg,#d97706,#b45309)', border: 'none', whiteSpace: 'nowrap', fontSize: 13, padding: '10px 18px' }}
+                              onClick={() => {
+                                setAuditForm({ selectedDates: [], unavailable: false });
+                                setShowAuditModal(true);
+                              }}
+                            >
+                              <Calendar size={14} style={{ marginRight: 4 }}/> Select Dates
+                            </button>
+                          </div>
+                        )}
+
+                        {auditData.status === 'dates_accepted' && (
+                          <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#f7fef9)', border: '1.5px solid #bbf7d0', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                              <div style={{ width: 40, height: 40, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <CheckCircle size={20} style={{ color: '#16a34a' }} />
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 800, fontSize: 14, color: '#166534', marginBottom: 3 }}>
+                                  ✓ Audit Dates Selected
+                                </div>
+                                <div style={{ fontSize: 12, color: '#15803d', lineHeight: 1.4 }}>
+                                  Waiting for Admin to assign an auditor for {auditData.selected_dates?.map(d => new Date(d).toLocaleDateString()).join(' or ')}.
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {(auditData.status === 'auditors_assigned' || auditData.status === 'audit_completed') && (
+                          <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 12, padding: '16px 20px' }}>
+                            <div style={{ fontWeight: 800, fontSize: 14, color: '#0f172a', marginBottom: 12 }}>👨‍💼 Assigned Auditors</div>
+                            <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
+                              {auditData.auditors?.map((a, i) => (
+                                <div key={i} style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between' }}>
+                                  <div>
+                                    <div style={{ fontWeight: 700, fontSize: 13, color: '#334155' }}>{a.name}</div>
+                                    <div style={{ fontSize: 12, color: '#64748b' }}>{a.email} • {a.contact_number}</div>
+                                  </div>
+                                  <div style={{ fontSize: 11, background: '#e2e8f0', color: '#475569', padding: '4px 8px', borderRadius: '4px', height: 'fit-content' }}>{a.purpose || 'Audit'}</div>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            {auditData.nc_reports?.length > 0 && (
+                              <div style={{ borderTop: '2px dashed #cbd5e1', paddingTop: 16 }}>
+                                <div style={{ fontWeight: 800, fontSize: 14, color: '#b91c1c', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <AlertCircle size={16}/> Non-Conformity (NC) Reports
+                                </div>
+                                <div style={{ display: 'grid', gap: 12 }}>
+                                  {auditData.nc_reports.map((nc, i) => (
+                                    <div key={i} style={{ background: nc.status === 'corrected' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${nc.status === 'corrected' ? '#bbf7d0' : '#fecaca'}`, padding: '16px', borderRadius: '8px' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                        <span style={{ fontSize: 12, fontWeight: 700, color: nc.status === 'corrected' ? '#166534' : '#b91c1c', textTransform: 'uppercase' }}>
+                                          {nc.status === 'corrected' ? '✓ Corrected' : '⚠️ Action Required'}
+                                        </span>
+                                        <span style={{ fontSize: 11, color: '#64748b' }}>{new Date(nc.flagged_at).toLocaleDateString()}</span>
+                                      </div>
+                                      <p style={{ fontSize: 13, margin: '0 0 12px 0', color: '#334155' }}>{nc.text}</p>
+                                      
+                                      <div style={{ display: 'flex', gap: 12 }}>
+                                        {nc.document_url && (
+                                          <a href={getPdfUrl(nc.document_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ fontSize: 11 }}>View Document</a>
+                                        )}
+                                        {nc.status === 'flagged' && (
+                                          <button
+                                            className="btn btn-primary btn-sm"
+                                            style={{ fontSize: 11, background: '#dc2626', borderColor: '#dc2626' }}
+                                            onClick={async () => {
+                                              if (window.confirm('Have you corrected this Non-Conformity? This will notify the admin.')) {
+                                                try {
+                                                  const res = await api.post('/api/audits/resolve-nc', {
+                                                    audit_id: auditData._id || auditData.id,
+                                                    report_id: nc._id || nc.id
+                                                  });
+                                                  setAuditData(res.data.data);
+                                                  toast.success('NC Report marked as corrected!');
+                                                } catch(err) {
+                                                  toast.error(err.message || 'Failed to resolve NC report');
+                                                }
+                                              }
+                                            }}
+                                          >
+                                            Mark as Corrected
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div style={{ border:'1px solid #e2e8f0', borderRadius:12, background:'white', padding:'32px', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                       <h3 style={{ textAlign:'center', fontSize:18, fontWeight:800, color:'#334155', marginBottom:24, textTransform:'uppercase', letterSpacing:'0.05em' }}>
                         {selectedApp.processing_status || selectedApp.status?.replace(/_/g,' ').toUpperCase() || 'APPLICATION RECEIVED'}
@@ -641,7 +774,9 @@ export default function ApplicationsPage({ openNew }) {
                                   style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', border: 'none', whiteSpace: 'nowrap', fontSize: 13, padding: '10px 20px' }}
                                   onClick={() => {
                                     setInvoiceForm({ title: `Invoice for ${selectedApp.application_number}`, amount: proposalData.estimated_cost || '', due_date: '', notes: '', file: null });
-                                    setShowInvoiceModal(true);
+                                    fetchProposalForApp(selectedApp._id || selectedApp.id);
+                                    fetchInvoiceForApp(selectedApp._id || selectedApp.id);
+                                    fetchAuditForApp(selectedApp._id || selectedApp.id);
                                   }}
                                 >
                                   {invoiceData ? '↑ Resend Invoice' : '↑ Upload Invoice'}
@@ -1023,6 +1158,86 @@ export default function ApplicationsPage({ openNew }) {
                     ? <><span className="spinner-white" style={{ width:14, height:14 }} /> Confirming...</>
                     : <><CheckCircle size={15} /> Confirm Payment</>
                   }
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audit Form Modal */}
+      {showAuditModal && auditData?.status === 'dates_proposed' && (
+        <div className="modal-overlay" style={{ zIndex: 1200 }}>
+          <div className="modal" style={{ maxWidth: 500, padding: 0 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '20px' }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>🗓️ Select Audit Dates</div>
+              <button className="modal-close" onClick={() => setShowAuditModal(false)}><X size={20}/></button>
+            </div>
+            <div className="modal-body" style={{ padding: '24px' }}>
+              <p style={{ fontSize: 13, color: '#475569', marginBottom: 20 }}>
+                The Admin has proposed the following 3 dates for your upcoming audit. Please select <strong>exactly 2 dates</strong> that you are available, or indicate that you are not available on any of these days.
+              </p>
+
+              <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
+                {auditData.proposed_dates?.map((d, i) => (
+                  <label key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #cbd5e1', cursor: auditForm.unavailable ? 'not-allowed' : 'pointer', opacity: auditForm.unavailable ? 0.6 : 1 }}>
+                    <input
+                      type="checkbox"
+                      disabled={auditForm.unavailable}
+                      checked={auditForm.selectedDates.includes(d)}
+                      onChange={e => {
+                        let newDates = [...auditForm.selectedDates];
+                        if (e.target.checked) {
+                          if (newDates.length < 2) newDates.push(d);
+                          else toast.error('You can only select exactly 2 dates.');
+                        } else {
+                          newDates = newDates.filter(x => x !== d);
+                        }
+                        setAuditForm({ ...auditForm, selectedDates: newDates });
+                      }}
+                      style={{ width: 18, height: 18 }}
+                    />
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>{new Date(d).toDateString()}</span>
+                  </label>
+                ))}
+              </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={auditForm.unavailable}
+                  onChange={e => {
+                    setAuditForm({ unavailable: e.target.checked, selectedDates: [] });
+                  }}
+                  style={{ width: 16, height: 16 }}
+                />
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#b91c1c' }}>I am not available on any of these days</span>
+              </label>
+
+              <div style={{ marginTop: 32, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button className="btn btn-outline" onClick={() => setShowAuditModal(false)}>Cancel</button>
+                <button
+                  className="btn btn-primary"
+                  disabled={auditSubmitting || (!auditForm.unavailable && auditForm.selectedDates.length !== 2)}
+                  onClick={async () => {
+                    setAuditSubmitting(true);
+                    try {
+                      const res = await api.post('/api/audits/select-dates', {
+                        audit_id: auditData._id || auditData.id,
+                        selected_dates: auditForm.selectedDates,
+                        unavailable: auditForm.unavailable
+                      });
+                      setAuditData(res.data.data);
+                      setShowAuditModal(false);
+                      toast.success(auditForm.unavailable ? 'Admin notified. Waiting for new dates.' : 'Dates confirmed successfully!');
+                    } catch (err) {
+                      toast.error(err.message || 'Failed to submit selection');
+                    } finally {
+                      setAuditSubmitting(false);
+                    }
+                  }}
+                >
+                  {auditSubmitting ? 'Submitting...' : 'Submit Selection'}
                 </button>
               </div>
             </div>
