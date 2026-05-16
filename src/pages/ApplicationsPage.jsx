@@ -227,16 +227,19 @@ export default function ApplicationsPage({ openNew }) {
     setSubmitting(true);
     try {
       await api.put(`/api/proposals/${id}`, { status, client_comment: comment });
-      // If accepted/rejected, update application status on backend
-      await api.put(`/api/applications/${selectedApp._id || selectedApp.id}/status`, { status: 'PROPOSAL ACCEPTED/REJECTED' });
 
-      // Immediately update the local selectedApp state so the UI reflects the new progress
-      setSelectedApp(prev => ({ ...prev, status: 'PROPOSAL ACCEPTED/REJECTED' }));
+      // Set the correct application status depending on what the client chose
+      const newAppStatus = status === 'accepted' ? 'PROPOSAL ACCEPTED/REJECTED' : 'PROPOSAL REJECTED';
+      await api.put(`/api/applications/${selectedApp._id || selectedApp.id}/status`, { status: newAppStatus });
+
+      // Update local selectedApp state so the UI reflects the new status immediately
+      setSelectedApp(prev => ({ ...prev, status: newAppStatus }));
 
       toast.success(`Proposal ${status === 'accepted' ? 'accepted' : 'rejected'} successfully`);
       setShowRejectModal(false);
+      setRejectComment('');
       fetchProposalForApp(selectedApp._id || selectedApp.id);
-      fetchData(); // Refresh app data
+      fetchData();
     } catch (err) {
       toast.error(err.message || 'Failed to update proposal');
     } finally {
@@ -418,12 +421,20 @@ export default function ApplicationsPage({ openNew }) {
                       {ALL_STATUSES.map((step, idx) => {
                         const currentIdx = ALL_STATUSES.indexOf(selectedApp.processing_status || selectedApp.status?.toUpperCase() || 'APPLICATION RECEIVED');
                         const done = idx <= currentIdx;
+                        const isProposalRejected = step === 'PROPOSAL SENT' && (selectedApp.status === 'PROPOSAL REJECTED' || proposalData?.status === 'rejected');
                         return (
-                          <div key={step} style={{ background: done?'#f0fdf4':'#f1f5f9', border:`1px solid ${done?'#bbf7d0':'#e2e8f0'}`, borderRadius:8, display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', padding:'12px 6px', minHeight:75 }}>
-                            <div style={{ width:'90%', height:8, background: done?'#22c55e':'#cbd5e1', borderRadius:4, marginBottom:10 }}/>
-                            <div style={{ fontSize:10, fontWeight:700, color: done?'#0f172a':'#64748b', textTransform:'uppercase', display:'flex', gap:4, alignItems:'center', lineHeight:'1.2' }}>
-                              {done && <CheckCircle size={12} style={{ color:'#22c55e', minWidth:12 }}/>}{step}
+                          <div key={step} style={{ 
+                            background: isProposalRejected ? '#fef2f2' : done?'#f0fdf4':'#f1f5f9', 
+                            border:`2px solid ${isProposalRejected ? '#fca5a5' : done?'#bbf7d0':'#e2e8f0'}`, 
+                            borderRadius:8, display:'flex', flexDirection:'column', alignItems:'center', 
+                            textAlign:'center', padding:'12px 6px', minHeight:75, position:'relative',
+                            boxShadow: isProposalRejected ? '0 0 0 3px rgba(239,68,68,0.12)' : 'none'
+                          }}>
+                            <div style={{ width:'90%', height:8, background: isProposalRejected?'#ef4444': done?'#22c55e':'#cbd5e1', borderRadius:4, marginBottom:10 }}/>
+                            <div style={{ fontSize:10, fontWeight:700, color: isProposalRejected?'#dc2626': done?'#0f172a':'#64748b', textTransform:'uppercase', display:'flex', gap:4, alignItems:'center', lineHeight:'1.2' }}>
+                              {isProposalRejected ? <X size={12} style={{ color:'#ef4444', minWidth:12 }}/> : done && <CheckCircle size={12} style={{ color:'#22c55e', minWidth:12 }}/>}{step}
                             </div>
+                            {isProposalRejected && <div style={{ position:'absolute', bottom:3, fontSize:'8px', fontWeight:800, color:'#ef4444', textTransform:'uppercase' }}>REJECTED</div>}
                           </div>
                         );
                       })}
@@ -455,11 +466,36 @@ export default function ApplicationsPage({ openNew }) {
                         <div style={{ padding: 40, textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
                       ) : proposalData ? (
                         <div>
-                          <h4 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20, color: '#1e293b', textTransform: 'uppercase' }}>Certification Proposal</h4>
-                          
+                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 20, flexWrap:'wrap', gap:12 }}>
+                            <h4 style={{ fontSize: 18, fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', margin: 0 }}>Certification Proposal</h4>
+                            <span className={`badge ${
+                              proposalData.status === 'accepted' ? 'badge-green' :
+                              proposalData.status === 'rejected' ? 'badge-red' : 'badge-yellow'
+                            }`} style={{ fontSize: 12, padding: '4px 12px' }}>
+                              {proposalData.status === 'accepted' ? '✓ Accepted' : proposalData.status === 'rejected' ? '✗ Rejected' : '⏳ Pending Review'}
+                            </span>
+                          </div>
+
+                          {/* Rejected Banner */}
+                          {proposalData.status === 'rejected' && (
+                            <div style={{ background: 'linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%)', border: '1.5px solid #fca5a5', borderRadius: '12px', padding: '18px 20px', marginBottom: 20, display:'flex', gap:14, alignItems:'flex-start' }}>
+                              <div style={{ width:36, height:36, background:'#fee2e2', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:2 }}>
+                                <XCircle size={18} style={{ color:'#dc2626' }} />
+                              </div>
+                              <div>
+                                <div style={{ fontWeight:800, fontSize:14, color:'#991b1b', marginBottom:4 }}>You Rejected This Proposal</div>
+                                {proposalData.client_comment && (
+                                  <div style={{ fontSize:13, color:'#b91c1c', fontStyle:'italic', marginBottom:6 }}>"{proposalData.client_comment}"</div>
+                                )}
+                                <div style={{ fontSize:12, color:'#dc2626', fontWeight:600 }}>HFA will review your feedback and send a revised proposal. You will be notified once a new proposal is ready.</div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Cost + Document grid */}
                           <div style={{ display: 'grid', gridTemplateColumns: proposalData.proposal_url ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 20 }}>
                             {proposalData.proposal_url && (
-                              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
+                              <div style={{ background: proposalData.status === 'rejected' ? '#fef2f2' : '#f8fafc', border: `1px solid ${proposalData.status === 'rejected' ? '#fecaca' : '#e2e8f0'}`, padding: 16, borderRadius: 12 }}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Proposal Document</div>
                                 <a 
                                   href={getPdfUrl(proposalData.proposal_url)}
@@ -472,13 +508,22 @@ export default function ApplicationsPage({ openNew }) {
                                 </a>
                               </div>
                             )}
-                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
+                            <div style={{ background: proposalData.status === 'rejected' ? '#fef2f2' : '#f8fafc', border: `1px solid ${proposalData.status === 'rejected' ? '#fecaca' : '#e2e8f0'}`, padding: 16, borderRadius: 12 }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Estimated Cost</div>
-                              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--primary)', marginTop: 4 }}>
-                                {proposalData.currency || 'GBP'} {proposalData.amount || '—'}
+                              <div style={{ fontSize: 24, fontWeight: 800, color: proposalData.status === 'rejected' ? '#dc2626' : 'var(--primary)', marginTop: 4 }}>
+                                £{proposalData.estimated_cost || proposalData.amount || '—'}
                               </div>
                             </div>
                           </div>
+
+                          {proposalData.admin_comment && (
+                            <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 20 }}>
+                              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', marginBottom: 8, display:'flex', alignItems:'center', gap:6 }}>
+                                <FileText size={12} /> HFA Admin Message
+                              </div>
+                              <div style={{ fontSize: 14, color: '#334155', fontStyle: 'italic' }}>"{proposalData.admin_comment}"</div>
+                            </div>
+                          )}
 
                           {proposalData.details && (
                             <div style={{ marginBottom: 20, background: '#f8fafc', border: '1px solid #e2e8f0', padding: 20, borderRadius: 12 }}>
@@ -489,13 +534,6 @@ export default function ApplicationsPage({ openNew }) {
                             </div>
                           )}
 
-                          {proposalData.status === 'rejected' && proposalData.client_comment && (
-                            <div style={{ background: '#fef2f2', padding: 20, borderRadius: 12, border: '1px solid #fecaca', marginBottom: 20 }}>
-                              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#dc2626', marginBottom: 8 }}>My Rejection Reason</div>
-                              <div style={{ fontSize: 15, color: '#991b1b' }}>{proposalData.client_comment}</div>
-                            </div>
-                          )}
-                          
                           {proposalData.status === 'accepted' && (
                             <div style={{ background: '#f0fdf4', padding: 20, borderRadius: 12, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 16 }}>
                               <CheckCircle size={28} style={{ color: '#16a34a' }} />

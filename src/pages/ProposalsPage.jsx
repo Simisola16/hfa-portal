@@ -47,15 +47,15 @@ export default function ProposalsPage() {
     try {
       await api.put(`/api/proposals/${id}`, { status, client_comment: comment });
       
-      // Update application status
-      if (status === 'accepted' && selected?.application_id?._id) {
-        await api.put(`/api/applications/${selected.application_id._id}/status`, { status: 'PROPOSAL ACCEPTED/REJECTED' });
-      } else if (status === 'rejected' && selected?.application_id?._id) {
-        await api.put(`/api/applications/${selected.application_id._id}/status`, { status: 'PROPOSAL REJECTED' });
+      // Update application status correctly for both accepted and rejected
+      const newAppStatus = status === 'accepted' ? 'PROPOSAL ACCEPTED/REJECTED' : 'PROPOSAL REJECTED';
+      if (selected?.application_id?._id) {
+        await api.put(`/api/applications/${selected.application_id._id}/status`, { status: newAppStatus });
       }
 
       toast.success(`Proposal ${status === 'accepted' ? 'accepted' : 'rejected'} successfully`);
       setShowRejectModal(false);
+      setRejectComment('');
       setSelected(null);
       fetch();
     } catch (err) {
@@ -176,7 +176,7 @@ export default function ProposalsPage() {
                 <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Estimated Cost</div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)', marginTop: 4 }}>
-                    {selected.currency || 'GBP'} {selected.amount || '—'}
+                    £{selected.estimated_cost || selected.amount || '—'}
                   </div>
                 </div>
               </div>
