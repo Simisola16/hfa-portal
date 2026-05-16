@@ -29,14 +29,15 @@ const ALL_STATUSES = [
 
 const CATEGORIES = [
   'Annual Certification – Food and General processing',
-  'Annual Certification – Abattoir',
-  'Annual Certification – Restaurants and Catering',
-  'Annual Certification – Retailers',
-  'Annual Certification – Pharmaceutical and Cosmetics',
-  'Surveillance Audit',
-  'Export Certification',
-  'Product Certification',
+  'Annual Certification – Meat Processing',
+  'UAE/GSO Approved Halal Certification For Exporters To UAE',
 ];
+
+const CATEGORY_DETAILS = {
+  'Annual Certification – Food and General processing': 'This certification applies to manufacturers and processors of food and general consumer products. It covers ingredient sourcing, production processes, hygiene controls, and halal management systems across all product lines handled at the facility.',
+  'Annual Certification – Meat Processing': 'This certification is specifically designed for slaughterhouses, abattoirs, and meat processing facilities. It covers the full slaughter process, species handled, use of approved Muslim slaughtermen, stunning methods, and post-slaughter handling and processing in compliance with halal requirements.',
+  'UAE/GSO Approved Halal Certification For Exporters To UAE': 'This certification is issued to exporters supplying halal products to the UAE and other GCC countries. It meets the requirements of the UAE/GSO halal standards and covers product compliance, traceability, labelling, and documentation required by UAE import authorities.',
+};
 
 const STATUS_BADGE = {
   submitted:'badge-blue', 
@@ -706,7 +707,45 @@ export default function ApplicationsPage({ openNew }) {
             </div>
 
             <div className="modal-body" style={{ minHeight: 450 }}>
-              {modalStep === 1 && (
+                              {modalStep === 1 && (
+                  <div className="animate-fade-in">
+                    <h3 className="section-title">Step 1: Application Basics</h3>
+                    <div className="form-group">
+                      <label className="form-label">Select Site <span>*</span></label>
+                      <select className="form-control" value={form.site_id} onChange={e => handleSiteChange(e.target.value)} required>
+                        <option value="">-- Select Site --</option>
+                        {sites.map(s => <option key={s._id} value={s._id}>{s.name} ({s.city})</option>)}
+                      </select>
+                    </div>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label className="form-label">Application Type <span>*</span></label>
+                        <select className="form-control" value={form.application_type} onChange={e => setForm(f => ({...f, application_type: e.target.value}))}>
+                          <option value="new">New Application</option>
+                          <option value="renewal">Renewal</option>
+                          <option value="surveillance">Surveillance</option>
+                          <option value="addon">Add-on</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Category <span>*</span></label>
+                        <select className="form-control" value={form.category} onChange={e => setForm(f => ({...f, category: e.target.value}))}>
+                          {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    {/* Category description */}
+                    {CATEGORY_DETAILS[form.category] && (
+                      <div className="category-description" style={{ marginTop: 12, padding: 12, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                        <p style={{ margin: 0, fontSize: 13, color: '#1B7A7A' }}>{CATEGORY_DETAILS[form.category]}</p>
+                      </div>
+                    )}
+                    <div className="form-group">
+                      <label className="form-label">Scope of Certification <span>*</span></label>
+                      <textarea className="form-control" rows={3} placeholder="Describe the activities to be certified (e.g., Slaughtering and processing of poultry...)" value={form.scope} onChange={e => setForm(f => ({...f, scope: e.target.value}))} required />
+                    </div>
+                  </div>
+                )}
                 <div className="animate-fade-in">
                   <h3 className="section-title">Step 1: Application Basics</h3>
                   <div className="form-group">
