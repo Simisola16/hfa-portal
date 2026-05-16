@@ -53,6 +53,7 @@ export default function Layout() {
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
   const [notifLoading, setNotifLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const panelRef = useRef();
 
   const fetchNotifs = async () => {
@@ -79,8 +80,10 @@ export default function Layout() {
       if (panelRef.current && !panelRef.current.contains(e.target)) setShowNotifs(false);
     };
     document.addEventListener('mousedown', handler);
+    // Close sidebar on route change
+    setSidebarOpen(false);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [location.pathname]);
 
   const toggleNotifs = () => {
     if (!showNotifs) fetchNotifs();
@@ -113,12 +116,21 @@ export default function Layout() {
 
   return (
     <div className="app-layout">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
       <div className="main-content">
         <header className="topbar">
-          <div>
-            <div className="topbar-title">{page.title}</div>
-            <div className="topbar-subtitle">{page.sub}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="mobile-toggle" onClick={() => setSidebarOpen(true)}>
+              <div style={{ width: 24, height: 2, background: 'var(--primary)', position: 'relative' }}>
+                <div style={{ width: 24, height: 2, background: 'var(--primary)', position: 'absolute', top: -6 }}></div>
+                <div style={{ width: 24, height: 2, background: 'var(--primary)', position: 'absolute', top: 6 }}></div>
+              </div>
+            </button>
+            <div>
+              <div className="topbar-title">{page.title}</div>
+              <div className="topbar-subtitle">{page.sub}</div>
+            </div>
           </div>
           <div className="topbar-actions">
             {/* Notification Bell */}

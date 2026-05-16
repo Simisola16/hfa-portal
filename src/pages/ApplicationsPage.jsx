@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
-import { Plus, Search, Eye, RefreshCw, X, Upload, Check, ChevronRight, ChevronLeft, Trash2, ShieldCheck, FileText, CheckCircle, Download, XCircle } from 'lucide-react';
+import { Plus, Search, Eye, RefreshCw, X, Upload, Check, ChevronRight, ChevronLeft, Trash2, ShieldCheck, FileText, CheckCircle, Download, XCircle, CreditCard, AlertCircle } from 'lucide-react';
 
 const getPdfUrl = (url) => {
   if (!url) return '#';
@@ -197,10 +197,13 @@ export default function ApplicationsPage({ openNew }) {
   });
 
   const [viewModal, setViewModal] = useState(false);
-  const [viewStep, setViewStep] = useState(1); // 1: Details, 2: Processing
+  const [viewStep, setViewStep] = useState(1);
   const [selectedApp, setSelectedApp] = useState(null);
   const [proposalData, setProposalData] = useState(null);
   const [proposalLoading, setProposalLoading] = useState(false);
+  const [invoiceData, setInvoiceData] = useState(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
 
@@ -209,13 +212,24 @@ export default function ApplicationsPage({ openNew }) {
     setProposalData(null);
     try {
       const res = await api.get(`/api/proposals/application/${appId}`);
-      if (res.data) {
-        setProposalData(res.data);
-      }
+      if (res.data) setProposalData(res.data);
     } catch (err) {
       console.error('Failed to load proposal', err);
     } finally {
       setProposalLoading(false);
+    }
+  };
+
+  const fetchInvoiceForApp = async (appId) => {
+    setInvoiceLoading(true);
+    setInvoiceData(null);
+    try {
+      const res = await api.get(`/api/invoices/application/${appId}`);
+      if (res.data) setInvoiceData(res.data);
+    } catch (err) {
+      console.error('Failed to load invoice', err);
+    } finally {
+      setInvoiceLoading(false);
     }
   };
 
@@ -251,7 +265,9 @@ export default function ApplicationsPage({ openNew }) {
     setSelectedApp(app);
     setViewModal(true);
     setViewStep(1);
-    fetchProposalForApp(app._id || app.id);
+    const appId = app._id || app.id;
+    fetchProposalForApp(appId);
+    fetchInvoiceForApp(appId);
   };
 
   const handleClose = () => {
@@ -535,11 +551,111 @@ export default function ApplicationsPage({ openNew }) {
                           )}
 
                           {proposalData.status === 'accepted' && (
-                            <div style={{ background: '#f0fdf4', padding: 20, borderRadius: 12, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 16 }}>
-                              <CheckCircle size={28} style={{ color: '#16a34a' }} />
-                              <div>
-                                <div style={{ fontWeight: 800, color: '#166534', fontSize: 16 }}>Proposal Accepted</div>
-                                <div style={{ fontSize: 14, color: '#15803d', marginTop: 4 }}>You have approved this proposal. HFA will proceed with the next steps.</div>
+                            <div>
+                              {/* Accepted banner */}
+                              <div style={{ background: '#f0fdf4', padding: 16, borderRadius: 12, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                                <CheckCircle size={24} style={{ color: '#16a34a', flexShrink: 0 }} />
+                                <div>
+                                  <div style={{ fontWeight: 800, color: '#166534', fontSize: 15 }}>Proposal Accepted</div>
+                                  <div style={{ fontSize: 13, color: '#15803d', marginTop: 2 }}>HFA will now process your invoice. Please check below for your invoice details.</div>
+                                </div>
+                              </div>
+
+                              {/* Invoice Section */}
+                              <div style={{ border: '2px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+                                <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <CreditCard size={18} style={{ color: '#7dd3fc' }} />
+                                  <div style={{ fontWeight: 800, fontSize: 14, color: 'white', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Invoice</div>
+                                  {invoiceData && (
+                                    <span className={`badge ${invoiceData.status === 'paid' ? 'badge-green' : 'badge-yellow'}`} style={{ marginLeft: 'auto', fontSize: 11 }}>
+                                      {invoiceData.status === 'paid' ? '✓ Paid' : '⏳ Unpaid'}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div style={{ padding: 20 }}>
+                                  {invoiceLoading ? (
+                                    <div style={{ textAlign: 'center', padding: 30 }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+                                  ) : invoiceData ? (
+                                    <div>
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                                        <div style={{ background: '#f8fafc', borderRadius: 10, padding: 14, border: '1px solid #e2e8f0' }}>
+                                          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Invoice No.</div>
+                                          <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>{invoiceData.invoice_number}</div>
+                                        </div>
+                                        <div style={{ background: invoiceData.status === 'paid' ? '#f0fdf4' : '#fefce8', borderRadius: 10, padding: 14, border: `1px solid ${invoiceData.status === 'paid' ? '#bbf7d0' : '#fde68a'}` }}>
+                                          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Amount Due</div>
+                                          <div style={{ fontWeight: 800, fontSize: 22, color: invoiceData.status === 'paid' ? '#16a34a' : '#b45309' }}>£{parseFloat(invoiceData.amount || 0).toFixed(2)}</div>
+                                        </div>
+                                      </div>
+
+                                      {invoiceData.due_date && (
+                                        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                          <AlertCircle size={14} style={{ color: '#ea580c', flexShrink: 0 }} />
+                                          <div style={{ fontSize: 13, color: '#9a3412', fontWeight: 600 }}>Due by: {new Date(invoiceData.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+                                        </div>
+                                      )}
+
+                                      {invoiceData.notes && (
+                                        <div style={{ background: '#f8fafc', borderRadius: 8, padding: '12px 14px', marginBottom: 16, border: '1px solid #e2e8f0', fontSize: 13, color: '#475569' }}>
+                                          <strong>Note from HFA:</strong> {invoiceData.notes}
+                                        </div>
+                                      )}
+
+                                      {invoiceData.invoice_url && (
+                                        <a
+                                          href={getPdfUrl(invoiceData.invoice_url)}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="btn btn-outline btn-sm"
+                                          style={{ width: '100%', justifyContent: 'center', marginBottom: 16 }}
+                                        >
+                                          <Download size={14} /> Download Invoice PDF
+                                        </a>
+                                      )}
+
+                                      {invoiceData.status === 'paid' ? (
+                                        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                                          <CheckCircle size={20} style={{ color: '#16a34a' }} />
+                                          <div>
+                                            <div style={{ fontWeight: 800, color: '#166534', fontSize: 14 }}>Payment Confirmed</div>
+                                            <div style={{ fontSize: 12, color: '#15803d', marginTop: 2 }}>Paid on {invoiceData.paid_at ? new Date(invoiceData.paid_at).toLocaleDateString('en-GB') : 'N/A'}</div>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          className="btn btn-primary"
+                                          style={{ width: '100%', padding: '12px', fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none' }}
+                                          disabled={paymentSubmitting}
+                                          onClick={async () => {
+                                            if (!window.confirm('Confirm that you have made payment for this invoice?')) return;
+                                            setPaymentSubmitting(true);
+                                            try {
+                                              await api.put(`/api/invoices/${invoiceData._id || invoiceData.id}/pay`, {});
+                                              toast.success('✅ Payment confirmed! Status updated to Payment Received.');
+                                              fetchInvoiceForApp(selectedApp._id || selectedApp.id);
+                                              fetchData();
+                                              setSelectedApp(prev => ({ ...prev, status: 'PAYMENT RECEIVED' }));
+                                            } catch (err) {
+                                              toast.error(err.message || 'Failed to confirm payment');
+                                            } finally {
+                                              setPaymentSubmitting(false);
+                                            }
+                                          }}
+                                        >
+                                          <CreditCard size={16} />
+                                          {paymentSubmitting ? 'Processing...' : 'Confirm Payment Made'}
+                                        </button>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div style={{ textAlign: 'center', padding: '30px 20px' }}>
+                                      <CreditCard size={40} style={{ color: '#94a3b8', opacity: 0.4, marginBottom: 12 }} />
+                                      <div style={{ fontWeight: 700, fontSize: 14, color: '#64748b', marginBottom: 6 }}>Invoice Not Yet Issued</div>
+                                      <div style={{ fontSize: 13, color: '#94a3b8' }}>HFA will upload your invoice shortly. You will be notified once it is ready.</div>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           )}

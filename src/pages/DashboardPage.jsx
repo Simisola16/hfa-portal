@@ -61,7 +61,7 @@ export default function DashboardPage() {
   return (
     <div>
       {/* Welcome Banner */}
-      <div style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)', borderRadius: 'var(--radius-lg)', padding: '24px 28px', marginBottom: 24, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="welcome-banner" style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)', borderRadius: 'var(--radius-lg)', padding: '24px 28px', marginBottom: 24, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>
             Welcome back, {profile?.full_name?.split(' ')[0] || 'there'}! 👋
@@ -88,7 +88,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
+      <div className="dashboard-grid">
         {/* Recent Applications */}
         <div className="card">
           <div className="card-header">
