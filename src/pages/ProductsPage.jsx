@@ -99,26 +99,6 @@ export default function ProductsPage({ openNew: openNewProp }) {
 
   const filtered = products.filter(p => !search || p.name?.toLowerCase().includes(search.toLowerCase()));
 
-  // Reusable UI components for the new layout
-  const Panel = ({ title, children, style }) => (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column', ...style }}>
-      <div style={{ background: '#002855', color: '#fff', padding: '14px 16px', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-        {title}
-      </div>
-      <div style={{ padding: '20px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {children}
-      </div>
-    </div>
-  );
-
-  const InputLabel = ({ children }) => <label style={{ display: 'block', fontSize: '13px', color: '#475569', marginBottom: '6px' }}>{children}</label>;
-  const InputField = ({ type = "text", ...props }) => (
-    <input type={type} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', outline: 'none' }} {...props} />
-  );
-  const TextAreaField = ({ ...props }) => (
-    <textarea style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', minHeight: '90px', resize: 'vertical', outline: 'none' }} {...props} />
-  );
-
   return (
     <div>
       <div className="toolbar">
@@ -185,86 +165,89 @@ export default function ProductsPage({ openNew: openNewProp }) {
                   <div className="form-group"><label className="form-label">Description</label><textarea className="form-control" value={form.description} onChange={setF('description')} /></div>
                 </div>
               ) : (
-                // NEW PROFESSIONAL BULK ADD LAYOUT
-                <div style={{ background: '#e8f0f8', padding: '24px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '20px' }}>
-                    
-                    {/* Panel 1: CONTACT PERSON */}
-                    <Panel title="CONTACT PERSON">
-                      <div>
-                        <InputLabel>Contact Person Name:*</InputLabel>
-                        <InputField required value={bulkForm.contact_name} onChange={setB('contact_name')} />
-                      </div>
-                      <div>
-                        <InputLabel>Contact Person Number:*</InputLabel>
-                        <InputField required value={bulkForm.contact_number} onChange={setB('contact_number')} />
-                      </div>
-                      <div>
-                        <InputLabel>Contact Person E-mail:*</InputLabel>
-                        <InputField type="email" required value={bulkForm.contact_email} onChange={setB('contact_email')} />
-                      </div>
-                    </Panel>
+                // NATIVE UI FOR NEW PRODUCTS
+                <div className="modal-body" style={{ background: '#f9fafb' }}>
+                  
+                  {/* Section 1: Contact Person */}
+                  <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Contact Person</h4>
+                  <div className="form-grid-3">
+                    <div className="form-group">
+                      <label className="form-label">Name <span>*</span></label>
+                      <input className="form-control" required value={bulkForm.contact_name} onChange={setB('contact_name')} placeholder="Full Name" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Phone Number <span>*</span></label>
+                      <input className="form-control" required value={bulkForm.contact_number} onChange={setB('contact_number')} placeholder="+44..." />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">E-mail <span>*</span></label>
+                      <input type="email" className="form-control" required value={bulkForm.contact_email} onChange={setB('contact_email')} placeholder="email@example.com" />
+                    </div>
+                  </div>
 
-                    {/* Panel 2: MESSAGE */}
-                    <Panel title="MESSAGE">
-                      <div>
-                        <InputLabel>Subject:</InputLabel>
-                        <InputField value={bulkForm.subject} onChange={setB('subject')} />
-                      </div>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                        <InputLabel>Message:</InputLabel>
-                        <TextAreaField style={{ flex: 1, minHeight: '120px' }} value={bulkForm.message} onChange={setB('message')} />
-                      </div>
-                    </Panel>
+                  {/* Section 2: Message */}
+                  <div style={{ height: 1, background: 'var(--border)', margin: '8px 0 24px' }}></div>
+                  <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Message</h4>
+                  <div className="form-group">
+                    <label className="form-label">Subject</label>
+                    <input className="form-control" value={bulkForm.subject} onChange={setB('subject')} placeholder="Application Subject" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Message Content</label>
+                    <textarea className="form-control" value={bulkForm.message} onChange={setB('message')} placeholder="Any additional details..." style={{ minHeight: '100px' }} />
+                  </div>
 
-                    {/* Panel 3: TYPE (Products Table) */}
-                    <Panel title="TYPE" style={{ overflow: 'visible' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* Section 3: Products (TYPE) */}
+                  <div style={{ height: 1, background: 'var(--border)', margin: '8px 0 24px' }}></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Products to Add</h4>
+                  </div>
+                  
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: '#fff', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead style={{ background: '#f3f4f6' }}>
+                        <tr>
+                          <th style={{ padding: '10px 16px', width: '50px', textAlign: 'center' }}>ID</th>
+                          <th style={{ padding: '10px 16px' }}>Product Name</th>
+                          <th style={{ padding: '10px 16px' }}>Code / SKU</th>
+                          <th style={{ padding: '10px 16px' }}>Type</th>
+                          <th style={{ padding: '10px 16px', width: '50px' }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
                         {productList.map((prod, index) => (
-                          <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '40px 2fr 1fr 1.5fr 30px', border: '1px solid #cbd5e1', borderRadius: '4px', overflow: 'hidden', flex: 1, background: '#fff' }}>
-                              <div style={{ borderRight: '1px solid #cbd5e1', padding: '8px', fontSize: '13px', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
-                                {prod.id}
-                              </div>
-                              <div style={{ borderRight: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', padding: '0' }}>
-                                <input placeholder="Product Name:" style={{ width: '100%', padding: '8px 12px', border: 'none', fontSize: '13px', outline: 'none' }} value={prod.name} onChange={e => updateProductRow(index, 'name', e.target.value)} required />
-                              </div>
-                              <div style={{ borderRight: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', padding: '0' }}>
-                                <input placeholder="Code:" style={{ width: '100%', padding: '8px 12px', border: 'none', fontSize: '13px', outline: 'none' }} value={prod.code} onChange={e => updateProductRow(index, 'code', e.target.value)} />
-                              </div>
-                              <div style={{ borderRight: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', padding: '0' }}>
-                                <input placeholder="Type:" style={{ width: '100%', padding: '8px 12px', border: 'none', fontSize: '13px', outline: 'none' }} value={prod.type} onChange={e => updateProductRow(index, 'type', e.target.value)} />
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: '#f8fafc', padding: '0 8px' }} onClick={() => removeProductRow(index)} title="Remove row">
-                                <X size={14} color="#94a3b8" />
-                              </div>
-                            </div>
-                            
-                            {/* The "ADD" Button exactly like the screenshot */}
-                            {index === productList.length - 1 && (
-                              <button 
-                                type="button"
-                                onClick={addProductRow}
-                                style={{ background: '#0b0f19', color: '#fff', border: 'none', borderRadius: '4px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', height: '100%', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-                              >
-                                ADD
+                          <tr key={index} style={{ borderBottom: '1px solid var(--border)' }}>
+                            <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 600, color: 'var(--text-secondary)' }}>{prod.id}</td>
+                            <td style={{ padding: '10px 16px' }}>
+                              <input className="form-control" value={prod.name} onChange={e => updateProductRow(index, 'name', e.target.value)} required placeholder="Name" />
+                            </td>
+                            <td style={{ padding: '10px 16px' }}>
+                              <input className="form-control" value={prod.code} onChange={e => updateProductRow(index, 'code', e.target.value)} placeholder="Code" />
+                            </td>
+                            <td style={{ padding: '10px 16px' }}>
+                              <input className="form-control" value={prod.type} onChange={e => updateProductRow(index, 'type', e.target.value)} placeholder="Type" />
+                            </td>
+                            <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                              <button type="button" className="btn btn-ghost btn-icon" onClick={() => removeProductRow(index)} style={{ color: 'var(--text-muted)' }}>
+                                <X size={16} />
                               </button>
-                            )}
-                            {index !== productList.length - 1 && (
-                              <div style={{ width: '56px' }}></div> /* Spacer for alignment */
-                            )}
-                          </div>
+                            </td>
+                          </tr>
                         ))}
-                      </div>
-                    </Panel>
-                    
+                      </tbody>
+                    </table>
+                    <div style={{ padding: '12px 16px', background: '#f9fafb', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+                      <button type="button" className="btn btn-outline btn-sm" onClick={addProductRow}>
+                        <Plus size={14} /> Add Another Product
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
 
-              <div className="modal-footer" style={{ background: '#fff', borderTop: '1px solid #e2e8f0', padding: '16px 24px' }}>
+              <div className="modal-footer" style={{ background: '#fff' }}>
                 <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={submitting} style={{ background: '#002855' }}>
+                <button type="submit" className="btn btn-primary" disabled={submitting}>
                   {submitting ? <span className="spinner" style={{ width: 16, height: 16 }} /> : (editing ? 'Update Product' : 'Submit Products')}
                 </button>
               </div>
