@@ -234,6 +234,8 @@ export default function ApplicationsPage({ openNew }) {
   const [agreementSubmitting, setAgreementSubmitting] = useState(false);
   const [agreementFile, setAgreementFile] = useState(null);
   const [agreementComment, setAgreementComment] = useState('');
+  const [certificateData, setCertificateData] = useState(null);
+  const [certificateLoading, setCertificateLoading] = useState(false);
 
   const fetchProposalForApp = async (appId) => {
     setProposalLoading(true);
@@ -295,6 +297,19 @@ export default function ApplicationsPage({ openNew }) {
     }
   };
 
+  const fetchCertificateForApp = async (appId) => {
+    setCertificateLoading(true);
+    setCertificateData(null);
+    try {
+      const res = await api.get(`/api/certificates/application/${appId}`);
+      if (res.data) setCertificateData(res.data);
+    } catch (err) {
+      console.error('Failed to load certificate', err);
+    } finally {
+      setCertificateLoading(false);
+    }
+  };
+
   const handleStatusUpdate = async (id, status, comment = '') => {
     if (status === 'rejected' && !comment) {
       toast.error('Please provide a reason for rejection');
@@ -332,6 +347,7 @@ export default function ApplicationsPage({ openNew }) {
     fetchInvoiceForApp(appId);
     fetchAuditForApp(appId);
     fetchAgreementForApp(appId);
+    fetchCertificateForApp(appId);
   };
 
   const handleClose = () => {
@@ -557,7 +573,7 @@ export default function ApplicationsPage({ openNew }) {
 
               {/* Tabs */}
               <div style={{ display:'flex', gap:0, borderBottom:'2px solid #f1f5f9', width:'100%', marginBottom:-20, overflowX: 'auto', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
-                {[{id:1,label:'View Application'},{id:2,label:'Track Processing'},{id:3,label:'Proposal'},{id:4,label:'Audit Date'},{id:5,label:'Agreement'},{id:6,label:'Final Invoice'}].map(tab => (
+                {[{id:1,label:'View Application'},{id:2,label:'Track Processing'},{id:3,label:'Proposal'},{id:4,label:'Audit Date'},{id:5,label:'Agreement'},{id:6,label:'Final Invoice'},{id:7,label:'🏅 Certificate'}].map(tab => (
                   <button key={tab.id} onClick={() => setViewStep(tab.id)} style={{
                     padding:'10px 20px', border:'none', background:'none', cursor:'pointer',
                     fontSize:13, fontWeight:700,
@@ -1299,9 +1315,90 @@ export default function ApplicationsPage({ openNew }) {
                   </div>
                 </div>
               )}
+
+              {/* ── CERTIFICATE TAB ── */}
+              {viewStep === 7 && (
+                <div>
+                  <div style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:12, padding:24, marginBottom:20, minHeight: 300 }}>
+                    {certificateLoading ? (
+                      <div style={{ padding: 40, textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+                    ) : certificateData ? (
+                      <div>
+                        {/* Premium Certificate Card */}
+                        <div style={{
+                          background: 'linear-gradient(135deg, #064e3b 0%, #065f46 40%, #047857 100%)',
+                          borderRadius: 16, padding: '32px 28px', marginBottom: 24,
+                          position: 'relative', overflow: 'hidden', color: '#fff',
+                          boxShadow: '0 12px 40px rgba(6,78,59,0.35)'
+                        }}>
+                          <div style={{ position: 'absolute', right: -40, top: -40, width: 200, height: 200, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.08)' }} />
+                          <div style={{ position: 'absolute', right: -20, top: -20, width: 140, height: 140, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.06)' }} />
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#6ee7b7', marginBottom: 8 }}>🏅 Halal Food Authority</div>
+                              <h2 style={{ fontSize: 22, fontWeight: 900, margin: '0 0 6px', color: '#fff' }}>Certificate of Halal Compliance</h2>
+                              <div style={{ fontSize: 13, color: '#a7f3d0', fontWeight: 600 }}>{certificateData.certificate_type}</div>
+                            </div>
+                            <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 16px', textAlign: 'center', flexShrink: 0 }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#6ee7b7', marginBottom: 4 }}>Cert No.</div>
+                              <div style={{ fontSize: 14, fontWeight: 900, color: '#fff' }}>{certificateData.certificate_number}</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24 }}>
+                            <div>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: '#6ee7b7', textTransform: 'uppercase', marginBottom: 4 }}>Issue Date</div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>
+                                {certificateData.issue_date ? new Date(certificateData.issue_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'}
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: '#fca5a5', textTransform: 'uppercase', marginBottom: 4 }}>Expiry Date</div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>
+                                {certificateData.expiry_date ? new Date(certificateData.expiry_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'}
+                              </div>
+                            </div>
+                          </div>
+                          {certificateData.products_covered && (
+                            <div style={{ marginTop: 16, background: 'rgba(255,255,255,0.08)', borderRadius: 10, padding: '12px 16px' }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: '#6ee7b7', textTransform: 'uppercase', marginBottom: 6 }}>Products / Scope Covered</div>
+                              <div style={{ fontSize: 13, color: '#d1fae5', lineHeight: 1.6 }}>{certificateData.products_covered}</div>
+                            </div>
+                          )}
+                          <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', boxShadow: '0 0 8px #34d399' }} />
+                            <span style={{ fontSize: 12, fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active & Valid</span>
+                          </div>
+                        </div>
+                        {certificateData.certificate_url && (
+                          <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <a
+                              href={getPdfUrl(certificateData.certificate_url)}
+                              target="_blank" rel="noopener noreferrer"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg, #064e3b, #047857)', color: '#fff', padding: '14px 32px', borderRadius: 12, textDecoration: 'none', fontWeight: 800, fontSize: 15, boxShadow: '0 6px 24px rgba(6,78,59,0.3)' }}
+                              onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 30px rgba(6,78,59,0.4)'; }}
+                              onMouseOut={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(6,78,59,0.3)'; }}
+                            >
+                              <Download size={18} /> Download Certificate PDF
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                        <div style={{ fontSize: 64, marginBottom: 16 }}>🏅</div>
+                        <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1e293b', marginBottom: 8 }}>No Certificate Yet</h3>
+                        <p style={{ fontSize: 13, color: '#64748b', maxWidth: 380, margin: '0 auto', lineHeight: 1.6 }}>
+                          Your Halal Certificate will appear here once HFA has completed processing and issued it. You will be notified by email as soon as it is ready.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => { setViewModal(false); setSelectedApp(null); }}>Close</button>
+
             </div>
           </div>
         </div>
