@@ -392,6 +392,124 @@ export default function ApplicationsPage({ openNew }) {
                 </div>
                 <button className="modal-close" onClick={() => { setViewModal(false); setSelectedApp(null); }}><X size={20}/></button>
               </div>
+              {/* Audit Action Banner (Moved to top of Modal) */}
+              {auditData && (
+                <div style={{ margin: '16px 0', width: '100%' }}>
+                  {auditData.status === 'dates_proposed' && (
+                    <div style={{ background: 'linear-gradient(135deg,#fffbeb,#fefce8)', border: '1.5px solid #fde68a', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', width: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <div style={{ width: 40, height: 40, background: '#fef3c7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <AlertCircle size={20} style={{ color: '#d97706' }} />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: 14, color: '#92400e', marginBottom: 3 }}>
+                            🗓️ Action Required: Audit Dates Proposed
+                          </div>
+                          <div style={{ fontSize: 12, color: '#b45309', lineHeight: 1.4 }}>
+                            Admin has proposed 3 dates. Please select exactly 2, or mark as unavailable.
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={{ background: 'linear-gradient(135deg,#d97706,#b45309)', border: 'none', whiteSpace: 'nowrap', fontSize: 13, padding: '10px 18px' }}
+                        onClick={() => {
+                          setAuditForm({ selectedDates: [], unavailable: false });
+                          setShowAuditModal(true);
+                        }}
+                      >
+                        <Calendar size={14} style={{ marginRight: 4 }}/> Select Dates
+                      </button>
+                    </div>
+                  )}
+
+                  {auditData.status === 'dates_accepted' && (
+                    <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#f7fef9)', border: '1.5px solid #bbf7d0', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', width: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <div style={{ width: 40, height: 40, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <CheckCircle size={20} style={{ color: '#16a34a' }} />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: 14, color: '#166534', marginBottom: 3 }}>
+                            ✓ Audit Dates Selected
+                          </div>
+                          <div style={{ fontSize: 12, color: '#15803d', lineHeight: 1.4 }}>
+                            Waiting for Admin to assign an auditor for {auditData.selected_dates?.map(d => new Date(d).toLocaleDateString()).join(' or ')}.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {(auditData.status === 'auditors_assigned' || auditData.status === 'audit_completed') && (
+                    <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 12, padding: '16px 20px', width: '100%' }}>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: '#0f172a', marginBottom: 12 }}>👨‍💼 Assigned Auditors</div>
+                      <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
+                        {auditData.auditors?.map((a, i) => (
+                          <div key={i} style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between' }}>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: 13, color: '#334155' }}>{a.name}</div>
+                              <div style={{ fontSize: 12, color: '#64748b' }}>{a.email} • {a.contact_number}</div>
+                            </div>
+                            <div style={{ fontSize: 11, background: '#e2e8f0', color: '#475569', padding: '4px 8px', borderRadius: '4px', height: 'fit-content' }}>{a.purpose || 'Audit'}</div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {auditData.nc_reports?.length > 0 && (
+                        <div style={{ borderTop: '2px dashed #cbd5e1', paddingTop: 16 }}>
+                          <div style={{ fontWeight: 800, fontSize: 14, color: '#b91c1c', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <AlertCircle size={16}/> Non-Conformity (NC) Reports
+                          </div>
+                          <div style={{ display: 'grid', gap: 12 }}>
+                            {auditData.nc_reports.map((nc, i) => (
+                              <div key={i} style={{ background: nc.status === 'corrected' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${nc.status === 'corrected' ? '#bbf7d0' : '#fecaca'}`, padding: '16px', borderRadius: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: nc.status === 'corrected' ? '#166534' : '#b91c1c', textTransform: 'uppercase' }}>
+                                    {nc.status === 'corrected' ? '✓ Corrected' : '⚠️ Action Required'}
+                                  </span>
+                                  <span style={{ fontSize: 11, color: '#64748b' }}>{new Date(nc.flagged_at).toLocaleDateString()}</span>
+                                </div>
+                                <p style={{ fontSize: 13, margin: '0 0 12px 0', color: '#334155' }}>{nc.text}</p>
+                                
+                                <div style={{ display: 'flex', gap: 12 }}>
+                                  {nc.document_url && (
+                                    <a href={getPdfUrl(nc.document_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ fontSize: 11 }}>View Document</a>
+                                  )}
+                                  {nc.status === 'flagged' && (
+                                    <button
+                                      className="btn btn-primary btn-sm"
+                                      style={{ fontSize: 11, background: '#dc2626', borderColor: '#dc2626' }}
+                                      onClick={async () => {
+                                        if (window.confirm('Have you corrected this Non-Conformity? This will notify the admin.')) {
+                                          try {
+                                            const res = await api.post('/api/audits/resolve-nc', {
+                                              audit_id: auditData._id || auditData.id,
+                                              report_id: nc._id || nc.id
+                                            });
+                                            setAuditData(res.data);
+                                            toast.success('NC Report marked as corrected!');
+                                          } catch(err) {
+                                            toast.error(err.message || 'Failed to resolve NC report');
+                                          }
+                                        }
+                                      }}
+                                    >
+                                      Mark as Corrected
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Tabs */}
               <div style={{ display:'flex', gap:0, borderBottom:'2px solid #f1f5f9', width:'100%', marginBottom:-20 }}>
                 {[{id:1,label:'View Application'},{id:2,label:'Track Processing'},{id:3,label:'Proposal'}].map(tab => (
@@ -536,123 +654,7 @@ export default function ApplicationsPage({ openNew }) {
                       </div>
                     )}
 
-                    {/* Audit Action Banner */}
-                    {auditData && (
-                      <div style={{ marginBottom: 20 }}>
-                        {auditData.status === 'dates_proposed' && (
-                          <div style={{ background: 'linear-gradient(135deg,#fffbeb,#fefce8)', border: '1.5px solid #fde68a', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                              <div style={{ width: 40, height: 40, background: '#fef3c7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                <AlertCircle size={20} style={{ color: '#d97706' }} />
-                              </div>
-                              <div>
-                                <div style={{ fontWeight: 800, fontSize: 14, color: '#92400e', marginBottom: 3 }}>
-                                  🗓️ Action Required: Audit Dates Proposed
-                                </div>
-                                <div style={{ fontSize: 12, color: '#b45309', lineHeight: 1.4 }}>
-                                  Admin has proposed 3 dates. Please select exactly 2, or mark as unavailable.
-                                </div>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              className="btn btn-primary"
-                              style={{ background: 'linear-gradient(135deg,#d97706,#b45309)', border: 'none', whiteSpace: 'nowrap', fontSize: 13, padding: '10px 18px' }}
-                              onClick={() => {
-                                setAuditForm({ selectedDates: [], unavailable: false });
-                                setShowAuditModal(true);
-                              }}
-                            >
-                              <Calendar size={14} style={{ marginRight: 4 }}/> Select Dates
-                            </button>
-                          </div>
-                        )}
 
-                        {auditData.status === 'dates_accepted' && (
-                          <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#f7fef9)', border: '1.5px solid #bbf7d0', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                              <div style={{ width: 40, height: 40, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                <CheckCircle size={20} style={{ color: '#16a34a' }} />
-                              </div>
-                              <div>
-                                <div style={{ fontWeight: 800, fontSize: 14, color: '#166534', marginBottom: 3 }}>
-                                  ✓ Audit Dates Selected
-                                </div>
-                                <div style={{ fontSize: 12, color: '#15803d', lineHeight: 1.4 }}>
-                                  Waiting for Admin to assign an auditor for {auditData.selected_dates?.map(d => new Date(d).toLocaleDateString()).join(' or ')}.
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {(auditData.status === 'auditors_assigned' || auditData.status === 'audit_completed') && (
-                          <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 12, padding: '16px 20px' }}>
-                            <div style={{ fontWeight: 800, fontSize: 14, color: '#0f172a', marginBottom: 12 }}>👨‍💼 Assigned Auditors</div>
-                            <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
-                              {auditData.auditors?.map((a, i) => (
-                                <div key={i} style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between' }}>
-                                  <div>
-                                    <div style={{ fontWeight: 700, fontSize: 13, color: '#334155' }}>{a.name}</div>
-                                    <div style={{ fontSize: 12, color: '#64748b' }}>{a.email} • {a.contact_number}</div>
-                                  </div>
-                                  <div style={{ fontSize: 11, background: '#e2e8f0', color: '#475569', padding: '4px 8px', borderRadius: '4px', height: 'fit-content' }}>{a.purpose || 'Audit'}</div>
-                                </div>
-                              ))}
-                            </div>
-                            
-                            {auditData.nc_reports?.length > 0 && (
-                              <div style={{ borderTop: '2px dashed #cbd5e1', paddingTop: 16 }}>
-                                <div style={{ fontWeight: 800, fontSize: 14, color: '#b91c1c', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <AlertCircle size={16}/> Non-Conformity (NC) Reports
-                                </div>
-                                <div style={{ display: 'grid', gap: 12 }}>
-                                  {auditData.nc_reports.map((nc, i) => (
-                                    <div key={i} style={{ background: nc.status === 'corrected' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${nc.status === 'corrected' ? '#bbf7d0' : '#fecaca'}`, padding: '16px', borderRadius: '8px' }}>
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                                        <span style={{ fontSize: 12, fontWeight: 700, color: nc.status === 'corrected' ? '#166534' : '#b91c1c', textTransform: 'uppercase' }}>
-                                          {nc.status === 'corrected' ? '✓ Corrected' : '⚠️ Action Required'}
-                                        </span>
-                                        <span style={{ fontSize: 11, color: '#64748b' }}>{new Date(nc.flagged_at).toLocaleDateString()}</span>
-                                      </div>
-                                      <p style={{ fontSize: 13, margin: '0 0 12px 0', color: '#334155' }}>{nc.text}</p>
-                                      
-                                      <div style={{ display: 'flex', gap: 12 }}>
-                                        {nc.document_url && (
-                                          <a href={getPdfUrl(nc.document_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ fontSize: 11 }}>View Document</a>
-                                        )}
-                                        {nc.status === 'flagged' && (
-                                          <button
-                                            className="btn btn-primary btn-sm"
-                                            style={{ fontSize: 11, background: '#dc2626', borderColor: '#dc2626' }}
-                                            onClick={async () => {
-                                              if (window.confirm('Have you corrected this Non-Conformity? This will notify the admin.')) {
-                                                try {
-                                                  const res = await api.post('/api/audits/resolve-nc', {
-                                                    audit_id: auditData._id || auditData.id,
-                                                    report_id: nc._id || nc.id
-                                                  });
-                                                  setAuditData(res.data);
-                                                  toast.success('NC Report marked as corrected!');
-                                                } catch(err) {
-                                                  toast.error(err.message || 'Failed to resolve NC report');
-                                                }
-                                              }
-                                            }}
-                                          >
-                                            Mark as Corrected
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
 
                     <div style={{ border:'1px solid #e2e8f0', borderRadius:12, background:'white', padding:'32px', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                       <h3 style={{ textAlign:'center', fontSize:18, fontWeight:800, color:'#334155', marginBottom:24, textTransform:'uppercase', letterSpacing:'0.05em' }}>
