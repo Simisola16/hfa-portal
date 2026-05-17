@@ -228,6 +228,11 @@ export default function ApplicationsPage({ openNew }) {
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [auditForm, setAuditForm] = useState({ selectedDates: [], unavailable: false });
   const [auditSubmitting, setAuditSubmitting] = useState(false);
+  const [agreementData, setAgreementData] = useState(null);
+  const [agreementLoading, setAgreementLoading] = useState(false);
+  const [agreementSubmitting, setAgreementSubmitting] = useState(false);
+  const [agreementFile, setAgreementFile] = useState(null);
+  const [agreementComment, setAgreementComment] = useState('');
 
   const fetchProposalForApp = async (appId) => {
     setProposalLoading(true);
@@ -268,6 +273,19 @@ export default function ApplicationsPage({ openNew }) {
     }
   };
 
+  const fetchAgreementForApp = async (appId) => {
+    setAgreementLoading(true);
+    setAgreementData(null);
+    try {
+      const res = await api.get(`/api/agreements/application/${appId}`);
+      if (res.data) setAgreementData(res.data);
+    } catch (err) {
+      console.error('Failed to load agreement', err);
+    } finally {
+      setAgreementLoading(false);
+    }
+  };
+
   const handleStatusUpdate = async (id, status, comment = '') => {
     if (status === 'rejected' && !comment) {
       toast.error('Please provide a reason for rejection');
@@ -304,6 +322,7 @@ export default function ApplicationsPage({ openNew }) {
     fetchProposalForApp(appId);
     fetchInvoiceForApp(appId);
     fetchAuditForApp(appId);
+    fetchAgreementForApp(appId);
   };
 
   const handleClose = () => {
@@ -529,7 +548,7 @@ export default function ApplicationsPage({ openNew }) {
 
               {/* Tabs */}
               <div style={{ display:'flex', gap:0, borderBottom:'2px solid #f1f5f9', width:'100%', marginBottom:-20 }}>
-                {[{id:1,label:'View Application'},{id:2,label:'Track Processing'},{id:3,label:'Proposal'},{id:4,label:'Audit Date'}].map(tab => (
+                {[{id:1,label:'View Application'},{id:2,label:'Track Processing'},{id:3,label:'Proposal'},{id:4,label:'Audit Date'},{id:5,label:'Agreement'}].map(tab => (
                   <button key={tab.id} onClick={() => setViewStep(tab.id)} style={{
                     padding:'10px 20px', border:'none', background:'none', cursor:'pointer',
                     fontSize:13, fontWeight:700,
@@ -1005,6 +1024,193 @@ export default function ApplicationsPage({ openNew }) {
                         <h3 style={{ fontSize: 16, color: '#334155', marginBottom: 8 }}>No Audit Scheduled</h3>
                         <p style={{ fontSize: 13, color: '#64748b', maxWidth: 360, margin: '0 auto' }}>
                           An audit has not been scheduled yet. We will notify you once HFA starts proposing dates.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── AGREEMENT TAB ── */}
+              {viewStep === 5 && (
+                <div>
+                  <div style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:12, padding:24, marginBottom:20, minHeight: 300 }}>
+                    {agreementLoading ? (
+                      <div style={{ padding: 40, textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+                    ) : agreementData ? (
+                      <div>
+                        {/* Status Header */}
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 20, flexWrap:'wrap', gap:12 }}>
+                          <h4 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', margin: 0 }}>Certification Agreement</h4>
+                          <span className={`badge ${
+                            agreementData.status === 'approved' ? 'badge-green' :
+                            agreementData.status === 'signed' ? 'badge-blue' : 'badge-yellow'
+                          }`} style={{ fontSize: 12, padding: '4px 12px' }}>
+                            {agreementData.status === 'approved' ? '✓ Fully Approved' : 
+                             agreementData.status === 'signed' ? '✍️ Signed Copy Sent' : '⏳ Action Required: Review & Sign'}
+                          </span>
+                        </div>
+
+                        {/* Agreement Details Card */}
+                        <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 12, padding: 20, marginBottom: 24 }}>
+                          <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 6 }}>
+                            {agreementData.title}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
+                            Sent by HFA on: {new Date(agreementData.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </div>
+
+                          {agreementData.details && (
+                            <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: 16, borderRadius: 8, fontSize: 14, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.6, maxHeight: 200, overflowY: 'auto', marginBottom: 16 }}>
+                              {agreementData.details}
+                            </div>
+                          )}
+
+                          {agreementData.agreement_url && (
+                            <a 
+                              href={getPdfUrl(agreementData.agreement_url)} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="btn btn-outline" 
+                              style={{ color: '#1e3a8a', borderColor: '#bfdbfe', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                            >
+                              <FileText size={16} /> View/Download Agreement PDF
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Status Sections */}
+                        {agreementData.status === 'sent' && (
+                          <div style={{ borderTop: '2px dashed #cbd5e1', paddingTop: 20 }}>
+                            <div style={{ fontWeight: 800, fontSize: 14, color: '#1e3a8a', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                              ✍️ Upload Your Signed Copy
+                            </div>
+                            <p style={{ fontSize: 13, color: '#475569', marginBottom: 16, lineHeight: 1.5 }}>
+                              Please download the agreement document, review it, sign it, and upload the scanned/signed copy back to us to complete this phase.
+                            </p>
+
+                            <div className="form-group" style={{ marginBottom: 16 }}>
+                              <label className="form-label">Signed Agreement (PDF) <span>*</span></label>
+                              <div
+                                onClick={() => document.getElementById('client-signed-file-input').click()}
+                                style={{
+                                  border: '2px dashed #cbd5e1', padding: '24px', borderRadius: '12px',
+                                  textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s',
+                                  background: agreementFile ? '#f0fdf4' : '#fff'
+                                }}
+                                onMouseOver={e => e.currentTarget.style.borderColor = '#2563eb'}
+                                onMouseOut={e => e.currentTarget.style.borderColor = '#cbd5e1'}
+                              >
+                                <Upload size={32} style={{ color: agreementFile ? '#16a34a' : '#94a3b8', marginBottom: 8, margin: '0 auto' }} />
+                                <div style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>
+                                  {agreementFile ? agreementFile.name : 'Click to select signed PDF'}
+                                </div>
+                                <input
+                                  id="client-signed-file-input"
+                                  type="file"
+                                  hidden
+                                  accept=".pdf"
+                                  onChange={e => setAgreementFile(e.target.files[0])}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="form-group" style={{ marginBottom: 20 }}>
+                              <label className="form-label">Client Notes/Comments (Optional)</label>
+                              <textarea
+                                className="form-control"
+                                rows={3}
+                                value={agreementComment}
+                                onChange={e => setAgreementComment(e.target.value)}
+                                placeholder="Any comment or confirmation statement..."
+                              />
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                              <button
+                                type="button"
+                                className="btn btn-primary"
+                                style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', border: 'none', padding: '10px 24px', color: '#fff' }}
+                                disabled={agreementSubmitting || !agreementFile}
+                                onClick={async () => {
+                                  setAgreementSubmitting(true);
+                                  try {
+                                    const formData = new FormData();
+                                    formData.append('status', 'signed');
+                                    if (agreementComment) formData.append('client_comment', agreementComment);
+                                    if (agreementFile) formData.append('signed_agreement_file', agreementFile);
+
+                                    const res = await api.put(`/api/agreements/${agreementData._id || agreementData.id}`, formData, true);
+                                    setAgreementData(res.data);
+                                    
+                                    // Update application states
+                                    setSelectedApp(prev => ({ ...prev, status: 'SIGNED COPY OF AGREEMENT SENT' }));
+                                    toast.success('✍️ Signed agreement uploaded successfully! Status updated to SIGNED COPY OF AGREEMENT SENT.');
+                                    fetchData();
+                                  } catch (err) {
+                                    toast.error(err.message || 'Failed to upload signed agreement');
+                                  } finally {
+                                    setAgreementSubmitting(false);
+                                  }
+                                }}
+                              >
+                                {agreementSubmitting ? 'Uploading...' : 'Submit Signed Copy'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {agreementData.status === 'signed' && (
+                          <div style={{ background: 'linear-gradient(135deg, #eff6ff, #f8fafc)', border: '1.5px solid #bfdbfe', borderRadius: 12, padding: '16px 20px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                            <div style={{ width: 36, height: 36, background: '#dbeafe', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                              <CheckCircle size={18} style={{ color: '#2563eb' }} />
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 800, fontSize: 14, color: '#1e3a8a', marginBottom: 4 }}>Signed Copy Uploaded Successfully</div>
+                              <p style={{ fontSize: 13, color: '#1d4ed8', margin: '0 0 12px 0', lineHeight: 1.4 }}>
+                                HFA team will verify the signed document and transition your certification process to completion.
+                              </p>
+                              {agreementData.signed_agreement_url && (
+                                <a href={getPdfUrl(agreementData.signed_agreement_url)} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-sm" style={{ borderColor: '#2563eb', color: '#2563eb' }}>
+                                  View Your Uploaded Copy
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {agreementData.status === 'approved' && (
+                          <div style={{ background: 'linear-gradient(135deg, #f0fdf4, #f7fef9)', border: '1.5px solid #86efac', borderRadius: 12, padding: '16px 20px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                            <div style={{ width: 36, height: 36, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                              <CheckCircle size={18} style={{ color: '#16a34a' }} />
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 800, fontSize: 14, color: '#166534', marginBottom: 4 }}>Agreement Fully Signed &amp; Approved</div>
+                              <p style={{ fontSize: 13, color: '#15803d', margin: '0 0 12px 0', lineHeight: 1.4 }}>
+                                The agreement has been approved. Your certification process is proceeding towards the final steps.
+                              </p>
+                              <div style={{ display: 'flex', gap: 10 }}>
+                                {agreementData.agreement_url && (
+                                  <a href={getPdfUrl(agreementData.agreement_url)} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-sm" style={{ borderColor: '#86efac', color: '#16a34a' }}>
+                                    View Agreement
+                                  </a>
+                                )}
+                                {agreementData.signed_agreement_url && (
+                                  <a href={getPdfUrl(agreementData.signed_agreement_url)} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm" style={{ background: '#16a34a', borderColor: '#16a34a' }}>
+                                    View Approved Copy
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                        <FileText size={48} style={{ color: '#94a3b8', margin: '0 auto 16px' }} />
+                        <h3 style={{ fontSize: 16, color: '#334155', marginBottom: 8 }}>No Agreement Sent Yet</h3>
+                        <p style={{ fontSize: 13, color: '#64748b', maxWidth: 360, margin: '0 auto' }}>
+                          HFA has not yet generated a certification agreement for this application. You will be notified as soon as it is available.
                         </p>
                       </div>
                     )}
