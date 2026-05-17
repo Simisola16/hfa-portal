@@ -25,8 +25,10 @@ const ALL_STATUSES = [
   'PROPOSAL ACCEPTED/REJECTED',
   'INVOICE SENT',
   'PAYMENT RECEIVED',
+  'PROPOSE AUDIT DATE',
   'AUDIT DATE FINALIZED',
-  'AUDIT-SESSION',
+  'ASSIGN AUDITOR',
+  'AUDITED',
   'NC REPORTS',
   'NC REPORTS CLOSED',
   'AUDIT REPORT SUBMITTED',
@@ -931,10 +933,10 @@ export default function ApplicationsPage({ openNew }) {
 
                         {/* Audit Dates Grid */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 24 }}>
-                          {auditData.selected_dates?.length > 0 && (
+                          {auditData.status === 'dates_accepted' && auditData.selected_dates?.length > 0 && (
                             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: 20, borderRadius: 12 }}>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <Calendar size={14} /> Finalized Audit Dates
+                                <Calendar size={14} /> Selected Dates (Pending Admin Finalization)
                               </div>
                               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
                                 {auditData.selected_dates.map((d, i) => (
@@ -942,6 +944,20 @@ export default function ApplicationsPage({ openNew }) {
                                     {new Date(d).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })}
                                   </div>
                                 ))}
+                              </div>
+                              <p style={{ fontSize: 12, color: '#64748b', marginTop: 12, marginBottom: 0 }}>Waiting for HFA Admin to finalize 1 date from your selection.</p>
+                            </div>
+                          )}
+
+                          {['date_finalized', 'auditors_assigned', 'audit_completed'].includes(auditData.status) && auditData.finalized_date && (
+                            <div style={{ background: '#f0fdf4', border: '1px solid #16a34a', padding: 20, borderRadius: 12 }}>
+                              <div style={{ fontSize: 11, fontWeight: 800, color: '#15803d', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <Calendar size={14} /> Confirmed Audit Date
+                              </div>
+                              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
+                                <div style={{ background: '#16a34a', color: '#fff', fontWeight: 700, padding: '8px 16px', borderRadius: 8, fontSize: 14 }}>
+                                  {new Date(auditData.finalized_date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })}
+                                </div>
                               </div>
                             </div>
                           )}
@@ -1244,7 +1260,6 @@ export default function ApplicationsPage({ openNew }) {
                   </div>
                 </div>
               )}
-            </div>
 
               {/* ── FINAL INVOICE TAB ── */}
               {viewStep === 6 && (
@@ -1744,7 +1759,8 @@ export default function ApplicationsPage({ openNew }) {
             </div>
           </div>
         </div>
-      )}
+      ) : null;
+    })()}
 
       {/* Audit Form Modal */}
       {showAuditModal && auditData?.status === 'dates_proposed' && (
