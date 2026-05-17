@@ -216,6 +216,7 @@ export default function ApplicationsPage({ openNew }) {
   const [proposalData, setProposalData] = useState(null);
   const [proposalLoading, setProposalLoading] = useState(false);
   const [invoiceData, setInvoiceData] = useState(null);
+  const [allInvoicesData, setAllInvoicesData] = useState([]);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -251,8 +252,16 @@ export default function ApplicationsPage({ openNew }) {
     setInvoiceLoading(true);
     setInvoiceData(null);
     try {
-      const res = await api.get(`/api/invoices/application/${appId}`);
-      if (res.data) setInvoiceData(res.data);
+      const res = await api.get(`/api/invoices/application/${appId}/all`);
+      if (res.data && Array.isArray(res.data)) {
+        setAllInvoicesData(res.data);
+        // Initial invoice is usually the first one created
+        const initialInvoice = res.data[0] || null;
+        setInvoiceData(initialInvoice);
+      } else if (res.data) {
+        setInvoiceData(res.data);
+        setAllInvoicesData([res.data]);
+      }
     } catch (err) {
       console.error('Failed to load invoice', err);
     } finally {
@@ -547,8 +556,8 @@ export default function ApplicationsPage({ openNew }) {
               )}
 
               {/* Tabs */}
-              <div style={{ display:'flex', gap:0, borderBottom:'2px solid #f1f5f9', width:'100%', marginBottom:-20 }}>
-                {[{id:1,label:'View Application'},{id:2,label:'Track Processing'},{id:3,label:'Proposal'},{id:4,label:'Audit Date'},{id:5,label:'Agreement'}].map(tab => (
+              <div style={{ display:'flex', gap:0, borderBottom:'2px solid #f1f5f9', width:'100%', marginBottom:-20, overflowX: 'auto', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+                {[{id:1,label:'View Application'},{id:2,label:'Track Processing'},{id:3,label:'Proposal'},{id:4,label:'Audit Date'},{id:5,label:'Agreement'},{id:6,label:'Final Invoice'}].map(tab => (
                   <button key={tab.id} onClick={() => setViewStep(tab.id)} style={{
                     padding:'10px 20px', border:'none', background:'none', cursor:'pointer',
                     fontSize:13, fontWeight:700,
@@ -613,16 +622,18 @@ export default function ApplicationsPage({ openNew }) {
                         if (statusToFind === 'PROPOSAL REJECTED') currentIdx = 3;
                         const done = idx <= currentIdx;
                         const isProposalRejected = step === 'PROPOSAL SENT' && (selectedApp.status === 'PROPOSAL REJECTED' || proposalData?.status === 'rejected');
+                        const finalInvoice = allInvoicesData.length > 1 ? allInvoicesData[allInvoicesData.length - 1] : null;
                         const isInvoiceStep = step === 'INVOICE SENT';
                         const isPaymentStep = step === 'PAYMENT RECEIVED';
-                        const canPayInvoice = isPaymentStep && invoiceData && invoiceData.status !== 'paid';
+                        const isFinalPaymentStep = step === 'FINAL PAYMENT RECEIVED';
+                        const canPayInvoice = (isPaymentStep && invoiceData && invoiceData.status !== 'paid' && invoiceData.status !== 'client_paid') || (isFinalPaymentStep && finalInvoice && finalInvoice.status !== 'paid' && finalInvoice.status !== 'client_paid');
 
                         return (
                           <div
                             key={step}
                             onClick={() => {
                               if (canPayInvoice) {
-                                setShowPaymentModal(true);
+                                setShowPaymentModal(isFinalPaymentStep ? 'final' : true);
                               }
                             }}
                             title={canPayInvoice ? 'Click to confirm payment' : undefined}
@@ -1219,6 +1230,76 @@ export default function ApplicationsPage({ openNew }) {
               )}
             </div>
 
+              {/* ── FINAL INVOICE TAB ── */}
+              {viewStep === 6 && (
+                <div>
+                  <div style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:12, padding:24, marginBottom:20, minHeight: 300 }}>
+                    {invoiceLoading ? (
+                      <div style={{ padding: 40, textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+                    ) : allInvoicesData.length > 1 ? (
+                      (() => {
+                        const finalInvoice = allInvoicesData[allInvoicesData.length - 1];
+                        return (
+                          <div>
+                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 20, flexWrap:'wrap', gap:12 }}>
+                              <h4 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', margin: 0 }}>Final Invoice</h4>
+                              <span className={`badge ${
+                                finalInvoice.status === 'paid' ? 'badge-green' :
+                                finalInvoice.status === 'client_paid' ? 'badge-blue' : 'badge-yellow'
+                              }`} style={{ fontSize: 12, padding: '4px 12px' }}>
+                                {finalInvoice.status === 'paid' ? '✓ Fully Paid' : 
+                                 finalInvoice.status === 'client_paid' ? '✓ Payment Under Review' : '⏳ Pending Payment'}
+                              </span>
+                            </div>
+
+                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Amount Due</div>
+                              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--primary)', marginTop: 4 }}>
+                                £{finalInvoice.amount}
+                              </div>
+                              <div style={{ fontSize: 13, color: '#475569', marginTop: 8 }}>
+                                Invoice Number: {finalInvoice.invoice_number}
+                              </div>
+                              {finalInvoice.invoice_url && (
+                                <a 
+                                  href={getPdfUrl(finalInvoice.invoice_url)}
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="btn btn-outline btn-sm"
+                                  style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                                >
+                                  <Download size={14} /> Download Final Invoice
+                                </a>
+                              )}
+                            </div>
+
+                            {finalInvoice.status !== 'paid' && finalInvoice.status !== 'client_paid' && (
+                              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                <button
+                                  type="button"
+                                  className="btn btn-primary"
+                                  onClick={() => setShowPaymentModal('final')}
+                                >
+                                  Upload Proof of Payment
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                        <FileText size={48} style={{ color: '#94a3b8', margin: '0 auto 16px' }} />
+                        <h3 style={{ fontSize: 16, color: '#334155', marginBottom: 8 }}>No Final Invoice Yet</h3>
+                        <p style={{ fontSize: 13, color: '#64748b', maxWidth: 360, margin: '0 auto' }}>
+                          HFA has not generated a final invoice for this application yet.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => { setViewModal(false); setSelectedApp(null); }}>Close</button>
             </div>
@@ -1481,21 +1562,23 @@ export default function ApplicationsPage({ openNew }) {
       )}
 
       {/* Confirm Payment Modal */}
-      {showPaymentModal && invoiceData && (
+      {showPaymentModal && (() => {
+        const activeInvoiceToPay = showPaymentModal === 'final' ? allInvoicesData[allInvoicesData.length - 1] : invoiceData;
+        return activeInvoiceToPay ? (
         <div className="modal-overlay" style={{ zIndex: 1100 }}>
           <div className="modal" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header" style={{ background: 'linear-gradient(135deg, #f0fdf4, #fff)', borderBottom: '2px solid #86efac' }}>
               <div>
                 <span className="modal-title" style={{ color: '#166534' }}>💰 Confirm Payment</span>
                 <div style={{ fontSize: 12, color: '#15803d', marginTop: 4, fontWeight: 600 }}>
-                  Invoice {invoiceData.invoice_number}
+                  Invoice {activeInvoiceToPay.invoice_number}
                 </div>
               </div>
               <button className="modal-close" onClick={() => setShowPaymentModal(false)}><X size={18} /></button>
             </div>
             <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
               <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>
-                Please confirm that you have made the payment of <strong>£{invoiceData.amount}</strong>. You can optionally upload a proof of payment receipt.
+                Please confirm that you have made the payment of <strong>£{activeInvoiceToPay.amount}</strong>. You can optionally upload a proof of payment receipt.
               </p>
 
               <div className="form-group">
