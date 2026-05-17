@@ -260,7 +260,7 @@ export default function ApplicationsPage({ openNew }) {
     setAuditData(null);
     try {
       const res = await api.get(`/api/audits/application/${appId}`);
-      if (res.data?.data) setAuditData(res.data.data);
+      if (res.data) setAuditData(res.data);
     } catch (err) {
       console.error('Failed to load audit', err);
     } finally {
