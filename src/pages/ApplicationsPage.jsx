@@ -19,12 +19,25 @@ const getPdfUrl = (url) => {
 };
 
 const ALL_STATUSES = [
-  'APPLICATION RECEIVED','APPLICATION APPROVED/REJECT','PROPOSAL SENT',
-  'PROPOSAL ACCEPTED/REJECTED','INVOICE SENT','PAYMENT RECEIVED',
-  /* 'PRODUCT APPROVAL FORMS RECEIVED', */ 'AUDIT-SESSION',
-  'APPLICATION SUCCESSFUL/UNSUCCESSFUL','AGREEMENT SENT',
-  'SIGNED COPY OF AGREEMENT SENT','INVOICE FOR FINAL PAYMENT SENT',
-  'FINAL PAYMENT RECEIVED','CERTIFICATE PROCESSING','SEND CERTIFICATE'
+  'APPLICATION RECEIVED',
+  'APPLICATION APPROVED/REJECT',
+  'PROPOSAL SENT',
+  'PROPOSAL ACCEPTED/REJECTED',
+  'INVOICE SENT',
+  'PAYMENT RECEIVED',
+  'AUDIT DATE FINALIZED',
+  'AUDIT-SESSION',
+  'NC REPORTS',
+  'NC REPORTS CLOSED',
+  'AUDIT REPORT SUBMITTED',
+  'APPLICATION SUCCESSFUL/UNSUCCESSFUL',
+  'AGREEMENT SENT',
+  'SIGNED COPY OF AGREEMENT SENT',
+  'AGREEMENT SIGNED COPY RECEIVED',
+  'INVOICE FOR FINAL PAYMENT SENT',
+  'FINAL PAYMENT RECEIVED',
+  'CERTIFICATE PROCESSING',
+  'SEND CERTIFICATE'
 ];
 
 const CATEGORIES = [
@@ -572,7 +585,9 @@ export default function ApplicationsPage({ openNew }) {
                   <div style={{ background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:12, padding:24, marginBottom:20 }}>
                     <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:10, marginBottom:32 }}>
                       {ALL_STATUSES.map((step, idx) => {
-                        const currentIdx = ALL_STATUSES.indexOf(selectedApp.processing_status || selectedApp.status?.toUpperCase() || 'APPLICATION RECEIVED');
+                        const statusToFind = selectedApp.processing_status || selectedApp.status?.toUpperCase() || 'APPLICATION RECEIVED';
+                        let currentIdx = ALL_STATUSES.indexOf(statusToFind);
+                        if (statusToFind === 'PROPOSAL REJECTED') currentIdx = 3;
                         const done = idx <= currentIdx;
                         const isProposalRejected = step === 'PROPOSAL SENT' && (selectedApp.status === 'PROPOSAL REJECTED' || proposalData?.status === 'rejected');
                         const isInvoiceStep = step === 'INVOICE SENT';
