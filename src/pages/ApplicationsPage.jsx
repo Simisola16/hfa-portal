@@ -632,7 +632,7 @@ export default function ApplicationsPage({ openNew }) {
                                                     audit_id: auditData._id || auditData.id,
                                                     report_id: nc._id || nc.id
                                                   });
-                                                  setAuditData(res.data.data);
+                                                  setAuditData(res.data);
                                                   toast.success('NC Report marked as corrected!');
                                                 } catch(err) {
                                                   toast.error(err.message || 'Failed to resolve NC report');
@@ -1227,7 +1227,7 @@ export default function ApplicationsPage({ openNew }) {
                         selected_dates: auditForm.selectedDates,
                         unavailable: auditForm.unavailable
                       });
-                      setAuditData(res.data.data);
+                      setAuditData(res.data);
                       setShowAuditModal(false);
                       toast.success(auditForm.unavailable ? 'Admin notified. Waiting for new dates.' : 'Dates confirmed successfully!');
                     } catch (err) {
