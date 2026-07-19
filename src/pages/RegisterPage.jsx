@@ -19,6 +19,7 @@ export default function RegisterPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [devVerificationUrl, setDevVerificationUrl] = useState('');
   const navigate = useNavigate();
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
@@ -42,7 +43,7 @@ export default function RegisterPage() {
     
     setLoading(true);
     try {
-      await api.post('/api/auth/register', {
+      const res = await api.post('/api/auth/register', {
         full_name: form.full_name,
         email: form.email,
         password: form.password,
@@ -51,8 +52,15 @@ export default function RegisterPage() {
         company_phone: form.company_phone,
         country: form.country
       });
-      toast.success('Account created! Please check your email.');
-      navigate('/login');
+
+      if (res && res.verificationUrl) {
+        setDevVerificationUrl(res.verificationUrl);
+        setStep(3);
+        toast.success('Account created! Local verification available.');
+      } else {
+        toast.success('Account created! Please check your email.');
+        navigate('/login');
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
     } finally {
@@ -97,7 +105,7 @@ export default function RegisterPage() {
           <div className="auth-form-container">
             <div className="auth-form-header">
               <h2>Create Your Account</h2>
-              <p>Step {step} of 2: {step === 1 ? 'Business Information' : 'Login Credentials'}</p>
+              <p>{step === 3 ? 'Registration Complete' : `Step ${step} of 2: ${step === 1 ? 'Business Information' : 'Login Credentials'}`}</p>
             </div>
 
             {/* Stepper */}
@@ -106,8 +114,8 @@ export default function RegisterPage() {
                 <div className="step-circle">{step > 1 ? <Check size={16} /> : '1'}</div>
                 <span className="step-label">Business</span>
               </div>
-              <div className={`step ${step >= 2 ? 'active' : ''}`}>
-                <div className="step-circle">2</div>
+              <div className={`step ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
+                <div className="step-circle">{step > 2 ? <Check size={16} /> : '2'}</div>
                 <span className="step-label">Account</span>
               </div>
             </div>
@@ -182,6 +190,52 @@ export default function RegisterPage() {
                       {loading ? <span className="spinner-white" /> : <><UserPlus size={18} /> Register Now</>}
                     </button>
                   </div>
+                </div>
+              )}
+
+              {step === 3 && (
+                <div className="step-content animate-fade-in" style={{ textAlign: 'center', padding: '16px 0' }}>
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 16, padding: 24, marginBottom: 24 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifycontent: 'center', margin: '0 auto 16px' }}>
+                      <Check size={24} style={{ color: '#16a34a' }} />
+                    </div>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, color: '#166534', marginBottom: 8 }}>Account Created!</h3>
+                    <p style={{ fontSize: 14, color: '#4b5563', margin: 0 }}>
+                      Your account registration was successful.
+                    </p>
+                  </div>
+
+                  {devVerificationUrl && (
+                    <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 16, padding: 24, marginBottom: 24, textAlign: 'left' }}>
+                      <h4 style={{ fontSize: 15, fontWeight: 700, color: '#b45309', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        ⚠️ Development Mode Bypass
+                      </h4>
+                      <p style={{ fontSize: 13, color: '#78350f', marginBottom: 16, lineHeight: 1.5 }}>
+                        Resend API is unconfigured locally. Click below to verify your email address instantly:
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Extract token or redirect
+                          const token = new URL(devVerificationUrl).searchParams.get('token');
+                          navigate(`/verify-email?token=${token}`);
+                        }}
+                        className="auth-btn-primary"
+                        style={{ width: '100%', background: '#d97706', borderColor: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        Verify Email Instantly
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => navigate('/login')}
+                    className="btn-ghost"
+                    style={{ width: '100%', padding: '12px 20px', fontWeight: 600 }}
+                  >
+                    Go to Login Page
+                  </button>
                 </div>
               )}
             </form>
