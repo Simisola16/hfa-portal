@@ -48,7 +48,7 @@ export default function ProposalsPage() {
       await api.put(`/api/proposals/${id}`, { status, client_comment: comment });
       
       // Update application status correctly for both accepted and rejected
-      const newAppStatus = status === 'accepted' ? 'PROPOSAL ACCEPTED/REJECTED' : 'PROPOSAL REJECTED';
+      const newAppStatus = status === 'accepted' ? 'proposal_approved' : 'proposal_rejected';
       if (selected?.application_id?._id) {
         await api.put(`/api/applications/${selected.application_id._id}/status`, { status: newAppStatus });
       }

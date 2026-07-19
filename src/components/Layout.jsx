@@ -56,6 +56,30 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const panelRef = useRef();
 
+  const [checkingSite, setCheckingSite] = useState(true);
+  const [hasSite, setHasSite] = useState(false);
+
+  useEffect(() => {
+    if (profile && profile.role === 'client') {
+      api.get('/api/sites')
+        .then(res => {
+          const sites = res.data || [];
+          const userHasSite = sites.length > 0;
+          setHasSite(userHasSite);
+          
+          if (!userHasSite && location.pathname !== '/add-site') {
+            navigate('/add-site', { replace: true });
+          } else if (userHasSite && location.pathname === '/add-site') {
+            navigate('/dashboard', { replace: true });
+          }
+        })
+        .catch(() => {})
+        .finally(() => setCheckingSite(false));
+    } else {
+      setCheckingSite(false);
+    }
+  }, [profile, location.pathname, navigate]);
+
   const fetchNotifs = async () => {
     setNotifLoading(true);
     try {
@@ -113,6 +137,14 @@ export default function Layout() {
     setShowNotifs(false);
     if (n.link) navigate(n.link);
   };
+
+  if (checkingSite) {
+    return (
+      <div className="loading-overlay" style={{ height: '100vh' }}>
+        <div className="spinner" style={{ width: 40, height: 40 }} />
+      </div>
+    );
+  }
 
   return (
     <div className="app-layout">
@@ -230,7 +262,7 @@ export default function Layout() {
         <main className="page-content"><Outlet /></main>
 
         {/* Activation Overlay */}
-        {profile?.is_active === false && (
+        {profile?.is_active === false && !['/dashboard', '/sites', '/products', '/profile', '/add-site'].includes(location.pathname) && (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 40 }}>
             <div className="animate-in" style={{ maxWidth: 480, background: 'white', padding: 48, borderRadius: 32, boxShadow: '0 25px 60px rgba(0,0,0,0.12)', border: '1px solid #f1f5f9' }}>
               <div style={{ fontSize: 72, marginBottom: 24 }}>🛡️</div>

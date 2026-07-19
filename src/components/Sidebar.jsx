@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, FileText, Award, Package, Ship,
@@ -61,6 +61,7 @@ const navItems = [
   { icon: Users, label: "Manage Users", path: '/manage-users' },
   { icon: MapPin, label: 'Manage Sites', path: '/sites' },
   { icon: FileBarChart, label: 'Invoices', path: '/invoices' },
+  { icon: FileCheck, label: 'Agreements', path: '/agreements' },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -70,6 +71,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
   const toggle = (label) => setExpanded(prev => ({ ...prev, [label]: !prev[label] }));
 
+  const location = useLocation();
   const initials = profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
 
   const handleLogout = () => { logout(); navigate('/login'); };
@@ -93,54 +95,62 @@ export default function Sidebar({ isOpen, onClose }) {
 
       {/* Nav */}
       <nav className="sidebar-nav">
-        <div className="nav-section-label">Main Menu</div>
-        {navItems.map(item => {
-          const Icon = item.icon;
-          const isExpanded = expanded[item.label];
-          return (
-            <div key={item.label}>
-              {item.children ? (
-                <>
-                  <button className="nav-item" onClick={() => toggle(item.label)}>
-                    <Icon size={17} />
-                    <span>{item.label}</span>
-                    <span style={{ marginLeft: 'auto' }}>
-                      {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    </span>
-                  </button>
-                  {isExpanded && (
-                    <div className="nav-sub">
-                      {item.children.map(child => (
-                        <NavLink
-                          key={child.label}
-                          to={child.path}
-                          className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-                        >
-                          <span style={{ width: 17 }} />
-                          {child.label}
-                        </NavLink>
-                      ))}
-                    </div>
+        {location.pathname !== '/add-site' ? (
+          <>
+            <div className="nav-section-label">Main Menu</div>
+            {navItems.map(item => {
+              const Icon = item.icon;
+              const isExpanded = expanded[item.label];
+              return (
+                <div key={item.label}>
+                  {item.children ? (
+                    <>
+                      <button className="nav-item" onClick={() => toggle(item.label)}>
+                        <Icon size={17} />
+                        <span>{item.label}</span>
+                        <span style={{ marginLeft: 'auto' }}>
+                          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        </span>
+                      </button>
+                      {isExpanded && (
+                        <div className="nav-sub">
+                          {item.children.map(child => (
+                            <NavLink
+                              key={child.label}
+                              to={child.path}
+                              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+                            >
+                              <span style={{ width: 17 }} />
+                              {child.label}
+                            </NavLink>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <NavLink
+                      to={item.path}
+                      className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+                    >
+                      <Icon size={17} />
+                      {item.label}
+                    </NavLink>
                   )}
-                </>
-              ) : (
-                <NavLink
-                  to={item.path}
-                  className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-                >
-                  <Icon size={17} />
-                  {item.label}
-                </NavLink>
-              )}
-            </div>
-          );
-        })}
+                </div>
+              );
+            })}
 
-        <div className="nav-section-label" style={{ marginTop: 12 }}>Account</div>
-        <NavLink to="/profile" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-          <Settings size={17} />
-          Profile &amp; Settings
-        </NavLink>
+            <div className="nav-section-label" style={{ marginTop: 12 }}>Account</div>
+            <NavLink to="/profile" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+              <Settings size={17} />
+              Profile &amp; Settings
+            </NavLink>
+          </>
+        ) : (
+          <div style={{ padding: '24px 16px', color: '#64748b', fontSize: 13, textAlign: 'center', lineHeight: 1.5 }}>
+            Please register your business site to enable portal features.
+          </div>
+        )}
       </nav>
 
       {/* Footer */}
