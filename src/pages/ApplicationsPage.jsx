@@ -77,20 +77,33 @@ export default function ApplicationsPage({ openNew }) {
 
   const [newProduct, setNewProduct] = useState({ name: '', brand: '', category: '' });
   const [files, setFiles] = useState({});
+  const [hasActiveCert, setHasActiveCert] = useState(false);
+  const [addOnApps, setAddOnApps] = useState([]);
+  const [addOnLoading, setAddOnLoading] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
+    setAddOnLoading(true);
     try {
-      const [appsRes, sitesRes] = await Promise.all([
+      const [appsRes, sitesRes, certsRes, addOnRes] = await Promise.all([
         api.get('/api/applications'),
-        api.get('/api/sites')
+        api.get('/api/sites'),
+        api.get('/api/certificates').catch(() => ({ data: [] })),
+        api.get('/api/add-on-applications').catch(() => ({ data: [] }))
       ]);
       setApps(appsRes.data || []);
       setSites(sitesRes.data || []);
+      
+      const active = (certsRes.data || []).some(c => 
+        c.status === 'active' && new Date(c.expiry_date) >= new Date()
+      );
+      setHasActiveCert(active);
+      setAddOnApps(addOnRes.data || []);
     } catch (err) {
       toast.error('Failed to load data');
     } finally {
       setLoading(false);
+      setAddOnLoading(false);
     }
   };
 
@@ -312,6 +325,24 @@ export default function ApplicationsPage({ openNew }) {
           <Plus size={15} /> New Application
         </button>
 
+        {hasActiveCert ? (
+          <button 
+            className="btn btn-primary" 
+            onClick={() => navigate('/addon-applications/new')} 
+            style={{ marginLeft: 8, background: 'linear-gradient(135deg, #0284c7, #0369a1)', borderColor: '#0284c7' }}
+          >
+            <Plus size={15} /> New Add-on Application
+          </button>
+        ) : (
+          <div style={{
+            display: 'flex', alignItems: 'center', background: '#fff7ed', border: '1px solid #ffedd5',
+            padding: '8px 14px', borderRadius: 10, fontSize: 12, color: '#c2410c', marginLeft: 8,
+            fontWeight: 500
+          }}>
+            <HelpCircle size={15} style={{ marginRight: 6, color: '#ea580c', flexShrink: 0 }} /> 
+            Add-on applications are available once you hold an active certificate.
+          </div>
+        )}
       </div>
 
       <div style={{ background: '#fff', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)', overflow: 'hidden', marginTop: 24 }}>
@@ -397,6 +428,137 @@ export default function ApplicationsPage({ openNew }) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Add-on Applications Section */}
+      <div style={{ background: '#fff', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)', overflow: 'hidden', marginTop: 32 }}>
+        <div style={{ padding: '24px 32px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fafaf9' }}>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <PlusCircle size={20} style={{ color: '#0284c7' }} /> 
+            Add-on Applications <span style={{ background: '#e0f2fe', color: '#0369a1', fontSize: 12, padding: '2px 10px', borderRadius: 30 }}>{addOnApps.length}</span>
+          </h3>
+        </div>
+        
+        <div style={{ padding: '24px 32px' }}>
+          {addOnLoading ? (
+            <div style={{ padding: 40, textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+          ) : addOnApps.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', background: '#f8fafc', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
+              <PlusCircle size={36} color="#94a3b8" style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+              <h4 style={{ fontSize: 15, fontWeight: 700, color: '#475569', marginBottom: 4 }}>No Add-on Applications</h4>
+              <p style={{ fontSize: 13, color: '#64748b', maxWidth: 400, margin: '0 auto' }}>If you hold an active certificate and need to modify products, use the button above to submit a request.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {addOnApps.map(app => {
+                // Determine step index for tracker: 
+                // Submitted -> Under Review -> Approved/Rejected -> Inspection Assigned -> Inspection Completed -> Completed
+                const steps = ['submitted', 'under_review', 'approved_or_rejected', 'inspection_assigned', 'inspection_completed', 'completed'];
+                let currentStepIndex = 0;
+                
+                if (app.status === 'submitted') currentStepIndex = 0;
+                else if (app.status === 'under_review') currentStepIndex = 1;
+                else if (app.status === 'approved' || app.status === 'rejected') currentStepIndex = 2;
+                else if (app.status === 'inspection_assigned') currentStepIndex = 3;
+                else if (app.status === 'inspection_completed') currentStepIndex = 4;
+                else if (app.status === 'completed') currentStepIndex = 5;
+
+                const isRejected = app.status === 'rejected';
+
+                return (
+                  <div key={app._id} style={{ border: '1px solid #e2e8f0', borderRadius: 16, padding: '24px', background: '#fff' }}>
+                    {/* Header: Certificate Number and Action */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', background: app.action_type === 'add' ? '#f0fdf4' : app.action_type === 'remove' ? '#fef2f2' : '#f0f9ff', color: app.action_type === 'add' ? '#15803d' : app.action_type === 'remove' ? '#b91c1c' : '#0369a1', borderRadius: 6, textTransform: 'uppercase' }}>
+                            {app.action_type === 'change_name' ? 'rename' : app.action_type}
+                          </span>
+                          <span style={{ fontWeight: 800, fontSize: 15, color: '#1e293b' }}>
+                            Cert: {app.certificate_id?.certificate_number || '—'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 13, color: '#475569', marginTop: 8, fontWeight: 500 }}>
+                          {app.action_type === 'add' && <>Adding product: <strong>{app.new_product_name}</strong></>}
+                          {app.action_type === 'remove' && <>Removing product: <strong>{app.product_name}</strong></>}
+                          {app.action_type === 'change_name' && <>Renaming: <strong>{app.product_name}</strong> → <strong>{app.new_product_name}</strong></>}
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                        <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>
+                          Submitted: {new Date(app.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </div>
+                        {app.assigned_food_tech && (
+                          <div style={{ fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
+                            🔍 Inspector: {app.assigned_food_tech.full_name}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Tracker Progress Bar */}
+                    <div style={{ margin: '24px 0 16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', width: '100%' }}>
+                        {/* Connecting Line */}
+                        <div style={{ position: 'absolute', top: 12, left: '4%', right: '4%', height: 3, background: '#e2e8f0', zIndex: 1 }} />
+                        <div style={{ position: 'absolute', top: 12, left: '4%', width: `${(currentStepIndex / 5) * 92}%`, height: 3, background: isRejected ? '#ef4444' : 'var(--primary)', zIndex: 2, transition: 'all 0.4s ease' }} />
+                        
+                        {[
+                          { label: 'Submitted', key: 'submitted' },
+                          { label: 'Under Review', key: 'under_review' },
+                          { label: isRejected ? 'Rejected' : 'Approved', key: 'approved_or_rejected' },
+                          { label: 'Inspection', key: 'inspection_assigned' },
+                          { label: 'Inspected', key: 'inspection_completed' },
+                          { label: 'Completed', key: 'completed' }
+                        ].map((s, idx) => {
+                          const isDone = idx <= currentStepIndex;
+                          const isCurrent = idx === currentStepIndex;
+                          let dotColor = '#e2e8f0';
+                          let textColor = '#94a3b8';
+                          
+                          if (isDone) {
+                            dotColor = isRejected && idx === 2 ? '#ef4444' : 'var(--primary)';
+                            textColor = isRejected && idx === 2 ? '#ef4444' : 'var(--text-dark)';
+                          }
+                          if (isCurrent) {
+                            dotColor = isRejected ? '#ef4444' : 'var(--primary)';
+                            textColor = isRejected ? '#ef4444' : 'var(--primary)';
+                          }
+
+                          return (
+                            <div key={s.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 3, width: '16%', textAlign: 'center' }}>
+                              <div style={{
+                                width: 24, height: 24, borderRadius: '50%', background: dotColor, border: '4px solid #white',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
+                                fontSize: 10, fontWeight: 700, boxShadow: isCurrent ? '0 0 0 4px rgba(27,122,122,0.15)' : 'none'
+                              }}>
+                                {isDone ? '✓' : idx + 1}
+                              </div>
+                              <span style={{ fontSize: 11, fontWeight: isCurrent ? 800 : 600, color: textColor, marginTop: 8 }}>{s.label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Rejection / Notes details */}
+                    {isRejected && app.rejection_reason && (
+                      <div style={{ marginTop: 16, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#991b1b' }}>
+                        <strong>Rejection Reason:</strong> {app.rejection_reason}
+                      </div>
+                    )}
+                    {app.status === 'completed' && (
+                      <div style={{ marginTop: 16, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#166534' }}>
+                        ✓ This add-on application has been successfully completed. Your active certificate products list has been updated.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

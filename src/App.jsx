@@ -11,6 +11,7 @@ import VerifyEmailPage from './pages/VerifyEmailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
+import AddOnApplicationPage from './pages/AddOnApplicationPage';
 import ApplicationsPage from './pages/ApplicationsPage';
 import CertificatesPage from './pages/CertificatesPage';
 import ProductsPage from './pages/ProductsPage';
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/new" element={<ApplicationsPage openNew />} />
+            <Route path="/addon-applications/new" element={<AddOnApplicationPage />} />
             <Route path="/proposals" element={<ProposalsPage />} />
             <Route path="/proposals/new" element={<ProposalsPage openNew />} />
             <Route path="/certificates" element={<CertificatesPage />} />
