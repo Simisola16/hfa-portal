@@ -179,10 +179,11 @@ export default function TrackProcessing() {
   const showProposalAction = status === 'proposal_sent';
   const showPaymentAction = status === 'invoice_sent' && invoice && invoice.status !== 'client_paid' && invoice.status !== 'paid';
   const showPaymentPending = (status === 'invoice_sent' && invoice && invoice.status === 'client_paid') || (status === 'payment_received' && invoice && invoice.status !== 'paid');
-  const showPaymentConfirmed = status === 'payment_received' && (!invoice || invoice.status === 'paid');
-  const showAuditAction = status === 'dates_proposed';
-  const showAuditDatesAccepted = status === 'dates_accepted';
-  const showAuditScheduled = status === 'date_finalized' || status === 'audit_assigned';
+  const showPaymentConfirmed = (status === 'payment_received' || (invoice && invoice.status === 'paid' && status === 'invoice_sent')) && (!audit || audit.status === 'pending');
+  const showAuditAction = status === 'dates_proposed' || audit?.status === 'dates_proposed';
+  const showAuditDatesRejected = status === 'dates_rejected' || audit?.status === 'dates_rejected';
+  const showAuditDatesAccepted = status === 'dates_accepted' || audit?.status === 'dates_accepted';
+  const showAuditScheduled = status === 'date_finalized' || status === 'audit_assigned' || audit?.status === 'date_finalized' || audit?.status === 'auditors_assigned';
   const showAgreementAction = status === 'agreement_sent';
 
   return (
@@ -327,6 +328,8 @@ export default function TrackProcessing() {
             </div>
           </div>
         </div>
+      )}
+
       {/* Payment confirmed — awaiting admin date proposal */}
       {showPaymentConfirmed && (
         <div style={{
@@ -342,6 +345,26 @@ export default function TrackProcessing() {
             <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>Payment Confirmed</div>
             <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
               Your payment has been successfully verified by HFA. Our administration team is preparing your audit schedule. We will propose three available audit dates for your selection shortly.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audit dates rejected — waiting for admin to re-propose */}
+      {showAuditDatesRejected && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fef2f2, #fff5f5)',
+          border: '1.5px solid #fecaca', borderRadius: 16,
+          padding: '20px 24px', marginBottom: 24,
+          display: 'flex', alignItems: 'flex-start', gap: 16
+        }}>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Calendar size={22} style={{ color: '#dc2626' }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: '#991b1b', marginBottom: 4 }}>Audit Dates Rejected</div>
+            <div style={{ fontSize: 13, color: '#b91c1c', lineHeight: 1.6 }}>
+              You indicated that you were unavailable for the proposed audit dates. HFA Admin has been notified and is preparing 3 new date options for you.
             </div>
           </div>
         </div>
