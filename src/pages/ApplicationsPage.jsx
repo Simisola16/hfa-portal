@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
-import { Plus, Search, RefreshCw, X, Upload, Check, ChevronRight, ChevronLeft, Trash2, ShieldCheck, FileText } from 'lucide-react';
+import { Plus, HelpCircle, Search, RefreshCw, X, Upload, Check, ChevronRight, ChevronLeft, Trash2, ShieldCheck, FileText } from 'lucide-react';
 import { STATUS_LABELS, STATUS_BADGE } from '../lib/applicationStatuses';
 const CATEGORIES = [
   'Annual Certification – Food and General processing',
