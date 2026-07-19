@@ -178,8 +178,11 @@ export default function TrackProcessing() {
   // Helper flags for action stepper
   const showProposalAction = status === 'proposal_sent';
   const showPaymentAction = status === 'invoice_sent' && invoice && invoice.status !== 'client_paid' && invoice.status !== 'paid';
-  const showPaymentPending = status === 'invoice_sent' && invoice && invoice.status === 'client_paid';
+  const showPaymentPending = (status === 'invoice_sent' && invoice && invoice.status === 'client_paid') || (status === 'payment_received' && invoice && invoice.status !== 'paid');
+  const showPaymentConfirmed = status === 'payment_received' && (!invoice || invoice.status === 'paid');
   const showAuditAction = status === 'dates_proposed';
+  const showAuditDatesAccepted = status === 'dates_accepted';
+  const showAuditScheduled = status === 'date_finalized' || status === 'audit_assigned';
   const showAgreementAction = status === 'agreement_sent';
 
   return (
@@ -321,6 +324,64 @@ export default function TrackProcessing() {
             <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
               Your payment receipt has been submitted. The HFA finance team is currently reviewing and confirming your payment.
               You will receive a notification once it has been verified.
+            </div>
+          </div>
+        </div>
+      {/* Payment confirmed — awaiting admin date proposal */}
+      {showPaymentConfirmed && (
+        <div style={{
+          background: 'linear-gradient(135deg, #f0fdf4, #fffbeb)',
+          border: '1.5px solid #86efac', borderRadius: 16,
+          padding: '20px 24px', marginBottom: 24,
+          display: 'flex', alignItems: 'flex-start', gap: 16
+        }}>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <CheckCircle size={22} style={{ color: '#16a34a' }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>Payment Confirmed</div>
+            <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
+              Your payment has been successfully verified by HFA. Our administration team is preparing your audit schedule. We will propose three available audit dates for your selection shortly.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audit dates chosen — awaiting admin final date confirmation */}
+      {showAuditDatesAccepted && (
+        <div style={{
+          background: 'linear-gradient(135deg, #e0f2fe, #f0f9ff)',
+          border: '1.5px solid #bae6fd', borderRadius: 16,
+          padding: '20px 24px', marginBottom: 24,
+          display: 'flex', alignItems: 'flex-start', gap: 16
+        }}>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#bae6fd', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Calendar size={22} style={{ color: '#0284c7' }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: '#0369a1', marginBottom: 4 }}>Preferred Audit Dates Selected</div>
+            <div style={{ fontSize: 13, color: '#075985', lineHeight: 1.6 }}>
+              You have submitted your preferred audit dates. HFA is currently coordinating with our auditors to lock in the final audit date. We will notify you once finalized.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audit scheduled / finalized */}
+      {showAuditScheduled && audit && (
+        <div style={{
+          background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
+          border: '1.5px solid #a7f3d0', borderRadius: 16,
+          padding: '20px 24px', marginBottom: 24,
+          display: 'flex', alignItems: 'flex-start', gap: 16
+        }}>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Calendar size={22} style={{ color: '#10b981' }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: '#065f46', marginBottom: 4 }}>Audit Scheduled</div>
+            <div style={{ fontSize: 13, color: '#047857', lineHeight: 1.6 }}>
+              Your audit has been finalized and scheduled for: <strong>{audit.finalized_date || audit.scheduled_date ? new Date(audit.finalized_date || audit.scheduled_date).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Pending final date'}</strong>. Please ensure all relevant documentation and staff are prepared for this date.
             </div>
           </div>
         </div>

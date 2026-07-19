@@ -12,6 +12,14 @@ export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('expired_impersonation') === '1') {
+      toast.error('This impersonation session has expired.', { id: 'impersonation-expired' });
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) return toast.error('Please fill in all fields');

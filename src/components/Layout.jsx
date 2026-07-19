@@ -46,7 +46,7 @@ function timeAgo(date) {
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, endImpersonation } = useAuth();
   const page = pageTitles[location.pathname] || { title: 'HFA Portal', sub: 'Halal Food Authority UK' };
 
   const [showNotifs, setShowNotifs] = useState(false);
@@ -147,8 +147,50 @@ export default function Layout() {
   }
 
   return (
-    <div className="app-layout">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {profile?.is_impersonation && (
+        <div style={{
+          background: 'linear-gradient(90deg, #d97706, #b45309)',
+          color: 'white',
+          padding: '10px 24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '13px',
+          fontWeight: 700,
+          zIndex: 99999,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          position: 'sticky',
+          top: 0,
+          fontFamily: 'Inter, sans-serif'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <AlertTriangle size={15} />
+            <span>You are viewing this account as <strong>{profile.admin_name || 'Admin'}</strong> (Admin mode)</span>
+          </div>
+          <button
+            onClick={endImpersonation}
+            style={{
+              background: 'white',
+              color: '#b45309',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '4px 12px',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseOver={e => { e.currentTarget.style.background = '#fef3c7'; }}
+            onMouseOut={e => { e.currentTarget.style.background = 'white'; }}
+          >
+            End Impersonation
+          </button>
+        </div>
+      )}
+      <div className="app-layout" style={{ flex: 1 }}>
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
       <div className="main-content">
         <header className="topbar">
@@ -276,5 +318,6 @@ export default function Layout() {
         )}
       </div>
     </div>
+  </div>
   );
 }

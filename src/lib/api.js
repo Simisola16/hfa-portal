@@ -4,6 +4,15 @@ function getToken() {
   return localStorage.getItem('hfa_token');
 }
 
+function isTokenImpersonated(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return !!payload.is_impersonation;
+  } catch (e) {
+    return false;
+  }
+}
+
 async function request(method, path, body, isFormData = false) {
   const token = getToken();
   const headers = {};
@@ -15,6 +24,12 @@ async function request(method, path, body, isFormData = false) {
     headers,
     body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
   });
+
+  if (res.status === 401 && token && isTokenImpersonated(token)) {
+    localStorage.removeItem('hfa_token');
+    window.location.href = '/login?expired_impersonation=1';
+    return new Promise(() => {}); // prevent further execution
+  }
 
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Request failed');
