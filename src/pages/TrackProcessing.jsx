@@ -177,7 +177,8 @@ export default function TrackProcessing() {
 
   // Helper flags for action stepper
   const showProposalAction = status === 'proposal_sent';
-  const showPaymentAction = status === 'invoice_sent';
+  const showPaymentAction = status === 'invoice_sent' && invoice && invoice.status !== 'client_paid' && invoice.status !== 'paid';
+  const showPaymentPending = status === 'invoice_sent' && invoice && invoice.status === 'client_paid';
   const showAuditAction = status === 'dates_proposed';
   const showAgreementAction = status === 'agreement_sent';
 
@@ -300,6 +301,27 @@ export default function TrackProcessing() {
             <button className="btn btn-primary" style={{ background: '#ea580c' }} onClick={() => setShowPaymentModal(true)}>
               Pay Now
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Payment submitted — awaiting admin confirmation */}
+      {showPaymentPending && (
+        <div style={{
+          background: 'linear-gradient(135deg, #f0fdf4, #fffbeb)',
+          border: '1.5px solid #86efac', borderRadius: 16,
+          padding: '20px 24px', marginBottom: 24,
+          display: 'flex', alignItems: 'flex-start', gap: 16
+        }}>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <CheckCircle size={22} style={{ color: '#16a34a' }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>Payment Proof Submitted</div>
+            <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
+              Your payment receipt has been submitted. The HFA finance team is currently reviewing and confirming your payment.
+              You will receive a notification once it has been verified.
+            </div>
           </div>
         </div>
       )}
