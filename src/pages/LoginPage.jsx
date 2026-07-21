@@ -118,12 +118,16 @@ export default function LoginPage() {
                 {loading ? <span className="spinner-white" /> : <><LogIn size={18} /> Login</>}
               </button>
 
-              <div style={{ marginTop: 24 }}>
+              <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <Link to="/forgot-password" style={{ color: '#1B7A7A', fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
                   Forgot password?
                 </Link>
+                <Link to="/verify-email" style={{ color: '#94a3b8', fontWeight: 500, fontSize: 13, textDecoration: 'none' }}>
+                  Didn't receive a verification email? <span style={{ color: '#15803d', fontWeight: 600 }}>Resend it →</span>
+                </Link>
               </div>
             </form>
+
           </div>
         </div>
       </div>

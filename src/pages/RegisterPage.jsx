@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ArrowRight, ArrowLeft, UserPlus, Building2, User, Lock, Globe, Check, BookOpen } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ArrowLeft, UserPlus, Building2, User, Lock, Globe, Check, BookOpen, Mail, RefreshCw } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 
 export default function RegisterPage() {
   const [step, setStep] = useState(1);
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const [form, setForm] = useState({
     company_name: '',
     company_phone: '',
@@ -19,8 +20,16 @@ export default function RegisterPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [devVerificationUrl, setDevVerificationUrl] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0); // seconds remaining
   const navigate = useNavigate();
+
+  // Countdown timer for resend cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
 
@@ -43,7 +52,7 @@ export default function RegisterPage() {
     
     setLoading(true);
     try {
-      const res = await api.post('/api/auth/register', {
+      await api.post('/api/auth/register', {
         full_name: form.full_name,
         email: form.email,
         password: form.password,
@@ -53,20 +62,32 @@ export default function RegisterPage() {
         country: form.country
       });
 
-      if (res && res.verificationUrl) {
-        setDevVerificationUrl(res.verificationUrl);
-        setStep(3);
-        toast.success('Account created! Local verification available.');
-      } else {
-        toast.success('Account created! Please check your email.');
-        navigate('/login');
-      }
+      setRegisteredEmail(form.email);
+      setResendCooldown(60);
+      setStep(3);
     } catch (err) {
-      toast.error(err.response?.data?.message || err.message);
+      toast.error(err.response?.data?.error || err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleResend = async () => {
+    if (resendCooldown > 0 || resendLoading) return;
+    setResendLoading(true);
+    try {
+      await api.post('/api/auth/resend-verification', { email: registeredEmail });
+      toast.success('A new verification email has been sent!');
+      setResendCooldown(60);
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message;
+      toast.error(msg);
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+
 
   return (
     <div className="auth-wrapper">
@@ -194,39 +215,67 @@ export default function RegisterPage() {
               )}
 
               {step === 3 && (
-                <div className="step-content animate-fade-in" style={{ textAlign: 'center', padding: '16px 0' }}>
-                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 16, padding: 24, marginBottom: 24 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifycontent: 'center', margin: '0 auto 16px' }}>
-                      <Check size={24} style={{ color: '#16a34a' }} />
-                    </div>
-                    <h3 style={{ fontSize: 18, fontWeight: 700, color: '#166534', marginBottom: 8 }}>Account Created!</h3>
-                    <p style={{ fontSize: 14, color: '#4b5563', margin: 0 }}>
-                      Your account registration was successful.
+                <div className="step-content animate-fade-in" style={{ textAlign: 'center', padding: '8px 0' }}>
+                  {/* Icon */}
+                  <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                    <Mail size={32} style={{ color: '#15803d' }} />
+                  </div>
+
+                  <h3 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>
+                    Check Your Email
+                  </h3>
+                  <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, marginBottom: 4 }}>
+                    We've sent a verification link to:
+                  </p>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: '#15803d', marginBottom: 24, wordBreak: 'break-all' }}>
+                    {registeredEmail}
+                  </p>
+
+                  {/* Instruction box */}
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '16px 20px', marginBottom: 24, textAlign: 'left' }}>
+                    <p style={{ fontSize: 13, color: '#166534', margin: 0, lineHeight: 1.6 }}>
+                      <strong>1.</strong> Open the email from <em>HFA Portal</em><br />
+                      <strong>2.</strong> Click <strong>"Verify Email Address"</strong><br />
+                      <strong>3.</strong> Return here and log in
                     </p>
                   </div>
 
-                  {devVerificationUrl && (
-                    <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 16, padding: 24, marginBottom: 24, textAlign: 'left' }}>
-                      <h4 style={{ fontSize: 15, fontWeight: 700, color: '#b45309', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        ⚠️ Development Mode Bypass
-                      </h4>
-                      <p style={{ fontSize: 13, color: '#78350f', marginBottom: 16, lineHeight: 1.5 }}>
-                        Resend API is unconfigured locally. Click below to verify your email address instantly:
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          // Extract token or redirect
-                          const token = new URL(devVerificationUrl).searchParams.get('token');
-                          navigate(`/verify-email?token=${token}`);
-                        }}
-                        className="auth-btn-primary"
-                        style={{ width: '100%', background: '#d97706', borderColor: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        Verify Email Instantly
-                      </button>
-                    </div>
-                  )}
+                  {/* Resend button */}
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendCooldown > 0 || resendLoading}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      padding: '12px 20px',
+                      borderRadius: 10,
+                      border: '1.5px solid #e2e8f0',
+                      background: resendCooldown > 0 ? '#f8fafc' : 'white',
+                      color: resendCooldown > 0 ? '#94a3b8' : '#334155',
+                      fontWeight: 600,
+                      fontSize: 14,
+                      cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer',
+                      marginBottom: 12,
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {resendLoading
+                      ? <span className="spinner" style={{ width: 16, height: 16 }} />
+                      : <RefreshCw size={15} style={{ animation: resendLoading ? 'spin 0.8s linear infinite' : 'none' }} />
+                    }
+                    {resendCooldown > 0
+                      ? `Resend available in ${resendCooldown}s`
+                      : "Didn't receive it? Resend verification email"
+                    }
+                  </button>
+
+                  <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 20 }}>
+                    The link expires in 24 hours. Check your spam folder if you don't see it.
+                  </p>
 
                   <button
                     type="button"
@@ -238,6 +287,7 @@ export default function RegisterPage() {
                   </button>
                 </div>
               )}
+
             </form>
           </div>
         </div>
