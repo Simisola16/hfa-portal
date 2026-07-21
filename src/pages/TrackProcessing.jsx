@@ -9,6 +9,7 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import ProcessingTimeline from '../components/ProcessingTimeline';
 import { STATUS_LABELS, STATUS_BADGE } from '../lib/applicationStatuses';
+import { getSocket } from '../lib/socket';
 
 // Client-side Detail Cards
 import ProposalCard from '../components/ProposalCard';
@@ -76,11 +77,54 @@ export default function TrackProcessing() {
     }
   }, [appId]);
 
+  const [socketConnected, setSocketConnected] = useState(true);
+
   useEffect(() => {
     fetchApp();
+  }, [fetchApp]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('hfa_token');
+    if (!token) return;
+
+    const socket = getSocket(token);
+    if (!socket) return;
+
+    const handleConnect = () => setSocketConnected(true);
+    const handleDisconnect = () => setSocketConnected(false);
+    const handleConnectError = () => setSocketConnected(false);
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('connect_error', handleConnectError);
+
+    // Sync initial state
+    setSocketConnected(socket.connected);
+
+    const handleUpdate = (data) => {
+      if (data.appId === appId) {
+        // Silent re-fetch to sync fresh DB state with zero UI disruption
+        fetchApp(true);
+      }
+    };
+
+    socket.on('application_updated', handleUpdate);
+
+    return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('connect_error', handleConnectError);
+      socket.off('application_updated', handleUpdate);
+    };
+  }, [appId]);
+
+  // Fallback Polling (only if socket is disconnected)
+  useEffect(() => {
+    if (socketConnected) return;
+
     const interval = setInterval(() => fetchApp(true), 20000);
     return () => clearInterval(interval);
-  }, [fetchApp]);
+  }, [socketConnected, fetchApp]);
 
   const handleApproveProposal = async () => {
     if (!proposal) return;
@@ -176,14 +220,20 @@ export default function TrackProcessing() {
   const rejectionEntry = (app.status_history || app.statusHistory || []).find(e => e.status === 'rejected');
 
   // Helper flags for action stepper
+  const auditsArr = audit?.data || (Array.isArray(audit) ? audit : [audit]).filter(Boolean);
+  const isDualStage = app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE';
+  const stage1 = auditsArr?.find(a => a.stage === 1) || auditsArr?.[0];
+  const stage2 = auditsArr?.find(a => a.stage === 2);
+  const activeAudit = auditsArr?.find(a => a.status === 'dates_proposed') || (isDualStage ? (stage2 || stage1) : stage1);
+
   const showProposalAction = status === 'proposal_sent';
   const showPaymentAction = status === 'invoice_sent' && invoice && invoice.status !== 'client_paid' && invoice.status !== 'paid';
   const showPaymentPending = (status === 'invoice_sent' && invoice && invoice.status === 'client_paid') || (status === 'payment_received' && invoice && invoice.status !== 'paid');
-  const showPaymentConfirmed = (status === 'payment_received' || (invoice && invoice.status === 'paid' && status === 'invoice_sent')) && (!audit || audit.status === 'pending');
-  const showAuditAction = status === 'dates_proposed' || audit?.status === 'dates_proposed';
-  const showAuditDatesRejected = status === 'dates_rejected' || audit?.status === 'dates_rejected';
-  const showAuditDatesAccepted = status === 'dates_accepted' || audit?.status === 'dates_accepted';
-  const showAuditScheduled = status === 'date_finalized' || status === 'audit_assigned' || audit?.status === 'date_finalized' || audit?.status === 'auditors_assigned';
+  const showPaymentConfirmed = (status === 'payment_received' || (invoice && invoice.status === 'paid' && status === 'invoice_sent')) && (!activeAudit || activeAudit.status === 'pending' || activeAudit.status === 'scheduled');
+  const showAuditAction = status === 'dates_proposed' || activeAudit?.status === 'dates_proposed';
+  const showAuditDatesRejected = status === 'dates_rejected' || activeAudit?.status === 'dates_rejected';
+  const showAuditDatesAccepted = status === 'dates_accepted' || activeAudit?.status === 'dates_accepted';
+  const showAuditScheduled = status === 'date_finalized' || status === 'audit_assigned' || activeAudit?.status === 'date_finalized' || activeAudit?.status === 'auditors_assigned';
   const showAgreementAction = status === 'agreement_sent';
 
   return (
@@ -229,6 +279,23 @@ export default function TrackProcessing() {
             {lastUpdated && !refreshing && (
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                 Updated {lastUpdated.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+            {!socketConnected && (
+              <span style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                color: '#991b1b',
+                padding: '4px 8px',
+                borderRadius: 6,
+                fontSize: 10,
+                fontWeight: 700
+              }}>
+                <span className="spinner" style={{ width: 8, height: 8, borderTopColor: '#991b1b', display: 'inline-block' }} />
+                Disconnected (Polling)
               </span>
             )}
             <button
@@ -524,7 +591,8 @@ export default function TrackProcessing() {
 
           {/* Audit Card */}
           <AuditCard
-            audit={audit}
+            audits={auditsArr}
+            app={app}
             status={status}
             onSelectDatesClick={() => setShowAuditModal(true)}
             onNcResolve={handleNcResolve}
@@ -736,7 +804,7 @@ export default function TrackProcessing() {
       <ClientAuditModal
         isOpen={showAuditModal}
         onClose={() => setShowAuditModal(false)}
-        audit={audit}
+        audit={activeAudit}
         onSuccess={() => fetchApp(true)}
       />
 

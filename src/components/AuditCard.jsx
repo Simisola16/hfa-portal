@@ -1,9 +1,15 @@
 import React from 'react';
 import { Calendar, Users, Lock, AlertCircle, CheckCircle, FileText } from 'lucide-react';
 
-export default function AuditCard({ audit, status, onSelectDatesClick, onNcResolve }) {
+export default function AuditCard({ audits, app, status, onSelectDatesClick, onNcResolve }) {
   const normStatus = (status || '').toLowerCase().replace(/ /g, '_');
-  const isAvailable = ['invoice_sent', 'payment_received', 'dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'audit_report_submitted', 'logsheet_created', 'logsheet_signed', 'agreement_sent', 'agreement_signed', 'certificate_issued'].includes(normStatus) || audit;
+  const hasAudits = audits && audits.length > 0;
+  const isAvailable = ['invoice_sent', 'payment_received', 'dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'audit_report_submitted', 'audit_successful', 'on_hold', 'final_invoice_sent', 'logsheet_created', 'logsheet_signed', 'agreement_sent', 'agreement_signed', 'certificate_issued'].includes(normStatus) || hasAudits;
+
+  const isDualStage = app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE';
+  const stage1 = audits?.find(a => a.stage === 1) || audits?.[0];
+  const stage2 = audits?.find(a => a.stage === 2);
+  const audit = (isDualStage ? (stage2 || stage1) : stage1) || null;
 
   if (!isAvailable) {
     return (
@@ -15,7 +21,7 @@ export default function AuditCard({ audit, status, onSelectDatesClick, onNcResol
     );
   }
 
-  if (!audit) {
+  if (!hasAudits) {
     return (
       <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', padding: 24, textAlign: 'center' }}>
         <Calendar size={28} style={{ color: '#94a3b8', margin: '0 auto 10px' }} />
@@ -32,8 +38,8 @@ export default function AuditCard({ audit, status, onSelectDatesClick, onNcResol
     audit_trainee: { bg: '#fefce8', color: '#a16207', border: '#fde68a' },
   };
 
-  const hasNcReports = audit.nc_reports && audit.nc_reports.length > 0;
-  const showNcSection = ['auditors_assigned', 'audit_completed'].includes(audit.status);
+  const hasNcReports = audit?.nc_reports && audit.nc_reports.length > 0;
+  const showNcSection = audit && ['auditors_assigned', 'audit_completed'].includes(audit.status);
 
   return (
     <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
@@ -45,10 +51,10 @@ export default function AuditCard({ audit, status, onSelectDatesClick, onNcResol
           </div>
           <div>
             <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Assigned Audit Team</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Status: <span style={{ fontWeight: 700, textTransform: 'capitalize' }}>{audit.status.replace(/_/g, ' ')}</span></div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Status: <span style={{ fontWeight: 700, textTransform: 'capitalize' }}>{(audit?.status || 'pending').replace(/_/g, ' ')}</span></div>
           </div>
         </div>
-        {audit.status === 'dates_proposed' && (
+        {audit?.status === 'dates_proposed' && (
           <button className="btn btn-primary btn-sm" onClick={onSelectDatesClick}>
             Select Dates
           </button>
@@ -57,6 +63,38 @@ export default function AuditCard({ audit, status, onSelectDatesClick, onNcResol
 
       {/* Card Body */}
       <div style={{ padding: '20px 24px' }}>
+        {/* Two-stage progress bar for UAE/GSO */}
+        {isDualStage && (
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+            {[1, 2].map(stageNum => {
+              const stageAudit = audits?.find(a => a.stage === stageNum);
+              const isLocked = stageNum === 2 && stage1?.status !== 'audit_completed';
+              
+              // status color helper
+              let bg = '#f8fafc', border = '#e2e8f0', color = '#64748b';
+              if (stageAudit) {
+                if (stageAudit.status === 'audit_completed') {
+                  bg = '#f0fdf4'; border = '#bbf7d0'; color = '#15803d';
+                } else if (['auditors_assigned', 'date_finalized', 'dates_accepted'].includes(stageAudit.status)) {
+                  bg = '#eff6ff'; border = '#bfdbfe'; color = '#1d4ed8';
+                } else if (stageAudit.status === 'dates_proposed') {
+                  bg = '#fefce8'; border = '#fde68a'; color = '#a16207';
+                }
+              }
+              return (
+                <div key={stageNum} style={{ flex: 1, padding: '10px 14px', background: bg, borderRadius: 10, border: `1px solid ${border}`, opacity: isLocked ? 0.5 : 1 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Stage {stageNum} {isLocked ? '🔒' : stageAudit?.status === 'audit_completed' ? '✓' : ''}
+                  </div>
+                  <div style={{ fontSize: 11, color: color, marginTop: 2, textTransform: 'capitalize' }}>
+                    {stageAudit ? stageAudit.status.replace(/_/g, ' ') : (isLocked ? 'Locked' : 'Pending')}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Date Section */}
         {audit.finalized_date ? (
           <div style={{ marginBottom: 16, padding: '12px 16px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 8 }}>

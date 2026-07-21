@@ -79,6 +79,7 @@ export default function ApplicationsPage({ openNew }) {
   const [newProduct, setNewProduct] = useState({ name: '', brand: '', category: '' });
   const [files, setFiles] = useState({});
   const [hasActiveCert, setHasActiveCert] = useState(false);
+  const [certs, setCerts] = useState([]);
   const [addOnApps, setAddOnApps] = useState([]);
   const [addOnLoading, setAddOnLoading] = useState(false);
 
@@ -94,6 +95,7 @@ export default function ApplicationsPage({ openNew }) {
       ]);
       setApps(appsRes.data || []);
       setSites(sitesRes.data || []);
+      setCerts(certsRes.data || []);
       
       const active = (certsRes.data || []).some(c => 
         c.status === 'active' && new Date(c.expiry_date) >= new Date()
@@ -108,26 +110,50 @@ export default function ApplicationsPage({ openNew }) {
     }
   };
 
+  const getGatingStatus = () => {
+    if (!form.site_id) return null;
+    
+    // Rule A: Active Certificate blocks new application
+    if (form.application_type === 'new') {
+      const activeCert = certs.find(c => 
+        c.site_id === form.site_id && 
+        c.status === 'active' && 
+        new Date(c.expiry_date) > new Date()
+      );
+      if (activeCert) {
+        const expiryStr = new Date(activeCert.expiry_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        return {
+          blocked: true,
+          message: `This site already has an active certificate (valid until ${expiryStr}). You can submit a renewal application closer to the expiry date, or apply for a different site.`
+        };
+      }
+    }
+
+    // Rule B: Ongoing Application blocks a new one
+    const ongoingApp = apps.find(app => 
+      app.site_id === form.site_id &&
+      !['approved', 'rejected', 'certificate_issued'].includes(app.status?.toLowerCase())
+    );
+    if (ongoingApp) {
+      return {
+        blocked: true,
+        message: `This site already has an application in progress (#${ongoingApp.application_number} - status: ${ongoingApp.status.replace(/_/g, ' ')}). You cannot submit another application for this site until the current one is completed.`
+      };
+    }
+
+    return null;
+  };
+
   useEffect(() => { fetchData(); }, []);
 
   useEffect(() => {
-    if (openNew && !loading && apps.length > 0) {
-      const activeApp = apps.find(app => {
-        const s = app.status?.toLowerCase();
-        return s !== 'approved' && s !== 'rejected' && s !== 'certificate_issued';
-      });
-      if (activeApp) {
-        toast.error(`You already have a pending application in progress (${activeApp.application_number}).`);
-        navigate('/applications', { replace: true });
-        return;
-      }
-    }
     if (openNew && sites.length > 0) {
       setShowModal(true);
     } else if (openNew && sites.length === 0 && !loading) {
       toast.error('You must add a business site before submitting an application.');
+      navigate('/applications', { replace: true });
     }
-  }, [openNew, sites, loading, apps, navigate]);
+  }, [openNew, sites, loading, navigate]);
 
   const handleSiteChange = (siteId) => {
     const selected = sites.find(s => s._id === siteId);
@@ -163,6 +189,11 @@ export default function ApplicationsPage({ openNew }) {
     if (step === 1) {
       if (!form.site_id) {
         toast.error('Please select a business site.');
+        return false;
+      }
+      const gating = getGatingStatus();
+      if (gating?.blocked) {
+        toast.error(gating.message);
         return false;
       }
       if (!form.scope?.trim()) {
@@ -616,6 +647,21 @@ export default function ApplicationsPage({ openNew }) {
                       <p style={{ margin: 0, fontSize: 13, color: '#1B7A7A', lineHeight: 1.6 }}>{CATEGORY_DETAILS[form.category]}</p>
                     </div>
                   )}
+
+                  {/* Gating warnings */}
+                  {(() => {
+                    const gating = getGatingStatus();
+                    if (gating?.blocked) {
+                      return (
+                        <div style={{ marginTop: 12, padding: '14px 16px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fef08a', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                          <AlertTriangle size={18} style={{ color: '#d97706', flexShrink: 0, marginTop: 2 }} />
+                          <p style={{ margin: 0, fontSize: 13, color: '#854d0e', lineHeight: 1.6 }}>{gating.message}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
                   <div className="form-group" style={{ marginTop: 16 }}>
                     <label className="form-label">Scope of Certification <span>*</span></label>
                     <textarea className="form-control" rows={3} placeholder="Describe the activities to be certified (e.g., Slaughtering and processing of poultry...)" value={form.scope} onChange={e => setForm(f => ({...f, scope: e.target.value}))} required />
@@ -773,7 +819,7 @@ export default function ApplicationsPage({ openNew }) {
               <div className="ml-auto flex gap-3">
                 <button type="button" className="btn btn-ghost" onClick={handleCloseModal}>Cancel</button>
                 {modalStep < 6 ? (
-                  <button type="button" className="btn btn-primary" onClick={() => { if (validateStep(modalStep)) setModalStep(s => s + 1); }}>
+                  <button type="button" className="btn btn-primary" disabled={getGatingStatus()?.blocked} onClick={() => { if (validateStep(modalStep)) setModalStep(s => s + 1); }}>
                     Next Step <ChevronRight size={16} />
                   </button>
                 ) : (
