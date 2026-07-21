@@ -47,7 +47,7 @@ export default function ForgotPasswordPage() {
               <input type="email" className="form-control" placeholder="you@company.com" value={email} onChange={e => setEmail(e.target.value)} required />
             </div>
             <button type="submit" className="btn btn-primary w-full btn-lg" disabled={loading} style={{ justifyContent: 'center' }}>
-              {loading ? <span className="spinner" style={{ width: 18, height: 18 }} /> : 'Send Reset Link'}
+              {loading ? <span className="spinner-white" style={{ width: 18, height: 18 }} /> : 'Send Reset Link'}
             </button>
             <Link to="/login" className="btn btn-ghost w-full" style={{ justifyContent: 'center', marginTop: 12 }}>
               <ArrowLeft size={15} /> Back to Login

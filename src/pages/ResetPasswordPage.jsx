@@ -98,7 +98,7 @@ export default function ResetPasswordPage() {
             </div>
 
             <button type="submit" className="btn btn-primary w-full btn-lg" disabled={loading} style={{ justifyContent: 'center', marginTop: 12 }}>
-              {loading ? <span className="spinner" style={{ width: 18, height: 18 }} /> : 'Reset Password'}
+              {loading ? <span className="spinner-white" style={{ width: 18, height: 18 }} /> : 'Reset Password'}
             </button>
           </form>
         )}
