@@ -14,7 +14,7 @@ const navItems = [
     icon: FileText, label: 'Applications', path: '/applications',
     children: [
       { label: 'All Applications', path: '/applications' },
-      { label: 'New Application', path: '/applications/new' },
+      { label: 'Create Application', path: '/applications/new' },
       { label: 'Renewal Application', path: '/applications?type=renewal' },
       { label: 'Surveillance Application', path: '/applications?type=surveillance' },
       { label: 'In Progress', path: '/applications?status=audit_scheduled' },

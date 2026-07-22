@@ -354,7 +354,7 @@ export default function ApplicationsPage({ openNew }) {
             setShowModal(true);
           }}
         >
-          <Plus size={15} /> New Application
+          <Plus size={15} /> Create Application
         </button>
 
         {hasActiveCert ? (
