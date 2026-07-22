@@ -46,9 +46,10 @@ export default function LoginPage() {
               <span className="auth-logo-text">Halal Food Authority</span>
             </div>
 
+
             <h1>Welcome to HFA Portal</h1>
             <p>Register, apply, submit, track the progress of application and download your certificate through the HFA certification portal.</p>
-            
+
             <div className="user-guide-card">
               <h4 style={{ color: 'white', marginBottom: 12 }}>User's Guide</h4>
               <button className="btn-user-guide">
@@ -99,9 +100,9 @@ export default function LoginPage() {
                     onChange={e => setPassword(e.target.value)}
                     required
                   />
-                  <button 
-                    type="button" 
-                    onClick={() => setShowPassword(!showPassword)} 
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
                     style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

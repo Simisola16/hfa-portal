@@ -49,7 +49,7 @@ export default function RegisterPage() {
     if (form.password !== form.confirm_password) return toast.error('Passwords do not match');
     if (form.password.length < 6) return toast.error('Password must be at least 6 characters');
     if (!form.declared) return toast.error('Please accept the declaration');
-    
+
     setLoading(true);
     try {
       await api.post('/api/auth/register', {
@@ -102,7 +102,7 @@ export default function RegisterPage() {
 
             <h1>Welcome to HFA Portal</h1>
             <p>Register your account as Halal Food Authority Applicant to enjoy our service. Track your application and download certificates instantly.</p>
-            
+
             <div className="user-guide-card">
               <h4 style={{ color: 'white', marginBottom: 12 }}>User's Guide</h4>
               <button className="btn-user-guide">
@@ -202,7 +202,7 @@ export default function RegisterPage() {
                       <span style={{ fontSize: 13, color: '#64748b' }}>I hereby declare that the above information is true and correct to the best of my knowledge and belief. <span style={{ color: '#ef4444' }}>*</span></span>
                     </label>
                   </div>
-                  
+
                   <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
                     <button type="button" onClick={prevStep} className="btn-ghost" style={{ flex: 1, padding: 12 }}>
                       <ArrowLeft size={18} /> Back

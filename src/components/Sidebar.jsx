@@ -80,7 +80,7 @@ export default function Sidebar({ isOpen, onClose }) {
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       {/* Logo */}
       <div className="sidebar-logo">
-        <img src="/hfa-logo.png" alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain', background: 'white', borderRadius: 6, padding: 2 }} />
+        <img src="/hfa-hfa-logo.png" alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain', background: 'white', borderRadius: 6, padding: 2 }} />
         <div className="sidebar-logo-text">
           <span className="sidebar-logo-title">HFA Portal</span>
           <span className="sidebar-logo-sub">Halal Food Authority</span>
