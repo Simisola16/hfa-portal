@@ -227,8 +227,8 @@ export default function TrackProcessing() {
   const activeAudit = auditsArr?.find(a => a.status === 'dates_proposed') || (isDualStage ? (stage2 || stage1) : stage1);
 
   const showProposalAction = status === 'proposal_sent';
-  const showPaymentAction = status === 'invoice_sent' && invoice && invoice.status !== 'client_paid' && invoice.status !== 'paid';
-  const showPaymentPending = (status === 'invoice_sent' && invoice && invoice.status === 'client_paid') || (status === 'payment_received' && invoice && invoice.status !== 'paid');
+  const showPaymentAction = (status === 'invoice_sent' || status === 'final_invoice_sent') && invoice && invoice.status !== 'client_paid' && invoice.status !== 'paid';
+  const showPaymentPending = ((status === 'invoice_sent' || status === 'final_invoice_sent') && invoice && invoice.status === 'client_paid') || ((status === 'payment_received' || status === 'final_invoice_paid') && invoice && invoice.status !== 'paid');
   const showPaymentConfirmed = (status === 'payment_received' || (invoice && invoice.status === 'paid' && status === 'invoice_sent')) && (!activeAudit || activeAudit.status === 'pending' || activeAudit.status === 'scheduled');
   const showAuditAction = status === 'dates_proposed' || activeAudit?.status === 'dates_proposed';
   const showAuditDatesRejected = status === 'dates_rejected' || activeAudit?.status === 'dates_rejected';
@@ -362,9 +362,11 @@ export default function TrackProcessing() {
               <Receipt size={20} style={{ color: '#ea580c' }} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 15, color: '#ea580c', marginBottom: 4 }}>Action Required: Pay Invoice</div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#ea580c', marginBottom: 4 }}>
+                {status === 'final_invoice_sent' ? 'Final Invoice Received' : 'Action Required: Pay Invoice'}
+              </div>
               <div style={{ fontSize: 13, color: '#c2410c', lineHeight: 1.6 }}>
-                An invoice ({invoice.invoice_number}) has been issued for certification fees. Amount Due: <strong>£{Number(invoice.amount).toLocaleString('en-GB', { minimumFractionDigits: 2 })}</strong>.
+                {status === 'final_invoice_sent' ? 'A final invoice' : 'An invoice'} ({invoice.invoice_number}) has been issued for certification fees. Amount Due: <strong>£{Number(invoice.amount).toLocaleString('en-GB', { minimumFractionDigits: 2 })}</strong>.
               </div>
             </div>
           </div>

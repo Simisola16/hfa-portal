@@ -74,10 +74,11 @@ export default function ProcessingTimeline({ status, statusHistory = [] }) {
     if (status !== 'on_hold') {
       stepsToShow.push(
         'audit_successful',
-        'final_invoice_sent',
         // LogSheet must NOT be visible to clients at all (skip logsheet_created and logsheet_signed)
         'agreement_sent',
         'agreement_signed',
+        'final_invoice_sent',
+        'final_invoice_paid',
         'certificate_issued'
       );
     }
