@@ -64,7 +64,41 @@ const navItems = [
   { icon: FileCheck, label: 'Agreements', path: '/agreements' },
 ];
 
-export default function Sidebar({ isOpen, onClose }) {
+function getUnreadNavCount(notifications, pathStr, children = []) {
+  if (!notifications || notifications.length === 0) return 0;
+  const unreadList = notifications.filter(n => !n.is_read && n.link);
+  if (unreadList.length === 0) return 0;
+
+  const matchSinglePath = (link, targetPath) => {
+    if (!link || !targetPath) return false;
+    const [linkPath, linkSearch = ''] = link.split('?');
+    const [targetPathname, targetSearch = ''] = targetPath.split('?');
+
+    if (linkPath !== targetPathname) return false;
+    if (targetSearch) {
+      return linkSearch.includes(targetSearch);
+    }
+    return true;
+  };
+
+  let count = 0;
+  unreadList.forEach(n => {
+    let matched = false;
+    if (pathStr && matchSinglePath(n.link, pathStr)) {
+      matched = true;
+    }
+    if (!matched && children && children.length > 0) {
+      if (children.some(c => matchSinglePath(n.link, c.path))) {
+        matched = true;
+      }
+    }
+    if (matched) count++;
+  });
+
+  return count;
+}
+
+export default function Sidebar({ isOpen, onClose, notifications = [] }) {
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState({});
@@ -102,6 +136,8 @@ export default function Sidebar({ isOpen, onClose }) {
             {navItems.map(item => {
               const Icon = item.icon;
               const isExpanded = expanded[item.label];
+              const parentUnread = getUnreadNavCount(notifications, item.path, item.children);
+
               return (
                 <div key={item.label}>
                   {item.children ? (
@@ -109,22 +145,74 @@ export default function Sidebar({ isOpen, onClose }) {
                       <button className="nav-item" onClick={() => toggle(item.label)}>
                         <Icon size={17} />
                         <span>{item.label}</span>
-                        <span style={{ marginLeft: 'auto' }}>
+                        {parentUnread > 0 && !isExpanded && (
+                          <span
+                            className="nav-attention-badge"
+                            style={{
+                              marginLeft: 'auto',
+                              marginRight: 6,
+                              background: '#2563eb',
+                              color: '#ffffff',
+                              fontSize: 10,
+                              fontWeight: 500,
+                              minWidth: 18,
+                              height: 18,
+                              borderRadius: 9,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '0 5px',
+                              boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.2)',
+                              animation: 'navBadgePulse 2s ease-in-out infinite',
+                              fontFamily: "'Inter', sans-serif"
+                            }}
+                          >
+                            {parentUnread > 9 ? '9+' : parentUnread}
+                          </span>
+                        )}
+                        <span style={{ marginLeft: parentUnread > 0 && !isExpanded ? 0 : 'auto' }}>
                           {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                         </span>
                       </button>
                       {isExpanded && (
                         <div className="nav-sub">
-                          {item.children.map(child => (
-                            <NavLink
-                              key={child.label}
-                              to={child.path}
-                              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-                            >
-                              <span style={{ width: 17 }} />
-                              {child.label}
-                            </NavLink>
-                          ))}
+                          {item.children.map(child => {
+                            const childUnread = getUnreadNavCount(notifications, child.path);
+                            return (
+                              <NavLink
+                                key={child.label}
+                                to={child.path}
+                                className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+                              >
+                                <span style={{ width: 17 }} />
+                                {child.label}
+                                {childUnread > 0 && (
+                                  <span
+                                    className="nav-attention-badge"
+                                    style={{
+                                      marginLeft: 'auto',
+                                      background: '#2563eb',
+                                      color: '#ffffff',
+                                      fontSize: 10,
+                                      fontWeight: 500,
+                                      minWidth: 18,
+                                      height: 18,
+                                      borderRadius: 9,
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      padding: '0 5px',
+                                      boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.2)',
+                                      animation: 'navBadgePulse 2s ease-in-out infinite',
+                                      fontFamily: "'Inter', sans-serif"
+                                    }}
+                                  >
+                                    {childUnread > 9 ? '9+' : childUnread}
+                                  </span>
+                                )}
+                              </NavLink>
+                            );
+                          })}
                         </div>
                       )}
                     </>
@@ -135,6 +223,30 @@ export default function Sidebar({ isOpen, onClose }) {
                     >
                       <Icon size={17} />
                       {item.label}
+                      {parentUnread > 0 && (
+                        <span
+                          className="nav-attention-badge"
+                          style={{
+                            marginLeft: 'auto',
+                            background: '#2563eb',
+                            color: '#ffffff',
+                            fontSize: 10,
+                            fontWeight: 500,
+                            minWidth: 18,
+                            height: 18,
+                            borderRadius: 9,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0 5px',
+                            boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.2)',
+                            animation: 'navBadgePulse 2s ease-in-out infinite',
+                            fontFamily: "'Inter', sans-serif"
+                          }}
+                        >
+                          {parentUnread > 9 ? '9+' : parentUnread}
+                        </span>
+                      )}
                     </NavLink>
                   )}
                 </div>

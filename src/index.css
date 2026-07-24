@@ -129,6 +129,11 @@ body {
 .nav-sub { padding-left: 20px; }
 .nav-sub .nav-item { font-size: 13px; padding: 8px 20px; }
 
+@keyframes navBadgePulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.12); opacity: 0.85; }
+}
+
 .sidebar-footer {
   padding: 16px 20px;
   border-top: 1px solid rgba(255,255,255,0.1);

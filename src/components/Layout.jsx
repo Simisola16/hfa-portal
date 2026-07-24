@@ -204,6 +204,33 @@ export default function Layout() {
     return () => clearInterval(interval);
   }, [socketConnected]);
 
+  // Auto-clear unread notifications matching the active route
+  useEffect(() => {
+    if (!notifications || notifications.length === 0) return;
+    const currentPathname = location.pathname;
+    const currentSearch = location.search;
+
+    const matchingUnread = notifications.filter(n => {
+      if (n.is_read || !n.link) return false;
+      const [linkPath, linkSearch = ''] = n.link.split('?');
+      if (linkPath !== currentPathname) return false;
+      if (linkSearch) {
+        return currentSearch.includes(linkSearch);
+      }
+      return true;
+    });
+
+    if (matchingUnread.length > 0) {
+      matchingUnread.forEach(n => {
+        api.put(`/api/notifications/${n._id}/read`).catch(() => {});
+      });
+      setNotifications(prev => prev.map(n =>
+        matchingUnread.some(m => m._id === n._id) ? { ...n, is_read: true } : n
+      ));
+      setUnread(prev => Math.max(0, prev - matchingUnread.length));
+    }
+  }, [location.pathname, location.search]);
+
   useEffect(() => {
     const handler = (e) => {
       if (panelRef.current && !panelRef.current.contains(e.target)) setShowNotifs(false);
@@ -295,7 +322,7 @@ export default function Layout() {
         </div>
       )}
       <div className="app-layout" style={{ flex: 1 }}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} notifications={notifications} />
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
       <div className="main-content">
         <header className="topbar">
