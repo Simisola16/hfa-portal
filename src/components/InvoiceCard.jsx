@@ -55,11 +55,28 @@ export default function InvoiceCard({ invoice, status, onPayClick }) {
               <Download size={13} /> View Invoice
             </a>
           )}
-          {(status === 'invoice_sent' || status === 'final_invoice_sent') && invoice.status !== 'paid' && invoice.status !== 'client_paid' && (
+          {(invoice.status === 'paid' || status === 'payment_received' || status === 'final_invoice_paid') ? (
+            <span
+              style={{
+                background: '#f0fdf4',
+                color: '#15803d',
+                border: '1.5px solid #bbf7d0',
+                padding: '5px 14px',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <CheckCircle size={14} style={{ color: '#16a34a' }} /> Paid
+            </span>
+          ) : (status === 'invoice_sent' || status === 'final_invoice_sent') && invoice.status !== 'client_paid' ? (
             <button className="btn btn-primary btn-sm" style={{ background: '#ea580c' }} onClick={onPayClick}>
               Pay Now
             </button>
-          )}
+          ) : null}
         </div>
       </div>
       <div style={{ padding: '20px 24px' }}>

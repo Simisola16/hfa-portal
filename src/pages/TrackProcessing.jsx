@@ -371,9 +371,28 @@ export default function TrackProcessing() {
             </div>
           </div>
           <div>
-            <button className="btn btn-primary" style={{ background: '#ea580c' }} onClick={() => setShowPaymentModal(true)}>
-              Pay Now
-            </button>
+            {(invoice.status === 'paid' || status === 'payment_received' || status === 'final_invoice_paid') ? (
+              <span
+                style={{
+                  background: '#f0fdf4',
+                  color: '#15803d',
+                  border: '1.5px solid #bbf7d0',
+                  padding: '8px 16px',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <CheckCircle size={16} style={{ color: '#16a34a' }} /> Paid
+              </span>
+            ) : (
+              <button className="btn btn-primary" style={{ background: '#ea580c' }} onClick={() => setShowPaymentModal(true)}>
+                Pay Now
+              </button>
+            )}
           </div>
         </div>
       )}
