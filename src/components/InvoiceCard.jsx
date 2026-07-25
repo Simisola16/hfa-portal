@@ -18,7 +18,7 @@ export default function InvoiceCard({ invoice, status, onPayClick }) {
     return (
       <div style={{ background: '#f8fafc', opacity: 0.65, border: '1px dashed #cbd5e1', borderRadius: 20, padding: '24px 20px', textAlign: 'center' }}>
         <Lock size={20} style={{ color: '#94a3b8', margin: '0 auto 8px' }} />
-        <div style={{ fontWeight: 700, fontSize: 13, color: '#64748b' }}>Certification Invoice (Locked)</div>
+        <div style={{ fontWeight: 700, fontSize: 13, color: '#64748b' }}>Initial Invoice (Locked)</div>
         <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Available once proposal is approved</div>
       </div>
     );
@@ -42,7 +42,7 @@ export default function InvoiceCard({ invoice, status, onPayClick }) {
             <Receipt size={18} style={{ color: '#ea580c' }} />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Certification Invoice</div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Initial Invoice</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>No: {invoice.invoice_number} &middot; Status: <span style={{
               fontWeight: 700,
               color: invoice.status === 'paid' ? '#15803d' : invoice.status === 'client_paid' ? '#b45309' : '#b91c1c'
@@ -74,7 +74,7 @@ export default function InvoiceCard({ invoice, status, onPayClick }) {
             </span>
           ) : (status === 'invoice_sent' || status === 'final_invoice_sent') && invoice.status !== 'client_paid' ? (
             <button className="btn btn-primary btn-sm" style={{ background: '#ea580c' }} onClick={onPayClick}>
-              Pay Now
+              Paid
             </button>
           ) : null}
         </div>
