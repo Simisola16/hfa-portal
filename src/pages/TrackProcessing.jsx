@@ -21,6 +21,7 @@ import AgreementCard from '../components/AgreementCard';
 import PaymentModal from '../components/PaymentModal';
 import ClientAuditModal from '../components/ClientAuditModal';
 import ClientAgreementModal from '../components/ClientAgreementModal';
+import ClientProposalModal from '../components/ClientProposalModal';
 
 export default function TrackProcessing() {
   const { appId } = useParams();
@@ -39,6 +40,7 @@ export default function TrackProcessing() {
   const [signatures, setSignatures] = useState([]);
 
   // Modal Visibility States
+  const [showProposalModal, setShowProposalModal] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -334,17 +336,11 @@ export default function TrackProcessing() {
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <button
-              className="btn"
-              style={{ background: '#fef2f2', color: '#991b1b', border: '1.5px solid #fecaca' }}
-              onClick={() => setShowRejectModal(true)}
-            >
-              <XCircle size={15} /> Reject Proposal
-            </button>
-            <button
               className="btn btn-primary"
-              onClick={() => setShowApproveModal(true)}
+              style={{ background: '#854d0e', borderColor: '#854d0e', gap: 8 }}
+              onClick={() => setShowProposalModal(true)}
             >
-              <CheckCircle size={15} /> Approve Proposal
+              <FileText size={15} /> Review &amp; Respond to Proposal
             </button>
           </div>
         </div>
@@ -815,6 +811,14 @@ export default function TrackProcessing() {
       )}
 
       {/* Extracted Shared Modals */}
+      <ClientProposalModal
+        isOpen={showProposalModal}
+        onClose={() => setShowProposalModal(false)}
+        proposal={proposal}
+        app={app}
+        onSuccess={() => fetchApp(true)}
+      />
+
       <PaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}

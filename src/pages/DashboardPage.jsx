@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, RefreshCw, Download, X } from 'lucide-react';
+import ActionsNeededWidget from '../components/ActionsNeededWidget';
 
 const STATUS_BADGE = {
   submitted: 'badge-blue',
@@ -74,6 +75,9 @@ export default function DashboardPage() {
           <Plus size={16} /> New Application
         </Link>
       </div>
+
+      {/* Persistent Actions Needed Widget */}
+      <ActionsNeededWidget />
 
       {/* Stats */}
       <div className="stats-grid">
