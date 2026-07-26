@@ -635,7 +635,7 @@ export default function TrackProcessing() {
               <div className="card-title">Processing Status</div>
             </div>
             <div className="card-body" style={{ padding: '20px 24px' }}>
-              <ProcessingTimeline status={status} statusHistory={app.status_history || app.statusHistory} />
+              <ProcessingTimeline status={status} statusHistory={app.status_history || app.statusHistory} category={app.category || ''} />
             </div>
           </div>
 

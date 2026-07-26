@@ -12,8 +12,9 @@ import { STATUS_ORDER, STATUS_LABELS } from '../lib/applicationStatuses';
  * Phases 5–9 automatically get new stages by extending STATUS_ORDER in applicationStatuses.js.
  * No changes to this component needed.
  */
-export default function ProcessingTimeline({ status, statusHistory = [] }) {
+export default function ProcessingTimeline({ status, statusHistory = [], category = '' }) {
   const isRejected = status === 'rejected';
+  const isGSO = category === 'UAE/GSO Approved Halal Certification For Exporters To UAE';
 
   // Build a lookup from statusHistory entries for quick timestamp/note access
   const historyMap = {};
@@ -75,10 +76,13 @@ export default function ProcessingTimeline({ status, statusHistory = [] }) {
     if (status !== 'on_hold') {
       stepsToShow.push(
         // LogSheet must NOT be visible to clients at all (skip logsheet_created and logsheet_signed)
+        'application_successful',
         'agreement_sent',
         'agreement_signed',
+        'agreement_finalised',
         'final_invoice_sent',
         'final_invoice_paid',
+        'ready_for_certificate',
         'certificate_issued'
       );
     }

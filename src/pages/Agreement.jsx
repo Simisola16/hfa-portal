@@ -200,6 +200,20 @@ export default function AgreementPage() {
                     </a>
                   </div>
                 )}
+                {selected.final_agreement_url && (
+                  <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: 16, borderRadius: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', textTransform: 'uppercase', marginBottom: 4 }}>Final Countersigned Copy</div>
+                    <a 
+                      href={getPdfUrl(selected.final_agreement_url)} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="btn btn-outline btn-sm"
+                      style={{ width: '100%', marginTop: 8, justifyContent: 'center', borderColor: '#0284c7', color: '#0284c7' }}
+                    >
+                      <Download size={14} /> Download Final Countersigned PDF
+                    </a>
+                  </div>
+                )}
               </div>
 
               {selected.details && (

@@ -11,14 +11,14 @@ const getPdfUrl = (url) => {
 };
 
 export default function AgreementCard({ agreement, status, onSignClick }) {
-  const isAvailable = ['logsheet_signed', 'agreement_sent', 'agreement_signed', 'certificate_issued'].includes(status) || agreement;
+  const isAvailable = ['application_successful', 'logsheet_signed', 'agreement_sent', 'agreement_signed', 'agreement_finalised', 'ready_for_certificate', 'certificate_issued'].includes(status) || agreement;
 
   if (!isAvailable) {
     return (
       <div style={{ background: '#f8fafc', opacity: 0.65, border: '1px dashed #cbd5e1', borderRadius: 20, padding: '24px 20px', textAlign: 'center' }}>
         <Lock size={20} style={{ color: '#94a3b8', margin: '0 auto 8px' }} />
         <div style={{ fontWeight: 700, fontSize: 13, color: '#64748b' }}>Certification Agreement (Locked)</div>
-        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Available once logsheet is signed</div>
+        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Available once application is successful</div>
       </div>
     );
   }
@@ -42,10 +42,14 @@ export default function AgreementCard({ agreement, status, onSignClick }) {
           </div>
           <div>
             <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Certification Agreement</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Status: <span style={{ fontWeight: 700, textTransform: 'capitalize' }}>{agreement.client_signed ? 'Signed' : 'Awaiting Signature'}</span></div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              Status: <span style={{ fontWeight: 700, textTransform: 'capitalize' }}>
+                {agreement.final_agreement_url ? 'Finalized (Countersigned)' : (agreement.client_signed ? 'Signed' : 'Awaiting Signature')}
+              </span>
+            </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {agreement.agreement_url && (
             <a href={getPdfUrl(agreement.agreement_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
               <Download size={13} /> View Original PDF
@@ -54,6 +58,11 @@ export default function AgreementCard({ agreement, status, onSignClick }) {
           {agreement.signed_agreement_url && (
             <a href={getPdfUrl(agreement.signed_agreement_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ color: '#15803d', borderColor: '#bbf7d0' }}>
               <Download size={13} /> View Signed Copy
+            </a>
+          )}
+          {agreement.final_agreement_url && (
+            <a href={getPdfUrl(agreement.final_agreement_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ color: '#0284c7', borderColor: '#bae6fd', background: '#f0f9ff' }}>
+              <Download size={13} /> View Final Countersigned PDF
             </a>
           )}
           {status === 'agreement_sent' && !agreement.client_signed && (
