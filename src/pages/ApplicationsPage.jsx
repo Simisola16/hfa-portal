@@ -48,7 +48,6 @@ export default function ApplicationsPage({ openNew }) {
     halal_policy: useRef(),
     ingredient_list: useRef(),
     floor_plan: useRef(),
-    company_registration: useRef(),
     haccp_plan: useRef()
   };
 
