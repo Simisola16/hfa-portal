@@ -33,6 +33,19 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
             if (sigRes.data) setSignatures(sigRes.data?.data || sigRes.data || []);
           })
           .finally(() => setLoading(false));
+      } else if (!propAgreement && !targetAppId) {
+        setLoading(true);
+        Promise.all([
+          api.get('/api/agreements').catch(() => ({ data: [] })),
+          !propSignatures || propSignatures.length === 0 ? api.get('/api/signatures').catch(() => ({ data: [] })) : Promise.resolve({ data: propSignatures })
+        ])
+          .then(([agRes, sigRes]) => {
+            const list = agRes.data?.data || agRes.data || [];
+            const active = list.find(a => a.status === 'sent') || list[0] || null;
+            setAgreement(active);
+            if (sigRes.data) setSignatures(sigRes.data?.data || sigRes.data || []);
+          })
+          .finally(() => setLoading(false));
       } else {
         setAgreement(propAgreement || null);
         if (!propSignatures || propSignatures.length === 0) {

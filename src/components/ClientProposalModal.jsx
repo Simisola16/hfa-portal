@@ -38,6 +38,19 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
             if (aRes.data) setApp(aRes.data);
           })
           .finally(() => setLoading(false));
+      } else if (!propProposal && !targetAppId) {
+        setLoading(true);
+        api.get('/api/proposals')
+          .then(res => {
+            const list = res.data?.data || res.data || [];
+            const active = list.find(p => p.status === 'pending') || list[0] || null;
+            setProposal(active);
+            if (active?.application_id) {
+              setApp(typeof active.application_id === 'object' ? active.application_id : null);
+            }
+          })
+          .catch(() => setProposal(null))
+          .finally(() => setLoading(false));
       } else {
         setProposal(propProposal || null);
         setApp(propApp || null);

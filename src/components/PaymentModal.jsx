@@ -20,6 +20,16 @@ export default function PaymentModal({ isOpen, onClose, invoice: propInvoice, ap
           .then(res => setInvoice(res.data || null))
           .catch(() => setInvoice(null))
           .finally(() => setLoading(false));
+      } else if (!propInvoice && !targetAppId) {
+        setLoading(true);
+        api.get('/api/invoices')
+          .then(res => {
+            const list = res.data?.data || res.data || [];
+            const active = list.find(inv => inv.status !== 'paid') || list[0] || null;
+            setInvoice(active);
+          })
+          .catch(() => setInvoice(null))
+          .finally(() => setLoading(false));
       } else {
         setInvoice(propInvoice || null);
       }

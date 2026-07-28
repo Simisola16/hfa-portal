@@ -119,15 +119,16 @@ export default function Layout() {
     else if (titleLower.includes('audit') || titleLower.includes('non-conformity') || titleLower.includes('nc')) modalType = 'audit';
     else if (titleLower.includes('agreement')) modalType = 'agreement';
 
-    const extractAppId = (link) => {
-      if (!link) return null;
-      const m1 = link.match(/\/applications\/([a-fA-F0-9]{24})/);
-      if (m1) return m1[1];
-      const m2 = link.match(/appId=([a-fA-F0-9]{24})/);
-      if (m2) return m2[1];
+    const extractAppId = (notifObj) => {
+      if (!notifObj) return null;
+      if (notifObj.application_id) return String(notifObj.application_id._id || notifObj.application_id);
+      if (notifObj.appId) return String(notifObj.appId);
+      const link = notifObj.link || '';
+      const match = link.match(/([a-fA-F0-9]{24})/);
+      if (match) return match[1];
       return null;
     };
-    const targetAppId = extractAppId(notif.link);
+    const targetAppId = extractAppId(notif);
 
     toast.custom((t) => (
       <div
