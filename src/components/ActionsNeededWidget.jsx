@@ -8,16 +8,36 @@ import ClientAgreementModal from './ClientAgreementModal';
 
 export default function ActionsNeededWidget({ onActionCompleted }) {
   const [apps, setApps] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [agreements, setAgreements] = useState([]);
+  const [audits, setAudits] = useState([]);
+  const [signatures, setSignatures] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Active modal target
-  const [activeModal, setActiveModal] = useState(null); // { type: 'proposal'|'payment'|'audit'|'agreement', app, proposal, invoice, audit, agreement }
+  const [activeModal, setActiveModal] = useState(null); // { type, app, invoice, agreement, audit }
 
   const fetchActionApps = useCallback(async () => {
     try {
-      const res = await api.get('/api/applications');
-      const allApps = res.data?.data || res.data || [];
-      
+      const [appRes, invRes, agRes, audRes, sigRes] = await Promise.all([
+        api.get('/api/applications'),
+        api.get('/api/invoices').catch(() => ({ data: [] })),
+        api.get('/api/agreements').catch(() => ({ data: [] })),
+        api.get('/api/audits').catch(() => ({ data: [] })),
+        api.get('/api/signatures').catch(() => ({ data: [] }))
+      ]);
+
+      const allApps = appRes.data?.data || appRes.data || [];
+      const allInvoices = invRes.data?.data || invRes.data || [];
+      const allAgreements = agRes.data?.data || agRes.data || [];
+      const allAudits = audRes.data?.data || audRes.data || [];
+      const allSignatures = sigRes.data?.data || sigRes.data || [];
+
+      setInvoices(allInvoices);
+      setAgreements(allAgreements);
+      setAudits(allAudits);
+      setSignatures(allSignatures);
+
       const pendingApps = allApps.filter(app => [
         'proposal_sent',
         'invoice_sent',
@@ -45,6 +65,11 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
   };
 
   const getActionConfig = (app) => {
+    const appId = String(app._id || app.id);
+    const linkedInvoice = invoices.find(inv => String(inv.application_id?._id || inv.application_id) === appId);
+    const linkedAgreement = agreements.find(ag => String(ag.application_id?._id || ag.application_id) === appId);
+    const linkedAudit = audits.find(aud => String(aud.application_id?._id || aud.application_id) === appId);
+
     switch (app.status) {
       case 'proposal_sent':
         return {
@@ -66,7 +91,8 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           desc: `Pay initial certification fee for ${app.establishment_name}`,
           buttonText: 'Pay Invoice',
           buttonBg: '#ea580c',
-          modalType: 'payment'
+          modalType: 'payment',
+          invoice: linkedInvoice
         };
       case 'dates_proposed':
         return {
@@ -77,7 +103,8 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           desc: `Select 2 preferred audit dates for ${app.establishment_name}`,
           buttonText: 'Select Dates',
           buttonBg: '#0284c7',
-          modalType: 'audit'
+          modalType: 'audit',
+          audit: linkedAudit
         };
       case 'on_hold':
         return {
@@ -88,7 +115,8 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           desc: `Submit corrective action report for ${app.establishment_name}`,
           buttonText: 'Upload Action',
           buttonBg: '#dc2626',
-          modalType: 'audit'
+          modalType: 'audit',
+          audit: linkedAudit
         };
       case 'agreement_sent':
         return {
@@ -99,7 +127,8 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           desc: `Review & sign certification agreement for ${app.establishment_name}`,
           buttonText: 'Sign Agreement',
           buttonBg: '#2563eb',
-          modalType: 'agreement'
+          modalType: 'agreement',
+          agreement: linkedAgreement
         };
       case 'final_invoice_sent':
         return {
@@ -110,7 +139,8 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           desc: `Pay final invoice fee for ${app.establishment_name}`,
           buttonText: 'Pay Final Invoice',
           buttonBg: '#ea580c',
-          modalType: 'payment'
+          modalType: 'payment',
+          invoice: linkedInvoice
         };
       default:
         return null;
@@ -156,7 +186,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
                   padding: '14px 18px',
                   display: 'flex',
                   alignItems: 'center',
-                  justify: 'space-between',
+                  justifyContent: 'space-between',
                   gap: 16,
                   flexWrap: 'wrap'
                 }}
@@ -178,7 +208,13 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
                 <button
                   className="btn btn-primary btn-sm"
                   style={{ background: config.buttonBg, borderColor: config.buttonBg, gap: 6, fontWeight: 700, padding: '8px 16px' }}
-                  onClick={() => setActiveModal({ type: config.modalType, app })}
+                  onClick={() => setActiveModal({
+                    type: config.modalType,
+                    app,
+                    invoice: config.invoice,
+                    agreement: config.agreement,
+                    audit: config.audit
+                  })}
                 >
                   {config.buttonText} <ArrowRight size={14} />
                 </button>
@@ -203,6 +239,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           isOpen={true}
           onClose={() => setActiveModal(null)}
           app={activeModal.app}
+          invoice={activeModal.invoice}
           onSuccess={handleRefresh}
         />
       )}
@@ -212,6 +249,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           isOpen={true}
           onClose={() => setActiveModal(null)}
           app={activeModal.app}
+          audit={activeModal.audit}
           onSuccess={handleRefresh}
         />
       )}
@@ -221,6 +259,8 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           isOpen={true}
           onClose={() => setActiveModal(null)}
           app={activeModal.app}
+          agreement={activeModal.agreement}
+          signatures={signatures}
           onSuccess={handleRefresh}
         />
       )}
