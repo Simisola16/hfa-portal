@@ -20,7 +20,18 @@ export default function ClientAuditModal({ isOpen, onClose, audit: propAudit, ap
       if (!propAudit && targetAppId) {
         setLoading(true);
         api.get(`/api/audits/application/${targetAppId}`)
-          .then(res => setAudit(res.data || null))
+          .then(res => {
+            // The endpoint returns either a single audit object or an array
+            const raw = res.data;
+            if (!raw) { setAudit(null); return; }
+            if (Array.isArray(raw)) {
+              // Prefer the audit that still needs date selection (dates_proposed), fallback to first
+              const active = raw.find(a => a.status === 'dates_proposed') || raw[0] || null;
+              setAudit(active);
+            } else {
+              setAudit(raw);
+            }
+          })
           .catch(() => setAudit(null))
           .finally(() => setLoading(false));
       } else {
