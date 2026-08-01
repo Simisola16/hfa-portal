@@ -12,6 +12,13 @@ const getPdfUrl = (url) => {
   return url;
 };
 
+const getCleanId = (val) => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') return String(val._id || val.id || '');
+  return String(val);
+};
+
 export default function ClientProposalModal({ isOpen, onClose, proposal: propProposal, app: propApp, appId: propAppId, onSuccess }) {
   const [proposal, setProposal] = useState(propProposal || null);
   const [app, setApp] = useState(propApp || null);
@@ -20,7 +27,7 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
 
-  const targetAppId = propAppId || propApp?._id || propApp?.id || propProposal?.application_id;
+  const targetAppId = getCleanId(propAppId) || getCleanId(propApp) || getCleanId(propProposal?.application_id);
 
   useEffect(() => {
     if (isOpen) {
@@ -64,8 +71,8 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
     if (!proposal) return;
     setSubmitting(true);
     try {
-      const pId = proposal._id || proposal.id;
-      const aId = targetAppId || proposal.application_id;
+      const pId = getCleanId(proposal._id || proposal.id || proposal);
+      const aId = getCleanId(targetAppId) || getCleanId(proposal.application_id) || getCleanId(app?._id || app?.id);
       
       await api.put(`/api/proposals/${pId}`, { status: 'accepted' });
       await api.put(`/api/applications/${aId}/status`, {
@@ -91,8 +98,8 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
     }
     setSubmitting(true);
     try {
-      const pId = proposal._id || proposal.id;
-      const aId = targetAppId || proposal.application_id;
+      const pId = getCleanId(proposal._id || proposal.id || proposal);
+      const aId = getCleanId(targetAppId) || getCleanId(proposal.application_id) || getCleanId(app?._id || app?.id);
 
       await api.put(`/api/proposals/${pId}`, {
         status: 'rejected',

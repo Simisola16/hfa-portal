@@ -3,6 +3,13 @@ import { X, PenTool } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 
+const getCleanId = (val) => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') return String(val._id || val.id || '');
+  return String(val);
+};
+
 export default function ClientAgreementModal({ isOpen, onClose, agreement: propAgreement, app: propApp, appId: propAppId, signatures: propSignatures, onSuccess }) {
   const [agreement, setAgreement] = useState(propAgreement || null);
   const [signatures, setSignatures] = useState(propSignatures || []);
@@ -13,7 +20,7 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const targetAppId = propAppId || propApp?._id || propApp?.id || propAgreement?.application_id;
+  const targetAppId = getCleanId(propAppId) || getCleanId(propApp) || getCleanId(propAgreement?.application_id);
 
   useEffect(() => {
     if (isOpen) {
@@ -76,6 +83,7 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
 
     setSubmitting(true);
     try {
+      const agreeId = getCleanId(agreement._id || agreement.id || agreement);
       const formData = new FormData();
       formData.append('status', 'signed');
       formData.append('client_sign_name', signName);
@@ -84,13 +92,13 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
       if (sigFile) {
         formData.append('signature_file', sigFile);
       } else {
-        const selectedSig = signatures.find(s => s._id === selectedSigId || s.id === selectedSigId);
+        const selectedSig = signatures.find(s => String(s._id || s.id) === String(selectedSigId));
         if (selectedSig) {
           formData.append('signature_url', selectedSig.signature_url);
         }
       }
 
-      await api.put(`/api/agreements/${agreement._id || agreement.id}`, formData, true);
+      await api.put(`/api/agreements/${agreeId}`, formData, true);
       toast.success('Agreement signed and submitted successfully!');
       if (onSuccess) onSuccess();
       onClose();

@@ -114,10 +114,13 @@ export default function Layout() {
 
     const extractAppId = (notifObj) => {
       if (!notifObj) return null;
-      if (notifObj.application_id) return String(notifObj.application_id._id || notifObj.application_id);
-      if (notifObj.appId) return String(notifObj.appId);
-      const link = notifObj.link || '';
-      const match = link.match(/([a-fA-F0-9]{24})/);
+      const raw = notifObj.application_id || notifObj.appId || notifObj.app_id || 
+                  notifObj.data?.application_id || notifObj.data?.app_id || notifObj.data?.appId;
+      if (raw) {
+        if (typeof raw === 'string') return raw;
+        if (typeof raw === 'object') return String(raw._id || raw.id || '');
+      }
+      const match = (notifObj.link || '').match(/([a-fA-F0-9]{24})/) || (notifObj.message || '').match(/([a-fA-F0-9]{24})/);
       if (match) return match[1];
       return null;
     };

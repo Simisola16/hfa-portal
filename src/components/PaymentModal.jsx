@@ -3,13 +3,20 @@ import { X, FileText, CheckCircle } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 
+const getCleanId = (val) => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') return String(val._id || val.id || '');
+  return String(val);
+};
+
 export default function PaymentModal({ isOpen, onClose, invoice: propInvoice, app: propApp, appId: propAppId, onSuccess }) {
   const [invoice, setInvoice] = useState(propInvoice || null);
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const targetAppId = propAppId || propApp?._id || propApp?.id || propInvoice?.application_id;
+  const targetAppId = getCleanId(propAppId) || getCleanId(propApp) || getCleanId(propInvoice?.application_id);
 
   useEffect(() => {
     if (isOpen) {
@@ -42,10 +49,11 @@ export default function PaymentModal({ isOpen, onClose, invoice: propInvoice, ap
     if (!invoice) return;
     setSubmitting(true);
     try {
+      const invId = getCleanId(invoice._id || invoice.id || invoice);
       const formData = new FormData();
       if (file) formData.append('payment_proof', file);
 
-      await api.put(`/api/invoices/${invoice._id || invoice.id}/pay`, formData, true);
+      await api.put(`/api/invoices/${invId}/pay`, formData, true);
       toast.success('Payment confirmed! Admin will verify it shortly.');
       if (onSuccess) onSuccess();
       onClose();

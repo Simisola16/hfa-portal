@@ -3,6 +3,13 @@ import { X, Calendar } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 
+const getCleanId = (val) => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') return String(val._id || val.id || '');
+  return String(val);
+};
+
 export default function ClientAuditModal({ isOpen, onClose, audit: propAudit, app: propApp, appId: propAppId, onSuccess }) {
   const [audit, setAudit] = useState(propAudit || null);
   const [loading, setLoading] = useState(false);
@@ -10,7 +17,7 @@ export default function ClientAuditModal({ isOpen, onClose, audit: propAudit, ap
   const [unavailable, setUnavailable] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const targetAppId = propAppId || propApp?._id || propApp?.id || propAudit?.application_id;
+  const targetAppId = getCleanId(propAppId) || getCleanId(propApp) || getCleanId(propAudit?.application_id);
 
   useEffect(() => {
     if (isOpen) {
@@ -58,8 +65,9 @@ export default function ClientAuditModal({ isOpen, onClose, audit: propAudit, ap
     }
     setSubmitting(true);
     try {
+      const auditId = getCleanId(audit._id || audit.id || audit);
       await api.post('/api/audits/select-dates', {
-        audit_id: audit._id || audit.id,
+        audit_id: auditId,
         selected_dates: selectedDates,
         unavailable
       });
