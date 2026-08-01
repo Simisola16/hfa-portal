@@ -21,8 +21,9 @@ export function AuthProvider({ children }) {
           localStorage.setItem('hfa_token', data.token);
           setUser(data.user);
           setProfile(data.user);
-          window.history.replaceState({}, document.title, window.location.pathname);
-          toast.success(`Impersonation active: Viewing as Admin`);
+          toast.success(`Impersonation active: Viewing as ${data.user?.full_name || 'Client'}`);
+          // Navigate to dashboard — this MUST happen or the new tab stays on /login
+          window.location.href = '/dashboard';
         })
         .catch(err => {
           toast.error(err.message || 'Failed to exchange impersonation code.');
