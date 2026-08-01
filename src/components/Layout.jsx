@@ -64,28 +64,21 @@ export default function Layout() {
   const panelRef = useRef();
 
   const [checkingSite, setCheckingSite] = useState(true);
-  const [hasSite, setHasSite] = useState(false);
+  const [hasSite, setHasSite] = useState(true);
 
   useEffect(() => {
     if (profile && profile.role === 'client') {
       api.get('/api/sites')
         .then(res => {
           const sites = res.data || [];
-          const userHasSite = sites.length > 0;
-          setHasSite(userHasSite);
-          
-          if (!userHasSite && location.pathname !== '/add-site') {
-            navigate('/add-site', { replace: true });
-          } else if (userHasSite && location.pathname === '/add-site') {
-            navigate('/dashboard', { replace: true });
-          }
+          setHasSite(sites.length > 0);
         })
         .catch(() => {})
         .finally(() => setCheckingSite(false));
     } else {
       setCheckingSite(false);
     }
-  }, [profile, location.pathname, navigate]);
+  }, [profile]);
 
   const [animateBell, setAnimateBell] = useState(false);
   const [socketConnected, setSocketConnected] = useState(true);
@@ -311,14 +304,6 @@ export default function Layout() {
     setShowNotifs(false);
     if (n.link) navigate(n.link);
   };
-
-  if (checkingSite) {
-    return (
-      <div className="loading-overlay" style={{ height: '100vh' }}>
-        <div className="spinner" style={{ width: 40, height: 40 }} />
-      </div>
-    );
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>

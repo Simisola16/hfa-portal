@@ -622,7 +622,7 @@ export default function ApplicationsPage({ openNew }) {
                         style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, padding: '2px 8px' }}
                         onClick={() => navigate('/add-site')}
                       >
-                        + Add Site
+                        + Add Manufacturing Site
                       </button>
                     </div>
                     <select className="form-control" value={form.site_id} onChange={e => handleSiteChange(e.target.value)} required>

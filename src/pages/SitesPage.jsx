@@ -43,7 +43,7 @@ export default function SitesPage() {
     <div className="animate-fade-in">
       <div className="toolbar">
         <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1B7A7A' }}>Manage Sites</h1>
-        <button className="btn btn-primary" onClick={openNew} style={{ marginLeft: 'auto' }}><Plus size={18} /> Add Site</button>
+        <button className="btn btn-primary" onClick={openNew} style={{ marginLeft: 'auto' }}><Plus size={18} /> Add Manufacturing Site</button>
       </div>
 
       <div className="card">

@@ -56,10 +56,10 @@ export default function AddSitePage() {
           <MapPin size={24} style={{ color: 'var(--primary)' }} />
         </div>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', marginBottom: 8, letterSpacing: '-0.5px' }}>
-          Register Business Location
+          Register Manufacturing Site
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: 15, maxWidth: 480, margin: '0 auto', lineHeight: 1.5 }}>
-          Before proceeding with your halal application, please complete your onboarding by registering your primary operating business site.
+          Before proceeding with your halal application, please register your primary manufacturing site.
         </p>
       </div>
 

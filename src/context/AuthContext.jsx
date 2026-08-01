@@ -53,6 +53,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem('hfa_token');
+    sessionStorage.removeItem('dismissed_site_prompt');
     setUser(null);
     setProfile(null);
   };

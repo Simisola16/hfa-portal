@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
-import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, RefreshCw, Download, X } from 'lucide-react';
+import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, RefreshCw, Download, X, MapPin } from 'lucide-react';
 import ActionsNeededWidget from '../components/ActionsNeededWidget';
 
 const STATUS_BADGE = {
@@ -27,9 +27,10 @@ const OFFICIAL_FORMS = [
 export default function DashboardPage() {
   const { profile } = useAuth();
   const navigate = useNavigate();
-  const [data, setData] = useState({ applications: [], certificates: [], products: [], messages_count: 0 });
+  const [data, setData] = useState({ applications: [], certificates: [], products: [], messages_count: 0, sites: [] });
   const [loading, setLoading] = useState(true);
   const [showForms, setShowForms] = useState(false);
+  const [showSiteModal, setShowSiteModal] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -37,15 +38,28 @@ export default function DashboardPage() {
       api.get('/api/certificates'),
       api.get('/api/products'),
       api.get('/api/messages/unread-count'),
-    ]).then(([apps, certs, prods, msgs]) => {
+      api.get('/api/sites'),
+    ]).then(([apps, certs, prods, msgs, sitesRes]) => {
+      const userSites = sitesRes.data || [];
       setData({
         applications: apps.data || [],
         certificates: certs.data || [],
         products: prods.data || [],
         messages_count: msgs.count || 0,
+        sites: userSites,
       });
+
+      const isDismissed = sessionStorage.getItem('dismissed_site_prompt') === 'true';
+      if (userSites.length === 0 && !isDismissed) {
+        setShowSiteModal(true);
+      }
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  const handleDismissSiteModal = () => {
+    sessionStorage.setItem('dismissed_site_prompt', 'true');
+    setShowSiteModal(false);
+  };
 
   const recentApps = data.applications.slice(0, 5);
   const activeCerts = data.certificates.filter(c => c.status === 'active').length;
@@ -254,6 +268,52 @@ export default function DashboardPage() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setShowForms(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DISMISSIBLE SITE ONBOARDING MODAL */}
+      {showSiteModal && (
+        <div className="modal-overlay" style={{ zIndex: 1200 }} onClick={() => handleDismissSiteModal()}>
+          <div className="modal" style={{ maxWidth: 480, padding: 0 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MapPin size={20} style={{ color: 'var(--primary)' }} />
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>Add Manufacturing Site</div>
+              </div>
+              <button className="modal-close" onClick={() => handleDismissSiteModal()}><X size={18} /></button>
+            </div>
+
+            <div className="modal-body" style={{ padding: 24 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>
+                Get started by adding your first manufacturing site
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.5, margin: 0 }}>
+                Register your primary operating manufacturing site to begin applying for Halal certification.
+              </p>
+            </div>
+
+            <div className="modal-footer" style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => handleDismissSiteModal()}
+              >
+                Maybe Later
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  handleDismissSiteModal();
+                  navigate('/add-site');
+                }}
+              >
+                Add Manufacturing Site
+              </button>
             </div>
           </div>
         </div>
