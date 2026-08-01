@@ -108,30 +108,80 @@ export default function ApplicationsPage({ openNew }) {
     }
   };
 
+  const checkRenewalEligibility = (siteId) => {
+    if (!siteId) return false;
+    const now = Date.now();
+    const threeMonthsInMs = 90 * 24 * 60 * 60 * 1000;
+
+    const siteCerts = certs.filter(c => {
+      const sId = typeof c.site_id === 'object' ? c.site_id?._id || c.site_id?.id : c.site_id;
+      return String(sId) === String(siteId);
+    });
+
+    const certEligible = siteCerts.some(c => {
+      if (c.status === 'expired') return true;
+      if (!c.expiry_date) return false;
+      const expiryTime = new Date(c.expiry_date).getTime();
+      return (expiryTime - now) <= threeMonthsInMs;
+    });
+
+    if (certEligible) return true;
+
+    const siteApps = apps.filter(a => {
+      const sId = typeof a.site_id === 'object' ? a.site_id?._id || a.site_id?.id : a.site_id;
+      return String(sId) === String(siteId);
+    });
+
+    return siteApps.some(a => {
+      if (a.status === 'expired') return true;
+      if (a.certificate_expiry) {
+        const expiryTime = new Date(a.certificate_expiry).getTime();
+        return (expiryTime - now) <= threeMonthsInMs;
+      }
+      return false;
+    });
+  };
+
   const getGatingStatus = () => {
     if (!form.site_id) return null;
     
-    // Rule A: Active Certificate blocks new application
+    // Active Certificate blocks a new application if certificate has > 3 months left
     if (form.application_type === 'new') {
-      const activeCert = certs.find(c => 
-        c.site_id === form.site_id && 
-        c.status === 'active' && 
-        new Date(c.expiry_date) > new Date()
-      );
+      const activeCert = certs.find(c => {
+        const sId = typeof c.site_id === 'object' ? c.site_id?._id || c.site_id?.id : c.site_id;
+        return String(sId) === String(form.site_id) && c.status === 'active' && new Date(c.expiry_date) > new Date();
+      });
       if (activeCert) {
-        const expiryStr = new Date(activeCert.expiry_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        const expiry = new Date(activeCert.expiry_date).getTime();
+        const threeMonthsInMs = 90 * 24 * 60 * 60 * 1000;
+        const isWithin3Months = (expiry - Date.now()) <= threeMonthsInMs;
+        if (!isWithin3Months) {
+          const expiryStr = new Date(activeCert.expiry_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+          return {
+            blocked: true,
+            message: `This site has an active certificate (valid until ${expiryStr}). Renewal applications can be submitted within 3 months of expiration.`
+          };
+        }
+      }
+    }
+
+    // Renewal blocked if not eligible
+    if (form.application_type === 'renewal') {
+      const isEligible = checkRenewalEligibility(form.site_id);
+      if (!isEligible) {
         return {
           blocked: true,
-          message: `This site already has an active certificate (valid until ${expiryStr}). You can submit a renewal application closer to the expiry date, or apply for a different site.`
+          message: `Renewal is only allowed when an existing certificate is within 3 months of expiration or has already expired.`
         };
       }
     }
 
     // Rule B: Ongoing Application blocks a new one
-    const ongoingApp = apps.find(app => 
-      app.site_id === form.site_id &&
-      !['approved', 'rejected', 'certificate_issued'].includes(app.status?.toLowerCase())
-    );
+    const ongoingApp = apps.find(app => {
+      const sId = typeof app.site_id === 'object' ? app.site_id?._id || app.site_id?.id : app.site_id;
+      return String(sId) === String(form.site_id) &&
+        !['approved', 'rejected', 'certificate_issued'].includes(app.status?.toLowerCase());
+    });
     if (ongoingApp) {
       return {
         blocked: true,
@@ -156,9 +206,8 @@ export default function ApplicationsPage({ openNew }) {
   const handleSiteChange = (siteId) => {
     const selected = sites.find(s => s._id === siteId);
     if (selected) {
-      const hasPrevApp = apps.some(a => a.site_id === siteId);
-      const hasCert = certs.some(c => c.site_id === siteId);
-      const autoType = (hasPrevApp || hasCert) ? 'renewal' : 'new';
+      const isEligible = checkRenewalEligibility(siteId);
+      const autoType = isEligible ? 'renewal' : 'new';
 
       setForm(f => ({
         ...f,
@@ -633,9 +682,23 @@ export default function ApplicationsPage({ openNew }) {
                   <div className="form-grid">
                     <div className="form-group">
                       <label className="form-label">Application Type <span>*</span></label>
-                      <select className="form-control" value={form.application_type} onChange={e => setForm(f => ({...f, application_type: e.target.value}))}>
+                      <select
+                        className="form-control"
+                        value={form.application_type}
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === 'renewal' && form.site_id && !checkRenewalEligibility(form.site_id)) {
+                            toast.error('Renewal is only allowed when an existing certificate is within 3 months of expiration or has expired.');
+                            setForm(f => ({ ...f, application_type: 'new' }));
+                            return;
+                          }
+                          setForm(f => ({ ...f, application_type: val }));
+                        }}
+                      >
                         <option value="new">New Application</option>
-                        <option value="renewal">Renewal</option>
+                        <option value="renewal" disabled={Boolean(form.site_id && !checkRenewalEligibility(form.site_id))}>
+                          Renewal {form.site_id && !checkRenewalEligibility(form.site_id) ? '(Available 3 months before expiry)' : ''}
+                        </option>
                         <option value="surveillance">Surveillance</option>
                         <option value="addon">Add-on</option>
                       </select>
