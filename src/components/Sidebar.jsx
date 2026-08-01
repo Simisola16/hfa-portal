@@ -5,7 +5,7 @@ import {
   LayoutDashboard, FileText, Award, Package, Ship,
   MessageSquare, Users, MapPin, FileBarChart, Bell,
   LogOut, ChevronDown, ChevronRight, FileCheck, ClipboardList,
-  Settings, HelpCircle, RefreshCw, Menu, X, Ticket
+  Settings, HelpCircle, RefreshCw, Menu, X, Ticket, Calendar
 } from 'lucide-react';
 
 const navItems = [
