@@ -6,11 +6,11 @@ import { Award, Download, Search, RefreshCw, Eye, EyeOff, Calendar, AlertCircle,
 
 const getPdfUrl = (url) => {
   if (!url) return '#';
-  if (url.startsWith('/api/files/')) {
-    const API_URL = import.meta.env.VITE_API_URL || 'https://hfa-portal-backend.onrender.com';
-    return `${API_URL}${url}`;
-  }
-  return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const cleanApi = API_URL.replace(/\/$/, '');
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return `${cleanApi}${cleanPath}`;
 };
 
 export default function CertificatesPage() {
@@ -140,7 +140,13 @@ export default function CertificatesPage() {
                           </td>
                           <td style={{ display: 'flex', gap: 6 }}>
                             {cert.status === 'active' && (
-                              <a href={`${api.defaults?.baseURL || ''}/api/certificates/${cert.id || cert._id}/download`} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" onClick={e => e.stopPropagation()}>
+                              <a
+                                href={getPdfUrl(cert.certificate_url || cert.document_url || cert.pdf_url || `/api/certificates/${cert.id || cert._id}/download?token=${localStorage.getItem('hfa_token') || ''}`)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="btn btn-outline btn-sm"
+                                onClick={e => e.stopPropagation()}
+                              >
                                 <Download size={13} /> Download
                               </a>
                             )}
