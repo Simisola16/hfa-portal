@@ -252,9 +252,7 @@ export default function AuditCard({ audits, app, status, onSelectDatesClick, onN
                               cursor: 'pointer'
                             }}
                             onClick={() => {
-                              if (window.confirm('Have you resolved this Non-Conformity? This will notify HFA Admin.')) {
-                                onNcResolve(audit._id || audit.id, nc._id || nc.id);
-                              }
+                              onNcResolve(audit._id || audit.id, nc._id || nc.id);
                             }}
                           >
                             Upload NC Correction

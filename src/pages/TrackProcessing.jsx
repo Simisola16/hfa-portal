@@ -173,15 +173,11 @@ export default function TrackProcessing() {
     }
   };
 
-  const handleNcResolve = async (auditId, reportId) => {
-    try {
-      const res = await api.post('/api/audits/resolve-nc', { audit_id: auditId, report_id: reportId });
-      // Update local audit state so the NC flips to 'corrected' immediately
-      setAudit(res.data);
-      toast.success('NC report marked as corrected — HFA Admin has been notified.');
-    } catch (err) {
-      toast.error(err.message || 'Failed to resolve NC report');
-    }
+  const [auditModalMode, setAuditModalMode] = useState('select_dates');
+
+  const handleNcResolve = (auditId, reportId) => {
+    setAuditModalMode('nc_upload');
+    setShowAuditModal(true);
   };
 
   if (loading) {
@@ -611,7 +607,10 @@ export default function TrackProcessing() {
             audits={auditsArr}
             app={app}
             status={status}
-            onSelectDatesClick={() => setShowAuditModal(true)}
+            onSelectDatesClick={() => {
+              setAuditModalMode('select_dates');
+              setShowAuditModal(true);
+            }}
             onNcResolve={handleNcResolve}
           />
 
@@ -830,6 +829,7 @@ export default function TrackProcessing() {
         isOpen={showAuditModal}
         onClose={() => setShowAuditModal(false)}
         audit={activeAudit}
+        mode={auditModalMode}
         onSuccess={() => fetchApp(true)}
       />
 

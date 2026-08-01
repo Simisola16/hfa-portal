@@ -26,6 +26,7 @@ import TicketsPage from './pages/TicketsPage';
 import AddSitePage from './pages/AddSitePage';
 import TrackProcessing from './pages/TrackProcessing';
 import AgreementPage from './pages/Agreement';
+import AuditsPage from './pages/AuditsPage';
 
 export default function App() {
   return (
@@ -65,7 +66,7 @@ export default function App() {
             <Route path="/tickets/new" element={<TicketsPage openNew />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/add-site" element={<AddSitePage />} />
-            <Route path="/audits" element={<ApplicationsPage />} />
+            <Route path="/audits" element={<AuditsPage />} />
             <Route path="/applications/:appId/track" element={<TrackProcessing />} />
           </Route>
 
