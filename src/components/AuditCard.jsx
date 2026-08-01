@@ -213,17 +213,35 @@ export default function AuditCard({ audits, app, status, onSelectDatesClick, onN
 
                       {/* Actions Row */}
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        {nc.document_url && (
+                        {nc.document_url && nc.document_url !== '#' && nc.document_url !== 'undefined' ? (
                           <a
                             href={getPdfUrl(nc.document_url)}
                             target="_blank"
                             rel="noreferrer"
                             className="btn btn-outline btn-sm"
                             style={{ fontSize: 11, padding: '5px 12px', borderRadius: 20, background: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}
-                            onClick={e => e.stopPropagation()}
+                            onClick={e => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const fullUrl = getPdfUrl(nc.document_url);
+                              if (fullUrl && fullUrl !== '#') {
+                                window.open(fullUrl, '_blank', 'noopener,noreferrer');
+                              }
+                            }}
                           >
                             <FileText size={11} /> View Document
                           </a>
+                        ) : (
+                          <span
+                            style={{
+                              fontSize: 11, padding: '5px 12px', borderRadius: 20,
+                              background: '#f1f5f9', color: '#94a3b8', border: '1px solid #cbd5e1',
+                              display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'not-allowed', fontWeight: 600
+                            }}
+                            title="No document file was uploaded for this NC report"
+                          >
+                            <FileText size={11} /> Document Unavailable
+                          </span>
                         )}
                         {!isCorrected && onNcResolve && (
                           <button
