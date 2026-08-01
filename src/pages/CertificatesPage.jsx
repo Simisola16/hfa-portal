@@ -140,7 +140,7 @@ export default function CertificatesPage() {
                           </td>
                           <td style={{ display: 'flex', gap: 6 }}>
                             {cert.status === 'active' && (
-                              <a href={`${api.defaults?.baseURL || ''}/api/certificates/${cert.id || cert._id}/download`} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
+                              <a href={`${api.defaults?.baseURL || ''}/api/certificates/${cert.id || cert._id}/download`} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" onClick={e => e.stopPropagation()}>
                                 <Download size={13} /> Download
                               </a>
                             )}

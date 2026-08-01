@@ -47,7 +47,7 @@ export default function ProposalCard({ proposal, status }) {
         </div>
         {proposal.proposal_url && (
           <a href={getPdfUrl(proposal.proposal_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
-            <Download size={13} /> View Proposal
+            <Download size={13} /> {/\.(png|jpg|jpeg|webp)$/i.test(proposal.proposal_url) ? 'View Image' : 'View Proposal'}
           </a>
         )}
       </div>

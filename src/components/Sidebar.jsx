@@ -58,6 +58,7 @@ const navItems = [
     ]
   },
   { icon: FileText, label: 'Proposals', path: '/proposals' },
+  { icon: Calendar, label: 'Audits', path: '/audits' },
   { icon: Users, label: "Manage Users", path: '/manage-users' },
   { icon: MapPin, label: 'Manage Sites', path: '/sites' },
   { icon: FileBarChart, label: 'Invoices', path: '/invoices' },
@@ -71,14 +72,9 @@ function getUnreadNavCount(notifications, pathStr, children = []) {
 
   const matchSinglePath = (link, targetPath) => {
     if (!link || !targetPath) return false;
-    const [linkPath, linkSearch = ''] = link.split('?');
-    const [targetPathname, targetSearch = ''] = targetPath.split('?');
-
-    if (linkPath !== targetPathname) return false;
-    if (targetSearch) {
-      return linkSearch.includes(targetSearch);
-    }
-    return true;
+    const linkPath = link.split('?')[0].split('#')[0];
+    const targetPathname = targetPath.split('?')[0].split('#')[0];
+    return linkPath === targetPathname;
   };
 
   let count = 0;

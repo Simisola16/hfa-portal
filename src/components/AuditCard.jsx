@@ -1,6 +1,15 @@
 import React from 'react';
 import { Calendar, Users, Lock, AlertCircle, CheckCircle, FileText } from 'lucide-react';
 
+const getPdfUrl = (url) => {
+  if (!url) return '#';
+  if (url.startsWith('/api/files/') || url.startsWith('/uploads/')) {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    return `${API_URL}${url}`;
+  }
+  return url;
+};
+
 export default function AuditCard({ audits, app, status, onSelectDatesClick, onNcResolve }) {
   const normStatus = (status || '').toLowerCase().replace(/ /g, '_');
   const hasAudits = audits && audits.length > 0;
@@ -125,17 +134,21 @@ export default function AuditCard({ audits, app, status, onSelectDatesClick, onN
         {audit.auditors && audit.auditors.length > 0 ? (
           <div style={{ display: 'grid', gap: 10, marginBottom: showNcSection ? 20 : 0 }}>
             {audit.auditors.map((a, i) => {
-              const rc = roleColors[a.role] || roleColors.audit_trainee;
+              const name = a.name || a.full_name || a.user_id?.full_name || 'Auditor';
+              const email = a.email || a.user_id?.email || '';
+              const phone = a.contact_number || a.phone || a.user_id?.phone || '';
+              const role = a.role || 'lead_auditor';
+              const rc = roleColors[role] || roleColors.audit_trainee;
               return (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{a.name}</div>
-                    {a.email && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{a.email} {a.contact_number ? `• ${a.contact_number}` : ''}</div>}
+                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{name}</div>
+                    {(email || phone) && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{email} {phone ? `• ${phone}` : ''}</div>}
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    {a.role && (
+                    {role && (
                       <span style={{ fontSize: 11, fontWeight: 700, background: rc.bg, color: rc.color, border: `1px solid ${rc.border}`, padding: '3px 10px', borderRadius: 12 }}>
-                        {roleLabels[a.role] || a.role}
+                        {roleLabels[role] || role}
                       </span>
                     )}
                   </div>
@@ -202,11 +215,12 @@ export default function AuditCard({ audits, app, status, onSelectDatesClick, onN
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                         {nc.document_url && (
                           <a
-                            href={nc.document_url}
+                            href={getPdfUrl(nc.document_url)}
                             target="_blank"
                             rel="noreferrer"
                             className="btn btn-outline btn-sm"
                             style={{ fontSize: 11, padding: '5px 12px', borderRadius: 20, background: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}
+                            onClick={e => e.stopPropagation()}
                           >
                             <FileText size={11} /> View Document
                           </a>
@@ -225,7 +239,7 @@ export default function AuditCard({ audits, app, status, onSelectDatesClick, onN
                               }
                             }}
                           >
-                            Mark as Corrected
+                            Upload NC Correction
                           </button>
                         )}
                       </div>

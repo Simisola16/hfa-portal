@@ -39,17 +39,17 @@ export default function ApplicationsPage({ openNew }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const typeParam = searchParams.get('type');
+    const statusParam = searchParams.get('status');
+    if (typeParam !== null) setFilterType(typeParam);
+    if (statusParam !== null) setFilterStatus(statusParam);
+  }, [searchParams]);
+
   const pendingApp = apps.find(app => {
     const s = app.status?.toLowerCase();
     return s !== 'approved' && s !== 'rejected' && s !== 'certificate_issued';
   });
-  
-  const fileRefs = {
-    halal_policy: useRef(),
-    ingredient_list: useRef(),
-    floor_plan: useRef(),
-    haccp_plan: useRef()
-  };
 
   const [form, setForm] = useState({
     application_type: 'new',
@@ -76,7 +76,6 @@ export default function ApplicationsPage({ openNew }) {
   });
 
   const [newProduct, setNewProduct] = useState({ name: '', brand: '', category: '' });
-  const [files, setFiles] = useState({});
   const [hasActiveCert, setHasActiveCert] = useState(false);
   const [certs, setCerts] = useState([]);
   const [addOnApps, setAddOnApps] = useState([]);
@@ -157,6 +156,10 @@ export default function ApplicationsPage({ openNew }) {
   const handleSiteChange = (siteId) => {
     const selected = sites.find(s => s._id === siteId);
     if (selected) {
+      const hasPrevApp = apps.some(a => a.site_id === siteId);
+      const hasCert = certs.some(c => c.site_id === siteId);
+      const autoType = (hasPrevApp || hasCert) ? 'renewal' : 'new';
+
       setForm(f => ({
         ...f,
         site_id: siteId,
@@ -164,6 +167,7 @@ export default function ApplicationsPage({ openNew }) {
         establishment_name: selected.name,
         establishment_address: `${selected.address || ''}, ${selected.address_2 || ''}, ${selected.city || ''}, ${selected.state || ''}`,
         managing_director: selected.contact_person || '',
+        application_type: autoType
       }));
     }
   };
@@ -249,11 +253,6 @@ export default function ApplicationsPage({ openNew }) {
       return toast.error('Please provide intoxicants usage details (Step 5).');
     }
 
-    if (!files.halal_policy) return toast.error('Please upload your Halal Policy (Step 6).');
-    if (!files.ingredient_list) return toast.error('Please upload your Ingredient List (Step 6).');
-    if (!files.floor_plan) return toast.error('Please upload your Floor Plan (Step 6).');
-    if (!files.haccp_plan) return toast.error('Please upload your HACCP Plan (Step 6).');
-    
     if (!form.declared_true) return toast.error('You must declare that the information is true and correct (Step 6).');
 
     setSubmitting(true);
@@ -263,13 +262,14 @@ export default function ApplicationsPage({ openNew }) {
       submissionData.products = JSON.stringify(form.products);
       
       Object.entries(submissionData).forEach(([k, v]) => fd.append(k, v));
-      Object.entries(files).forEach(([k, v]) => fd.append(k, v));
 
       await api.post('/api/applications', fd, true);
       toast.success('Application submitted successfully!');
       setShowModal(false);
+      setModalStep(1);
       resetForm();
       fetchData();
+      navigate('/applications');
     } catch (err) {
       toast.error(err.message || 'Submission failed');
     } finally {
@@ -285,11 +285,7 @@ export default function ApplicationsPage({ openNew }) {
       production_schedule: '', employee_count: '', has_porcine: false, has_intoxicants: false,
       porcine_details: '', intoxicants_details: '', declared_true: false, notes: '', products: []
     });
-    setFiles({});
     setModalStep(1);
-    Object.values(fileRefs).forEach(ref => {
-      if (ref.current) ref.current.value = '';
-    });
   };
 
   const handleCloseModal = () => {
@@ -618,7 +614,17 @@ export default function ApplicationsPage({ openNew }) {
                 <div className="animate-fade-in">
                   <h3 className="section-title">Step 1: Application Basics</h3>
                   <div className="form-group">
-                    <label className="form-label">Select Site <span>*</span></label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <label className="form-label" style={{ marginBottom: 0 }}>Select Site <span>*</span></label>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, padding: '2px 8px' }}
+                        onClick={() => navigate('/add-site')}
+                      >
+                        + Add Site
+                      </button>
+                    </div>
                     <select className="form-control" value={form.site_id} onChange={e => handleSiteChange(e.target.value)} required>
                       <option value="">-- Select Site --</option>
                       {sites.map(s => <option key={s._id} value={s._id}>{s.name} ({s.city})</option>)}
@@ -779,31 +785,16 @@ export default function ApplicationsPage({ openNew }) {
 
               {modalStep === 6 && (
                 <div className="animate-fade-in">
-                  <h3 className="section-title">Step 6: Documents & Submission</h3>
-                  <div className="form-grid">
-                    {[
-                      { key: 'halal_policy', label: 'Halal Policy' },
-                      { key: 'ingredient_list', label: 'Ingredient List' },
-                      { key: 'floor_plan', label: 'Floor Plan' },
-                      { key: 'haccp_plan', label: 'HACCP Plan' },
-                    ].map(doc => (
-                      <div className="form-group" key={doc.key}>
-                        <label className="form-label">{doc.label} <span>*</span></label>
-                        <input type="file" ref={fileRefs[doc.key]} className="hidden" style={{ display: 'none' }} onChange={e => setFiles(f => ({...f, [doc.key]: e.target.files[0]}))} />
-                        <div className="file-upload-box" onClick={() => fileRefs[doc.key].current.click()}>
-                          <Upload size={16} />
-                          <span>{files[doc.key] ? files[doc.key].name : 'Choose File'}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="form-group mt-4">
+                  <h3 className="section-title">Step 6: Declaration &amp; Submission</h3>
+                  <div className="form-group mt-2">
                     <label className="form-label">Additional Notes</label>
-                    <textarea className="form-control" rows={2} value={form.notes} onChange={e => setForm(f => ({...f, notes: e.target.value}))} />
+                    <textarea className="form-control" rows={3} placeholder="Any additional details or comments for the certification body..." value={form.notes} onChange={e => setForm(f => ({...f, notes: e.target.value}))} />
                   </div>
-                  <label className="checkbox-label p-4 bg-light rounded-lg border border-dashed mt-4">
-                    <input type="checkbox" checked={form.declared_true} onChange={e => setForm(f => ({...f, declared_true: e.target.checked}))} required />
-                    <span className="text-sm font-semibold">I hereby declare that the information provided is true and correct.</span>
+                  <label className="checkbox-label p-4 bg-light rounded-lg border border-dashed mt-4" style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <input type="checkbox" checked={form.declared_true} onChange={e => setForm(f => ({...f, declared_true: e.target.checked}))} required style={{ marginTop: 3 }} />
+                    <span className="text-sm font-semibold" style={{ lineHeight: 1.5 }}>
+                      I hereby declare that all information provided in this application is true, complete, and correct to the best of my knowledge.
+                    </span>
                   </label>
                 </div>
               )}

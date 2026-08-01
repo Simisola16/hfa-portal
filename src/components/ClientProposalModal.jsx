@@ -165,7 +165,7 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
                       className="btn btn-outline btn-sm"
                       style={{ width: '100%', justifyContent: 'center', gap: 8, borderColor: '#cbd5e1', color: '#0f172a', background: 'white' }}
                     >
-                      <Download size={14} /> Download Proposal Document (PDF)
+                      <Download size={14} /> {/\.(png|jpg|jpeg|webp)$/i.test(proposal.proposal_url) ? 'View / Download Proposal Image' : 'Download Proposal Document (PDF)'}
                     </a>
                   </div>
                 )}
