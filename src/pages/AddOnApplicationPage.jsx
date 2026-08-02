@@ -38,8 +38,8 @@ const STATUS_LABELS = {
   ft_assigned: 'FT Assigned',
   product_approval_form_enabled: 'Form Enabled',
   all_forms_received: 'Forms Received',
-  logsheet_created: 'Logsheet Created',
-  waiting_sharia_signature: "Shari'a Signature",
+  logsheet_created: 'Under Review',
+  waiting_sharia_signature: 'Under Review',
   product_form_approved: 'Form Approved',
   ready_for_certificate: 'Ready For Certificate',
   completed: 'Certificate'
@@ -52,8 +52,8 @@ const STATUS_BADGE = {
   ft_assigned: 'badge-blue',
   product_approval_form_enabled: 'badge-purple',
   all_forms_received: 'badge-teal',
-  logsheet_created: 'badge-blue',
-  waiting_sharia_signature: 'badge-orange',
+  logsheet_created: 'badge-teal',
+  waiting_sharia_signature: 'badge-teal',
   product_form_approved: 'badge-green',
   ready_for_certificate: 'badge-teal',
   completed: 'badge-green'
@@ -66,8 +66,8 @@ const STATUS_COLOR = {
   ft_assigned: '#2563eb',
   product_approval_form_enabled: '#7c3aed',
   all_forms_received: '#0d9488',
-  logsheet_created: '#2563eb',
-  waiting_sharia_signature: '#ea580c',
+  logsheet_created: '#0d9488',
+  waiting_sharia_signature: '#0d9488',
   product_form_approved: '#16a34a',
   ready_for_certificate: '#0d9488',
   completed: '#16a34a'
@@ -75,9 +75,16 @@ const STATUS_COLOR = {
 
 const ORDER = [
   'submitted', 'accepted', 'ft_assigned', 'product_approval_form_enabled',
-  'all_forms_received', 'logsheet_created', 'waiting_sharia_signature',
-  'product_form_approved', 'ready_for_certificate', 'completed'
+  'all_forms_received', 'product_form_approved', 'ready_for_certificate', 'completed'
 ];
+
+const getClientStepIdx = (status) => {
+  if (['logsheet_created', 'waiting_sharia_signature'].includes(status)) {
+    return ORDER.indexOf('all_forms_received');
+  }
+  return ORDER.indexOf(status);
+};
+
 
 const emptyProduct = () => ({ name: '', code: '', type: 'Add product' });
 
@@ -213,7 +220,7 @@ export default function AddOnApplicationPage() {
               const statusColor = STATUS_COLOR[app.status] || '#475569';
               const needsFormSubmit = app.status === 'product_approval_form_enabled';
               const isExpanded = expandedId === app._id;
-              const stepIdx = ORDER.indexOf(app.status);
+              const stepIdx = getClientStepIdx(app.status);
 
               const ftNames = (() => {
                 const arr = app.assigned_food_techs || [];
@@ -304,7 +311,7 @@ export default function AddOnApplicationPage() {
                   <div style={{ height: 3, background: '#f1f5f9' }}>
                     <div style={{
                       height: '100%',
-                      width: app.status === 'rejected' ? '10%' : `${app.status === 'completed' ? 100 : Math.round(((stepIdx + 1) / 10) * 100)}%`,
+                      width: app.status === 'rejected' ? '10%' : `${app.status === 'completed' ? 100 : Math.round(((stepIdx + 1) / ORDER.length) * 100)}%`,
                       background: app.status === 'rejected' ? '#ef4444' : statusColor,
                       transition: 'width 0.4s ease'
                     }} />
@@ -336,7 +343,7 @@ export default function AddOnApplicationPage() {
                         </div>
                       )}
 
-                      {/* 10-step workflow */}
+                      {/* Workflow progress (Client: 8 visible steps) */}
                       {app.status !== 'rejected' && (
                         <div style={{ background: 'white', borderRadius: 10, border: '1px solid #e2e8f0', padding: '12px 16px' }}>
                           <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 12 }}>
@@ -349,16 +356,15 @@ export default function AddOnApplicationPage() {
                               { id: 'ft_assigned', label: 'FT Assigned' },
                               { id: 'product_approval_form_enabled', label: 'Form Enabled' },
                               { id: 'all_forms_received', label: 'Forms Received' },
-                              { id: 'logsheet_created', label: 'Logsheet' },
-                              { id: 'waiting_sharia_signature', label: "Shari'a Sig" },
                               { id: 'product_form_approved', label: 'Form Approved' },
                               { id: 'ready_for_certificate', label: 'Ready Cert' },
                               { id: 'completed', label: 'Certificate' }
                             ].map((step, idx, arr) => {
                               const sIdx = ORDER.indexOf(step.id);
-                              const currentIdx = ORDER.indexOf(app.status);
+                              const currentIdx = getClientStepIdx(app.status);
                               const isDone = currentIdx > sIdx || app.status === 'completed';
                               const isCurrent = currentIdx === sIdx && app.status !== 'completed';
+
                               return (
                                 <React.Fragment key={step.id}>
                                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 52 }}>
