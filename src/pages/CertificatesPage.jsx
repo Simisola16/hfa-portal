@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
-import { Award, Download, Search, RefreshCw, Eye, EyeOff, Calendar, AlertCircle, FileText } from 'lucide-react';
+import { Award, Download, Search, RefreshCw, Eye, EyeOff, Calendar, AlertCircle, FileText, RotateCcw, Upload, X, CheckCircle, ShieldCheck } from 'lucide-react';
 
 const getPdfUrl = (url) => {
   if (!url) return '#';
@@ -14,11 +15,19 @@ const getPdfUrl = (url) => {
 };
 
 export default function CertificatesPage() {
+  const navigate = useNavigate();
   const [certs, setCerts] = useState([]);
   const [survRequests, setSurvRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [expandedCertId, setExpandedCertId] = useState(null);
+
+  // Renewal modal state
+  const [renewModal, setRenewModal] = useState(null); // cert object or null
+  const [renewForm, setRenewForm] = useState({ contact_person: '', files: [] });
+  const [renewSubmitting, setRenewSubmitting] = useState(false);
+  const [renewSuccess, setRenewSuccess] = useState(false);
+  const fileInputRef = useRef(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -63,6 +72,39 @@ export default function CertificatesPage() {
     const d2 = new Date(cert.issue_date);
     d2.setFullYear(d2.getFullYear() + 2);
     return { y1: d1, y2: d2 };
+  };
+
+  const openRenewModal = (cert) => {
+    setRenewModal(cert);
+    setRenewForm({ contact_person: '', files: [] });
+    setRenewSuccess(false);
+  };
+
+  const closeRenewModal = () => {
+    setRenewModal(null);
+    setRenewForm({ contact_person: '', files: [] });
+    setRenewSuccess(false);
+  };
+
+  const handleRenewSubmit = async (e) => {
+    e.preventDefault();
+    if (!renewForm.contact_person.trim()) {
+      toast.error('Please enter the contact person name.');
+      return;
+    }
+    setRenewSubmitting(true);
+    try {
+      const fd = new FormData();
+      fd.append('certificate_id', renewModal._id || renewModal.id);
+      fd.append('contact_person', renewForm.contact_person.trim());
+      renewForm.files.forEach(f => fd.append('supporting_docs', f));
+      await api.post('/api/applications/renew', fd, true);
+      setRenewSuccess(true);
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Failed to submit renewal.');
+    } finally {
+      setRenewSubmitting(false);
+    }
   };
 
   const handleRequestSurveillance = async (certId) => {
@@ -142,7 +184,7 @@ export default function CertificatesPage() {
                               {effectiveStatus}
                             </span>
                           </td>
-                          <td style={{ display: 'flex', gap: 6 }}>
+                          <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                             {effectiveStatus === 'active' && (
                               <a
                                 href={getPdfUrl(cert.certificate_url || cert.document_url || cert.pdf_url || `/api/certificates/${cert.id || cert._id}/download?token=${localStorage.getItem('hfa_token') || ''}`)}
@@ -153,6 +195,22 @@ export default function CertificatesPage() {
                               >
                                 <Download size={13} /> Download
                               </a>
+                            )}
+                            {(effectiveStatus === 'expired' || isExpiringSoon(cert.expiry_date)) && (
+                              <button
+                                className="btn btn-sm"
+                                style={{
+                                  background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                                  color: '#fff', border: 'none', fontWeight: 700,
+                                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                                  padding: '6px 14px', borderRadius: 8, fontSize: 12,
+                                  boxShadow: '0 2px 8px rgba(220,38,38,0.25)',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={e => { e.stopPropagation(); openRenewModal(cert); }}
+                              >
+                                <RotateCcw size={12} /> Renew
+                              </button>
                             )}
                             <button
                               className="btn btn-ghost btn-sm"
@@ -336,6 +394,212 @@ export default function CertificatesPage() {
           }
         </div>
       </div>
+
+      {/* ─── Renewal Modal ─── */}
+      {renewModal && createPortal(
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)',
+            backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', zIndex: 9999, padding: 20,
+          }}
+          onClick={e => e.target === e.currentTarget && closeRenewModal()}
+        >
+          <div style={{
+            background: '#fff', borderRadius: 20, width: '100%', maxWidth: 520,
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)',
+            overflow: 'hidden', animation: 'fadeSlideUp 0.25s ease',
+          }}>
+
+            {/* Modal Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+              padding: '28px 32px', display: 'flex', alignItems: 'flex-start',
+              justifyContent: 'space-between', gap: 16,
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <span style={{
+                    width: 36, height: 36, borderRadius: 10,
+                    background: 'rgba(220,38,38,0.2)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <RotateCcw size={18} color="#fca5a5" />
+                  </span>
+                  <h2 style={{ color: '#fff', margin: 0, fontSize: 18, fontWeight: 800 }}>
+                    Renew Certificate
+                  </h2>
+                </div>
+                <p style={{ color: '#94a3b8', margin: 0, fontSize: 13 }}>
+                  Certificate <strong style={{ color: '#e2e8f0' }}>{renewModal.certificate_number}</strong>
+                  {renewModal.expiry_date && (
+                    <> &nbsp;·&nbsp; Expired/Expiring: <strong style={{ color: '#fca5a5' }}>{new Date(renewModal.expiry_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={closeRenewModal}
+                style={{
+                  background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 8,
+                  width: 32, height: 32, cursor: 'pointer', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}
+              >
+                <X size={16} color="#94a3b8" />
+              </button>
+            </div>
+
+            {renewSuccess ? (
+              /* Success State */
+              <div style={{ padding: '48px 32px', textAlign: 'center' }}>
+                <div style={{
+                  width: 72, height: 72, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(21,128,61,0.35)',
+                }}>
+                  <CheckCircle size={36} color="#fff" />
+                </div>
+                <h3 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', margin: '0 0 10px' }}>
+                  Renewal Submitted!
+                </h3>
+                <p style={{ fontSize: 14, color: '#64748b', margin: '0 0 28px', lineHeight: 1.6 }}>
+                  Your renewal application has been submitted successfully. The HFA team will review it and get back to you shortly.
+                </p>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => { closeRenewModal(); navigate('/applications'); }}
+                  >
+                    <ShieldCheck size={15} /> Track Application
+                  </button>
+                  <button className="btn btn-ghost" onClick={closeRenewModal}>
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Form State */
+              <form onSubmit={handleRenewSubmit}>
+                <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                  {/* Info Banner */}
+                  <div style={{
+                    background: '#fef9c3', border: '1px solid #fde047',
+                    borderRadius: 10, padding: '12px 16px',
+                    display: 'flex', gap: 10, alignItems: 'flex-start',
+                  }}>
+                    <AlertCircle size={16} style={{ color: '#a16207', flexShrink: 0, marginTop: 1 }} />
+                    <p style={{ margin: 0, fontSize: 13, color: '#713f12', lineHeight: 1.6 }}>
+                      We'll pre-fill your renewal using your existing application records. Just confirm the contact person and attach any updated supporting documents.
+                    </p>
+                  </div>
+
+                  {/* Contact Person */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 6 }}>
+                      Contact Person Name <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Full name of the main contact for this renewal"
+                      value={renewForm.contact_person}
+                      onChange={e => setRenewForm(f => ({ ...f, contact_person: e.target.value }))}
+                      required
+                      style={{ fontSize: 14 }}
+                    />
+                  </div>
+
+                  {/* Supporting Documents */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 6 }}>
+                      Supporting Documents <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500 }}>(optional — PDFs, images)</span>
+                    </label>
+                    <div
+                      style={{
+                        border: '2px dashed #e2e8f0', borderRadius: 12, padding: '24px 20px',
+                        textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s',
+                        background: renewForm.files.length > 0 ? '#f0fdf4' : '#fafafa',
+                        borderColor: renewForm.files.length > 0 ? '#86efac' : '#e2e8f0',
+                      }}
+                      onClick={() => fileInputRef.current?.click()}
+                      onMouseOver={e => e.currentTarget.style.borderColor = '#1B7A7A'}
+                      onMouseOut={e => e.currentTarget.style.borderColor = renewForm.files.length > 0 ? '#86efac' : '#e2e8f0'}
+                    >
+                      <Upload size={28} style={{ color: renewForm.files.length > 0 ? '#16a34a' : '#94a3b8', margin: '0 auto 10px', display: 'block' }} />
+                      {renewForm.files.length > 0 ? (
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#15803d', marginBottom: 6 }}>
+                            {renewForm.files.length} file{renewForm.files.length > 1 ? 's' : ''} selected
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+                            {renewForm.files.map((f, i) => (
+                              <span key={i} style={{
+                                fontSize: 11, background: '#dcfce7', color: '#166534',
+                                padding: '3px 8px', borderRadius: 20, fontWeight: 600,
+                              }}>
+                                <FileText size={10} style={{ marginRight: 3 }} />{f.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>Click to upload documents</div>
+                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>PDF, JPG, PNG — up to 10 files</div>
+                        </div>
+                      )}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        hidden
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        onChange={e => setRenewForm(f => ({ ...f, files: Array.from(e.target.files) }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div style={{
+                  padding: '20px 32px', borderTop: '1px solid #f1f5f9',
+                  display: 'flex', justifyContent: 'flex-end', gap: 10,
+                  background: '#fafafa',
+                }}>
+                  <button type="button" className="btn btn-ghost" onClick={closeRenewModal}>
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={renewSubmitting || !renewForm.contact_person.trim()}
+                    style={{
+                      background: 'linear-gradient(135deg, #15803d, #166534)',
+                      minWidth: 160,
+                    }}
+                  >
+                    {renewSubmitting ? (
+                      <><span className="spinner" style={{ width: 15, height: 15 }} /> Submitting...</>
+                    ) : (
+                      <><RotateCcw size={14} /> Submit Renewal</>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(20px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      ` }} />
     </div>
   );
 }
