@@ -27,7 +27,8 @@ const getSiteName = (c) => {
     if (appObj.establishment_name) return appObj.establishment_name;
     if (appObj.site_name) return appObj.site_name;
   }
-  return c.certificate_number ? `Site (${c.certificate_number})` : 'Site';
+  if (c.site_name) return c.site_name;
+  return 'Main Facility';
 };
 
 const PRODUCT_TYPES = ['Add product', 'Remove product', 'Change name/code', 'Change ingredients'];
@@ -130,7 +131,7 @@ export default function AddOnApplicationPage() {
   // ─── Submit new application ──────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.certificate_id) return toast.error('Please select a certificate / site.');
+    if (!form.certificate_id) return toast.error('Please select a site.');
     if (!form.contact_name.trim()) return toast.error('Contact Person Name is required.');
     if (!form.contact_email.trim()) return toast.error('Contact Person Email is required.');
     for (const [i, p] of form.products.entries()) {
@@ -185,7 +186,7 @@ export default function AddOnApplicationPage() {
         <Award size={48} style={{ color: '#94a3b8', margin: '0 auto 16px' }} />
         <h3 style={{ fontSize: 18, fontWeight: 800, color: '#334155', marginBottom: 12 }}>Add-on Application Unavailable</h3>
         <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
-          Add-on applications are available once you hold an active certificate. Please wait for your main certification to be issued.
+          Add-on applications are available once you have an active site.
         </p>
         <button className="btn btn-outline" onClick={() => navigate('/applications')}>
           <ArrowLeft size={14} style={{ marginRight: 6 }} /> Back to Applications
@@ -204,7 +205,7 @@ export default function AddOnApplicationPage() {
           </button>
           <div>
             <h2 style={{ fontSize: 20, fontWeight: 900, color: '#1e293b', margin: 0 }}>Add-on Product Applications</h2>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>Track and manage product additions, removals, and changes to your certificate</p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>Track and manage product additions, removals, and changes for your site</p>
           </div>
         </div>
         <button className="btn btn-primary" onClick={() => setShowForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -313,7 +314,7 @@ export default function AddOnApplicationPage() {
         <div className="card" style={{ padding: '48px 24px', textAlign: 'center' }}>
           <Package size={40} style={{ color: '#cbd5e1', margin: '0 auto 12px' }} />
           <div style={{ fontSize: 16, fontWeight: 700, color: '#334155', marginBottom: 4 }}>No Add-on Applications</div>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>Click "New Add-on Application" to request changes to your certificate's product list.</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>Click "New Add-on Application" to request changes to your site's product list.</div>
         </div>
       )}
 
