@@ -13,6 +13,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import AddOnApplicationPage from './pages/AddOnApplicationPage';
 import ClientAddOnApprovalForm from './pages/ClientAddOnApprovalForm';
+import ClientProductApprovalResponse from './pages/ClientProductApprovalResponse';
 import ApplicationsPage from './pages/ApplicationsPage';
 import CertificatesPage from './pages/CertificatesPage';
 import ProductsPage from './pages/ProductsPage';
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="/applications/new" element={<ApplicationsPage openNew />} />
             <Route path="/addon-applications" element={<AddOnApplicationPage />} />
             <Route path="/addon-applications/:addonId/approval-form" element={<ClientAddOnApprovalForm />} />
+            <Route path="/addon-applications/:addonId/approval-form/:productIndex" element={<ClientProductApprovalResponse />} />
             <Route path="/addon-applications/new" element={<AddOnApplicationPage />} />
             <Route path="/proposals" element={<ProposalsPage />} />
             <Route path="/proposals/new" element={<ProposalsPage openNew />} />

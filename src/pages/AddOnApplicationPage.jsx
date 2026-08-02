@@ -1,18 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import {
-  ArrowLeft, Award, PlusCircle, Trash2, Upload, FileText,
-  CheckCircle, Clock, AlertCircle, Lock, Package, X
+  ArrowLeft, Award, PlusCircle, Trash2, FileText,
+  CheckCircle, AlertCircle, Package, X, Users, ChevronDown, ChevronUp
 } from 'lucide-react';
-
-const getPdfUrl = (url) => {
-  if (!url) return '';
-  if (url.startsWith('http')) return url;
-  const API_URL = import.meta.env.VITE_API_URL || 'https://hfa-portal-backend.onrender.com';
-  return `${API_URL}${url.startsWith('/') ? url : '/' + url}`;
-};
 
 const formatSiteName = (str) => {
   if (!str) return 'Site';
@@ -39,15 +32,15 @@ const getSiteName = (c) => {
 const PRODUCT_TYPES = ['Add product', 'Remove product', 'Change name/code', 'Change ingredients'];
 
 const STATUS_LABELS = {
-  submitted: 'Submit Add-On',
-  accepted: 'Application Accepted',
-  rejected: 'Application Rejected',
-  ft_assigned: 'Assign FT Food Technologies',
-  product_approval_form_enabled: 'Product Approval Form Enabled',
-  all_forms_received: 'All Product Approval Form Received',
-  logsheet_created: 'Create Logsheet',
-  waiting_sharia_signature: 'Waiting For Shari\'a Board Signature',
-  product_form_approved: 'Product Form Approved',
+  submitted: 'Submitted',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+  ft_assigned: 'FT Assigned',
+  product_approval_form_enabled: 'Form Enabled',
+  all_forms_received: 'Forms Received',
+  logsheet_created: 'Logsheet Created',
+  waiting_sharia_signature: "Shari'a Signature",
+  product_form_approved: 'Form Approved',
   ready_for_certificate: 'Ready For Certificate',
   completed: 'Certificate'
 };
@@ -66,6 +59,26 @@ const STATUS_BADGE = {
   completed: 'badge-green'
 };
 
+const STATUS_COLOR = {
+  submitted: '#f59e0b',
+  accepted: '#16a34a',
+  rejected: '#ef4444',
+  ft_assigned: '#2563eb',
+  product_approval_form_enabled: '#7c3aed',
+  all_forms_received: '#0d9488',
+  logsheet_created: '#2563eb',
+  waiting_sharia_signature: '#ea580c',
+  product_form_approved: '#16a34a',
+  ready_for_certificate: '#0d9488',
+  completed: '#16a34a'
+};
+
+const ORDER = [
+  'submitted', 'accepted', 'ft_assigned', 'product_approval_form_enabled',
+  'all_forms_received', 'logsheet_created', 'waiting_sharia_signature',
+  'product_form_approved', 'ready_for_certificate', 'completed'
+];
+
 const emptyProduct = () => ({ name: '', code: '', type: 'Add product' });
 
 export default function AddOnApplicationPage() {
@@ -75,8 +88,8 @@ export default function AddOnApplicationPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
 
-  // Form state
   const [form, setForm] = useState({
     certificate_id: '',
     contact_name: '',
@@ -85,13 +98,6 @@ export default function AddOnApplicationPage() {
     message: '',
     products: [emptyProduct()]
   });
-
-  // Product Approval Form submission state
-  const [formResponseApp, setFormResponseApp] = useState(null);
-  const [responseText, setResponseText] = useState('');
-  const [responseFile, setResponseFile] = useState(null);
-  const [submittingForm, setSubmittingForm] = useState(false);
-  const responseFileRef = useRef(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -117,7 +123,6 @@ export default function AddOnApplicationPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // ─── Products table helpers ──────────────────────────────────────────────
   const updateProduct = (idx, field, value) => {
     setForm(f => {
       const products = [...f.products];
@@ -133,7 +138,6 @@ export default function AddOnApplicationPage() {
     setForm(f => ({ ...f, products: f.products.filter((_, i) => i !== idx) }));
   };
 
-  // ─── Submit new application ──────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.certificate_id) return toast.error('Please select a site.');
@@ -143,7 +147,6 @@ export default function AddOnApplicationPage() {
       if (!p.name.trim()) return toast.error(`Product row ${i + 1}: Product Name is required.`);
       if (!p.type) return toast.error(`Product row ${i + 1}: Type is required.`);
     }
-
     setSubmitting(true);
     try {
       await api.post('/api/add-on-applications', form);
@@ -155,29 +158,6 @@ export default function AddOnApplicationPage() {
       toast.error(err.response?.data?.error || err.message || 'Failed to submit application.');
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  // ─── Submit Product Approval Form response ───────────────────────────────
-  const handleFormResponse = async () => {
-    if (!responseText.trim() && !responseFile) {
-      return toast.error('Please upload your completed form document or type your response.');
-    }
-    setSubmittingForm(true);
-    try {
-      const fd = new FormData();
-      if (responseFile) fd.append('response_file', responseFile);
-      if (responseText.trim()) fd.append('response_text', responseText);
-      await api.put(`/api/add-on-applications/${formResponseApp._id}/submit-form`, fd, true);
-      toast.success('Product Approval Form response submitted!');
-      setFormResponseApp(null);
-      setResponseText('');
-      setResponseFile(null);
-      fetchData();
-    } catch (err) {
-      toast.error(err.response?.data?.error || err.message || 'Failed to submit form response.');
-    } finally {
-      setSubmittingForm(false);
     }
   };
 
@@ -201,73 +181,104 @@ export default function AddOnApplicationPage() {
   }
 
   return (
-    <div className="animate-in" style={{ maxWidth: 900, margin: '0 auto' }}>
+    <div className="animate-in" style={{ maxWidth: 960, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => navigate('/applications')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600 }}>
+          <button onClick={() => navigate('/applications')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600 }}>
             <ArrowLeft size={15} /> Back
           </button>
           <div>
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: '#1e293b', margin: 0 }}>Add-on Product Applications</h2>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>Track and manage product additions, removals, and changes for your site</p>
+            <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', margin: 0 }}>Add-on Product Applications</h2>
+            <p style={{ fontSize: 12, color: '#64748b', margin: '2px 0 0' }}>Track and manage product additions, removals, and changes for your site</p>
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button className="btn btn-primary" onClick={() => setShowForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
           <PlusCircle size={15} /> New Add-on Application
         </button>
       </div>
 
-      {/* My Applications List */}
+      {/* Applications List */}
       {myApps.length > 0 && (
-        <div className="card shadow-sm" style={{ marginBottom: 32 }}>
-          <div className="card-header">
-            <div className="card-title">My Add-on Applications ({myApps.length})</div>
-            <div className="card-subtitle">Track the status of each submitted request</div>
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
+            My Applications ({myApps.length})
           </div>
-          <div style={{ padding: '0 0 8px' }}>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {myApps.map(app => {
               const certNo = app.certificate_id?.certificate_number || '—';
               const statusLabel = STATUS_LABELS[app.status] || app.status;
               const badgeClass = STATUS_BADGE[app.status] || 'badge-gray';
+              const statusColor = STATUS_COLOR[app.status] || '#475569';
               const needsFormSubmit = app.status === 'product_approval_form_enabled';
+              const isExpanded = expandedId === app._id;
+              const stepIdx = ORDER.indexOf(app.status);
+
+              const ftNames = (() => {
+                const arr = app.assigned_food_techs || [];
+                if (arr.length > 0) return arr.map(ft => ft.full_name || ft).join(', ');
+                if (app.assigned_food_tech?.full_name) return app.assigned_food_tech.full_name;
+                return null;
+              })();
 
               return (
-                <div key={app._id} style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-                    <div style={{ flex: 1, minWidth: 200 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <div key={app._id} style={{
+                  background: 'white', borderRadius: 14,
+                  border: `1px solid ${needsFormSubmit ? '#e9d5ff' : '#e2e8f0'}`,
+                  boxShadow: needsFormSubmit ? '0 0 0 3px #f5f3ff' : '0 1px 4px rgba(0,0,0,0.04)',
+                  overflow: 'hidden', transition: 'box-shadow 0.2s'
+                }}>
+                  {/* Card header */}
+                  <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Status + cert */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
                         <span className={`badge ${badgeClass}`} style={{ fontSize: 10, textTransform: 'uppercase', fontWeight: 700 }}>{statusLabel}</span>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Cert: {certNo}</span>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>• {new Date(app.createdAt).toLocaleDateString('en-GB')}</span>
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>Cert: {certNo}</span>
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>•</span>
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(app.createdAt).toLocaleDateString('en-GB')}</span>
                       </div>
 
-                      {/* Products summary */}
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                      {/* Products chips */}
+                      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: (ftNames || needsFormSubmit) ? 8 : 0 }}>
                         {(app.products || []).map((p, i) => (
-                          <span key={i} style={{ fontSize: 11, padding: '2px 8px', background: '#f1f5f9', borderRadius: 6, border: '1px solid #e2e8f0', color: '#475569' }}>
-                            {p.sn || i + 1}. {p.name} <span style={{ color: '#94a3b8' }}>({p.type})</span>
+                          <span key={i} style={{
+                            fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600,
+                            background: p.type === 'Add product' ? '#f0fdf4' : p.type === 'Remove product' ? '#fef2f2' : '#f0f9ff',
+                            color: p.type === 'Add product' ? '#166534' : p.type === 'Remove product' ? '#991b1b' : '#0369a1',
+                            border: `1px solid ${p.type === 'Add product' ? '#bbf7d0' : p.type === 'Remove product' ? '#fecaca' : '#bae6fd'}`
+                          }}>
+                            {p.sn || i + 1}. {p.name} <span style={{ opacity: 0.6 }}>({p.type})</span>
                           </span>
                         ))}
                       </div>
 
+                      {/* FT assigned */}
+                      {ftNames && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#2563eb', fontWeight: 600 }}>
+                          <Users size={11} /> Food Technology Staff: {ftNames}
+                        </div>
+                      )}
+
+                      {/* Rejection reason */}
                       {app.status === 'rejected' && app.rejection_reason && (
-                        <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>
-                          <AlertCircle size={12} style={{ display: 'inline', marginRight: 4 }} />
+                        <div style={{ fontSize: 12, color: '#dc2626', marginTop: 6, display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+                          <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
                           Rejected: {app.rejection_reason}
                         </div>
                       )}
                     </div>
 
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      {/* Product Approval Form action */}
+                    {/* Right actions */}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
                       {needsFormSubmit && (
                         <button
                           className="btn btn-primary btn-sm"
-                          style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#7c3aed', borderColor: '#7c3aed', fontWeight: 700 }}
                           onClick={() => navigate(`/addon-applications/${app._id}/approval-form`)}
                         >
-                          <FileText size={13} /> Complete Product Approval Form
+                          <FileText size={13} /> Complete Form
                         </button>
                       )}
                       {app.status === 'completed' && (
@@ -275,88 +286,105 @@ export default function AddOnApplicationPage() {
                           <CheckCircle size={12} /> Certificate Updated
                         </span>
                       )}
+                      {app.status !== 'product_approval_form_enabled' && app.product_approval_form?.submitted_at && (
+                        <span style={{ fontSize: 11, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+                          <CheckCircle size={11} /> Form Submitted
+                        </span>
+                      )}
+                      <button
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4 }}
+                        onClick={() => setExpandedId(isExpanded ? null : app._id)}
+                      >
+                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </button>
                     </div>
                   </div>
 
-                  {/* 10-Step Canonical Flow Progress Indicator */}
-                  {app.status !== 'rejected' && (
-                    <div style={{ marginTop: 16, background: '#fafbfc', padding: '14px 16px', borderRadius: 12, border: '1px solid #f1f5f9' }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                        Workflow Progress ({STATUS_LABELS[app.status] || app.status})
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, overflowX: 'auto', paddingBottom: 4 }}>
-                        {[
-                          { id: 'submitted', label: 'Submit Add-On' },
-                          { id: 'accepted', label: 'Accepted' },
-                          { id: 'ft_assigned', label: 'Assign FT' },
-                          { id: 'product_approval_form_enabled', label: 'Form Enabled' },
-                          { id: 'all_forms_received', label: 'Form Received' },
-                          { id: 'logsheet_created', label: 'Create Logsheet' },
-                          { id: 'waiting_sharia_signature', label: 'Shari\'a Signature' },
-                          { id: 'product_form_approved', label: 'Form Approved' },
-                          { id: 'ready_for_certificate', label: 'Ready for Cert' },
-                          { id: 'completed', label: 'Certificate' }
-                        ].map((step, idx, arr) => {
-                          const order = ['submitted', 'accepted', 'ft_assigned', 'product_approval_form_enabled', 'all_forms_received', 'logsheet_created', 'waiting_sharia_signature', 'product_form_approved', 'ready_for_certificate', 'completed'];
-                          const currentIdx = order.indexOf(app.status);
-                          const stepIdx = order.indexOf(step.id);
-                          const isDone = currentIdx > stepIdx || app.status === 'completed';
-                          const isCurrent = currentIdx === stepIdx && app.status !== 'completed';
+                  {/* Progress bar */}
+                  <div style={{ height: 3, background: '#f1f5f9' }}>
+                    <div style={{
+                      height: '100%',
+                      width: app.status === 'rejected' ? '10%' : `${app.status === 'completed' ? 100 : Math.round(((stepIdx + 1) / 10) * 100)}%`,
+                      background: app.status === 'rejected' ? '#ef4444' : statusColor,
+                      transition: 'width 0.4s ease'
+                    }} />
+                  </div>
 
-                          return (
-                            <div key={step.id} style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 65, textAlign: 'center', flexDirection: 'column' }}>
-                              <div style={{
-                                width: 22, height: 22, borderRadius: '50%',
-                                background: isDone ? '#16a34a' : isCurrent ? '#2563eb' : '#e2e8f0',
-                                color: isDone || isCurrent ? 'white' : '#94a3b8',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: 10, fontWeight: 700, margin: '0 auto 4px',
-                                boxShadow: isCurrent ? '0 0 0 3px rgba(37,99,235,0.2)' : 'none'
-                              }}>
-                                {isDone ? '✓' : idx + 1}
-                              </div>
-                              <span style={{
-                                fontSize: 9.5, fontWeight: isCurrent ? 700 : 500,
-                                color: isDone ? '#16a34a' : isCurrent ? '#2563eb' : '#94a3b8',
-                                lineHeight: 1.1
-                              }}>
-                                {step.label}
-                              </span>
+                  {/* Expanded detail */}
+                  {isExpanded && (
+                    <div style={{ padding: '16px 20px', borderTop: '1px solid #f1f5f9', background: '#fafbfc' }}>
+                      {/* Action banner for form */}
+                      {needsFormSubmit && app.product_approval_form && (
+                        <div style={{ marginBottom: 16, padding: 14, background: '#fdf4ff', border: '1px solid #e9d5ff', borderRadius: 10 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <FileText size={13} /> Product Approval Form — Action Required
+                          </div>
+                          {app.product_approval_form.form_text && (
+                            <div style={{ fontSize: 12, color: '#6b21a8', background: 'white', padding: 10, borderRadius: 8, border: '1px solid #e9d5ff', whiteSpace: 'pre-wrap', marginBottom: 8, maxHeight: 80, overflow: 'hidden' }}>
+                              {app.product_approval_form.form_text.length > 200
+                                ? app.product_approval_form.form_text.slice(0, 200) + '…'
+                                : app.product_approval_form.form_text}
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Product Approval Form — view admin form content if enabled */}
-                  {needsFormSubmit && app.product_approval_form && (
-                    <div style={{ marginTop: 12, padding: 14, background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#854d0e', marginBottom: 8 }}>
-                        📋 Product Approval Form — Please Review and Submit Your Response
-                      </div>
-                      {app.product_approval_form.form_file_url && (
-                        <a
-                          href={getPdfUrl(app.product_approval_form.form_file_url)}
-                          target="_blank" rel="noreferrer"
-                          className="btn btn-outline btn-sm"
-                          style={{ marginBottom: 8 }}
-                        >
-                          <FileText size={13} style={{ marginRight: 6 }} /> View Form Document
-                        </a>
-                      )}
-                      {app.product_approval_form.form_text && (
-                        <div style={{ fontSize: 13, color: '#475569', background: 'white', padding: 12, borderRadius: 8, border: '1px solid #fde68a', whiteSpace: 'pre-wrap', marginBottom: 8 }}>
-                          {app.product_approval_form.form_text}
+                          )}
+                          <button
+                            className="btn btn-primary btn-sm"
+                            style={{ background: '#7c3aed', borderColor: '#7c3aed', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                            onClick={() => navigate(`/addon-applications/${app._id}/approval-form`)}
+                          >
+                            <FileText size={13} /> Open Product Approval Form
+                          </button>
                         </div>
                       )}
-                    </div>
-                  )}
 
-                  {/* Show submitted form receipt */}
-                  {app.status !== 'product_approval_form_enabled' && app.product_approval_form?.submitted_at && (
-                    <div style={{ marginTop: 8, fontSize: 11, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <CheckCircle size={12} /> Product Approval Form submitted on {new Date(app.product_approval_form.submitted_at).toLocaleDateString('en-GB')}
+                      {/* 10-step workflow */}
+                      {app.status !== 'rejected' && (
+                        <div style={{ background: 'white', borderRadius: 10, border: '1px solid #e2e8f0', padding: '12px 16px' }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 12 }}>
+                            Workflow Progress
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto' }}>
+                            {[
+                              { id: 'submitted', label: 'Submitted' },
+                              { id: 'accepted', label: 'Accepted' },
+                              { id: 'ft_assigned', label: 'FT Assigned' },
+                              { id: 'product_approval_form_enabled', label: 'Form Enabled' },
+                              { id: 'all_forms_received', label: 'Forms Received' },
+                              { id: 'logsheet_created', label: 'Logsheet' },
+                              { id: 'waiting_sharia_signature', label: "Shari'a Sig" },
+                              { id: 'product_form_approved', label: 'Form Approved' },
+                              { id: 'ready_for_certificate', label: 'Ready Cert' },
+                              { id: 'completed', label: 'Certificate' }
+                            ].map((step, idx, arr) => {
+                              const sIdx = ORDER.indexOf(step.id);
+                              const currentIdx = ORDER.indexOf(app.status);
+                              const isDone = currentIdx > sIdx || app.status === 'completed';
+                              const isCurrent = currentIdx === sIdx && app.status !== 'completed';
+                              return (
+                                <React.Fragment key={step.id}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 52 }}>
+                                    <div style={{
+                                      width: 22, height: 22, borderRadius: '50%',
+                                      background: isDone ? '#16a34a' : isCurrent ? statusColor : '#e2e8f0',
+                                      color: isDone || isCurrent ? 'white' : '#94a3b8',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      fontSize: 10, fontWeight: 700, marginBottom: 4,
+                                      boxShadow: isCurrent ? `0 0 0 3px ${statusColor}30` : 'none'
+                                    }}>
+                                      {isDone ? '✓' : idx + 1}
+                                    </div>
+                                    <span style={{ fontSize: 9, fontWeight: isCurrent ? 700 : 400, textAlign: 'center', lineHeight: 1.2, color: isDone ? '#16a34a' : isCurrent ? statusColor : '#94a3b8' }}>
+                                      {step.label}
+                                    </span>
+                                  </div>
+                                  {idx < arr.length - 1 && (
+                                    <div style={{ flex: '0 0 8px', height: 2, background: isDone ? '#16a34a' : '#e2e8f0', marginBottom: 12 }} />
+                                  )}
+                                </React.Fragment>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -367,10 +395,15 @@ export default function AddOnApplicationPage() {
       )}
 
       {myApps.length === 0 && (
-        <div className="card" style={{ padding: '48px 24px', textAlign: 'center' }}>
-          <Package size={40} style={{ color: '#cbd5e1', margin: '0 auto 12px' }} />
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#334155', marginBottom: 4 }}>No Add-on Applications</div>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>Click "New Add-on Application" to request changes to your site's product list.</div>
+        <div style={{ padding: '64px 24px', textAlign: 'center', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0' }}>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Package size={24} style={{ color: '#94a3b8' }} />
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#334155', marginBottom: 6 }}>No Add-on Applications Yet</div>
+          <div style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>Click "New Add-on Application" to request changes to your site's product list.</div>
+          <button className="btn btn-primary" onClick={() => setShowForm(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <PlusCircle size={14} /> New Add-on Application
+          </button>
         </div>
       )}
 
@@ -409,7 +442,7 @@ export default function AddOnApplicationPage() {
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>2. Contact Person</div>
                   <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10, background: '#f0f9ff', padding: '8px 12px', borderRadius: 8, border: '1px solid #bae6fd' }}>
-                    ℹ️ This contact email will receive updates at every stage — enter the person directly handling this request (may differ from your account email).
+                    ℹ️ This contact email will receive updates at every stage — enter the person directly handling this request.
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div className="form-group" style={{ margin: 0 }}>
@@ -454,32 +487,13 @@ export default function AddOnApplicationPage() {
                           <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                             <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: '#94a3b8', fontSize: 12 }}>{idx + 1}</td>
                             <td style={{ padding: '6px 10px' }}>
-                              <input
-                                className="form-control"
-                                style={{ margin: 0, fontSize: 13, padding: '7px 10px' }}
-                                value={p.name}
-                                onChange={e => updateProduct(idx, 'name', e.target.value)}
-                                placeholder="Product name"
-                                required
-                              />
+                              <input className="form-control" style={{ margin: 0, fontSize: 13, padding: '7px 10px' }} value={p.name} onChange={e => updateProduct(idx, 'name', e.target.value)} placeholder="Product name" required />
                             </td>
                             <td style={{ padding: '6px 10px' }}>
-                              <input
-                                className="form-control"
-                                style={{ margin: 0, fontSize: 13, padding: '7px 10px' }}
-                                value={p.code}
-                                onChange={e => updateProduct(idx, 'code', e.target.value)}
-                                placeholder="Optional"
-                              />
+                              <input className="form-control" style={{ margin: 0, fontSize: 13, padding: '7px 10px' }} value={p.code} onChange={e => updateProduct(idx, 'code', e.target.value)} placeholder="Optional" />
                             </td>
                             <td style={{ padding: '6px 10px' }}>
-                              <select
-                                className="form-control"
-                                style={{ margin: 0, fontSize: 13, padding: '7px 10px' }}
-                                value={p.type}
-                                onChange={e => updateProduct(idx, 'type', e.target.value)}
-                                required
-                              >
+                              <select className="form-control" style={{ margin: 0, fontSize: 13, padding: '7px 10px' }} value={p.type} onChange={e => updateProduct(idx, 'type', e.target.value)} required>
                                 {PRODUCT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                               </select>
                             </td>
@@ -506,83 +520,6 @@ export default function AddOnApplicationPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Product Approval Form Submission Modal ────────────────────────── */}
-      {formResponseApp && (
-        <div className="modal-overlay" style={{ zIndex: 1100 }}>
-          <div className="modal" style={{ maxWidth: 600 }}>
-            <div className="modal-header">
-              <span className="modal-title">Submit Product Approval Form Response</span>
-              <button className="modal-close" onClick={() => setFormResponseApp(null)}><X size={18} /></button>
-            </div>
-            <div className="modal-body" style={{ padding: 24 }}>
-              <div style={{ marginBottom: 16, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 12, fontSize: 13, color: '#166534' }}>
-                <strong>Application:</strong> {formResponseApp.certificate_id?.certificate_number} &mdash; {(formResponseApp.products || []).length} product(s)
-              </div>
-
-              {/* View admin form content */}
-              {formResponseApp.product_approval_form?.form_file_url && (
-                <div style={{ marginBottom: 16 }}>
-                  <label className="form-label">Admin's Form Document:</label>
-                  <a href={getPdfUrl(formResponseApp.product_approval_form.form_file_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <FileText size={13} /> View Form Document
-                  </a>
-                </div>
-              )}
-              {formResponseApp.product_approval_form?.form_text && (
-                <div style={{ marginBottom: 16 }}>
-                  <label className="form-label">Form Content:</label>
-                  <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#334155', whiteSpace: 'pre-wrap', maxHeight: 200, overflowY: 'auto' }}>
-                    {formResponseApp.product_approval_form.form_text}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
-                <label className="form-label">Your Response</label>
-                <p style={{ fontSize: 12, color: '#64748b', marginTop: 0, marginBottom: 12 }}>Upload your completed form document AND/OR type your written response below.</p>
-
-                {/* File upload */}
-                <div style={{ marginBottom: 12 }}>
-                  <input
-                    type="file"
-                    accept=".pdf,image/*"
-                    ref={responseFileRef}
-                    style={{ display: 'none' }}
-                    onChange={e => setResponseFile(e.target.files[0] || null)}
-                  />
-                  <button type="button" className="btn btn-outline btn-sm" onClick={() => responseFileRef.current?.click()} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <Upload size={13} /> {responseFile ? responseFile.name : 'Upload Completed Form (PDF/Image)'}
-                  </button>
-                  {responseFile && (
-                    <button type="button" onClick={() => setResponseFile(null)} style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}>
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Text response */}
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Written Response / Acknowledgement</label>
-                  <textarea
-                    className="form-control"
-                    rows={4}
-                    value={responseText}
-                    onChange={e => setResponseText(e.target.value)}
-                    placeholder="Type your response, acknowledgement, or any comments here..."
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setFormResponseApp(null)} disabled={submittingForm}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleFormResponse} disabled={submittingForm || (!responseText.trim() && !responseFile)}>
-                {submittingForm ? 'Submitting...' : 'Submit Response'}
-              </button>
-            </div>
           </div>
         </div>
       )}

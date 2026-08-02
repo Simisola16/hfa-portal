@@ -1,18 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, FileText, Upload, Save, CheckCircle, Clock,
-  AlertCircle, Download, Check, X, Shield, Lock
+  ArrowLeft, FileText, CheckCircle, Clock, AlertCircle,
+  ChevronRight, Package, Users, Send
 } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
-
-const getPdfUrl = (url) => {
-  if (!url) return '';
-  if (url.startsWith('http')) return url;
-  const API_URL = import.meta.env.VITE_API_URL || 'https://hfa-portal-backend.onrender.com';
-  return `${API_URL}${url.startsWith('/') ? url : '/' + url}`;
-};
 
 export default function ClientAddOnApprovalForm() {
   const { addonId } = useParams();
@@ -20,33 +13,13 @@ export default function ClientAddOnApprovalForm() {
 
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [savingIndex, setSavingIndex] = useState(null);
   const [submittingAll, setSubmittingAll] = useState(false);
-
-  // Per-product draft state: { [productIndex]: { text: string, file: File | null } }
-  const [productInputs, setProductInputs] = useState({});
-  const fileInputRefs = useRef({});
 
   const fetchApp = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get(`/api/add-on-applications/${addonId}`);
-      const data = res.data?.data || res.data;
-      setApp(data);
-
-      // Pre-fill inputs from saved product responses
-      const savedResponses = data.product_approval_form?.product_responses || [];
-      const initialInputs = {};
-      (data.products || []).forEach((p, idx) => {
-        const saved = savedResponses.find(r => r.product_index === idx);
-        initialInputs[idx] = {
-          text: saved?.response_text || '',
-          fileUrl: saved?.response_url || '',
-          file: null,
-          isSaved: !!saved?.is_saved
-        };
-      });
-      setProductInputs(initialInputs);
+      setApp(res.data?.data || res.data);
     } catch {
       toast.error('Failed to load application form.');
     } finally {
@@ -54,324 +27,225 @@ export default function ClientAddOnApprovalForm() {
     }
   }, [addonId]);
 
-  useEffect(() => {
-    fetchApp();
-  }, [fetchApp]);
+  useEffect(() => { fetchApp(); }, [fetchApp]);
 
-  const handleInputChange = (idx, field, value) => {
-    setProductInputs(prev => ({
-      ...prev,
-      [idx]: {
-        ...prev[idx],
-        [field]: value
-      }
-    }));
-  };
-
-  // Save draft response for a single product
-  const handleSaveProductResponse = async (idx) => {
-    const input = productInputs[idx] || {};
-    setSavingIndex(idx);
-
-    try {
-      const fd = new FormData();
-      if (input.file) fd.append('response_file', input.file);
-      if (input.text !== undefined) fd.append('response_text', input.text);
-
-      const res = await api.put(`/api/add-on-applications/${addonId}/save-product-response/${idx}`, fd, true);
-      const updatedApp = res.data?.data || res.data;
-
-      toast.success(`Response saved for Product #${idx + 1}!`);
-      setApp(updatedApp);
-
-      // Update state with saved state
-      const savedResponses = updatedApp.product_approval_form?.product_responses || [];
-      const saved = savedResponses.find(r => r.product_index === idx);
-
-      setProductInputs(prev => ({
-        ...prev,
-        [idx]: {
-          ...prev[idx],
-          fileUrl: saved?.response_url || prev[idx]?.fileUrl || '',
-          file: null,
-          isSaved: true
-        }
-      }));
-    } catch (err) {
-      toast.error(err.response?.data?.error || err.message);
-    } finally {
-      setSavingIndex(null);
-    }
-  };
-
-  // Final submit all responses
   const handleSubmitAll = async () => {
     setSubmittingAll(true);
     try {
       await api.put(`/api/add-on-applications/${addonId}/submit-all-responses`);
-      toast.success('Product Approval Form submitted successfully!');
+      toast.success('All product responses submitted successfully!');
       fetchApp();
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message);
+      toast.error(err.response?.data?.error || err.message || 'Failed to submit responses.');
     } finally {
       setSubmittingAll(false);
     }
   };
 
-  if (loading) return <div className="loading-overlay"><div className="spinner" /></div>;
+  if (loading) {
+    return <div className="loading-overlay"><div className="spinner" /></div>;
+  }
 
   if (!app) {
     return (
-      <div className="animate-in" style={{ padding: 40, textAlign: 'center' }}>
+      <div style={{ padding: 40, textAlign: 'center' }}>
         <AlertCircle size={48} style={{ color: '#ef4444', margin: '0 auto 16px' }} />
-        <h2>Add-on Application Not Found</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b' }}>Application Not Found</h2>
         <button className="btn btn-outline" style={{ marginTop: 16 }} onClick={() => navigate('/addon-applications')}>
-          <ArrowLeft size={16} /> Back to Applications
+          <ArrowLeft size={16} /> Back to Add-on Applications
         </button>
       </div>
     );
   }
 
-  const products = app.products || [];
-  const savedResponses = app.product_approval_form?.product_responses || [];
-  const savedCount = products.filter((_, idx) => savedResponses.some(r => r.product_index === idx && r.is_saved)).length;
-  const isAllSaved = savedCount === products.length && products.length > 0;
-  const isSubmitted = app.status !== 'product_approval_form_enabled' && app.product_approval_form?.submitted_at;
+  const formText = app.product_approval_form?.form_text || '';
+  const productResponses = app.product_approval_form?.product_responses || [];
+  const allSubmitted = app.product_approval_form?.submitted_at;
+  const canSubmitAll = !allSubmitted && app.status === 'product_approval_form_enabled';
+
+  const getSavedResponse = (idx) =>
+    productResponses.find(r => r.product_index === idx);
+
+  const savedCount = (app.products || []).filter((_, idx) => {
+    const r = getSavedResponse(idx);
+    return r?.is_saved && r?.response_text?.trim();
+  }).length;
+
+  const allSaved = savedCount === (app.products || []).length;
 
   return (
-    <div className="animate-in" style={{ maxWidth: 860, margin: '0 auto', paddingBottom: 60 }}>
+    <div className="animate-in" style={{ maxWidth: 860, margin: '0 auto', paddingBottom: 48 }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button className="btn btn-ghost" onClick={() => navigate('/addon-applications')}>
-            <ArrowLeft size={16} /> Back to My Applications
-          </button>
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 800, color: '#1e293b', margin: 0 }}>Product Approval Form Response</h1>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>
-              Review the HFA form requirements and submit your response for each requested product
-            </p>
-          </div>
-        </div>
+      {/* Back */}
+      <button
+        onClick={() => navigate('/addon-applications')}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, marginBottom: 20 }}
+      >
+        <ArrowLeft size={15} /> Back to Applications
+      </button>
 
-        {isSubmitted ? (
-          <span className="badge badge-green" style={{ fontSize: 11, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <CheckCircle size={13} /> SUBMITTED ON {new Date(app.product_approval_form.submitted_at).toLocaleDateString('en-GB')}
-          </span>
-        ) : (
-          <span className="badge badge-purple" style={{ fontSize: 11, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Clock size={13} /> RESPONSE REQUIRED
-          </span>
-        )}
+      {/* Page title */}
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Product Approval Form</h1>
+        <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>Review the form instructions, then complete your response for each product below.</p>
       </div>
 
-      {/* ─── Admin Form Content Section (Top) ────────────────────────────── */}
-      <div className="card shadow-sm" style={{ padding: 24, marginBottom: 24, background: '#fefce8', border: '1px solid #fde68a', borderRadius: 12 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: '#854d0e', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FileText size={16} /> Admin Product Approval Form Instructions
+      {/* Context Card */}
+      <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e2e8f0', padding: '20px 24px', marginBottom: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Certificate</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{app.certificate_id?.certificate_number || '—'}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Contact</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>{app.contact_name}</div>
+            <div style={{ fontSize: 12, color: '#64748b' }}>{app.contact_email}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Products</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{(app.products || []).length} product(s)</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Status</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: allSubmitted ? '#16a34a' : '#7c3aed', display: 'flex', alignItems: 'center', gap: 4 }}>
+              {allSubmitted ? <><CheckCircle size={13} /> Submitted</> : <><Clock size={13} /> Awaiting Response</>}
+            </div>
+          </div>
         </div>
-
-        {app.product_approval_form?.form_file_url && (
-          <div style={{ marginBottom: 12 }}>
-            <a
-              href={getPdfUrl(app.product_approval_form.form_file_url)}
-              target="_blank" rel="noreferrer"
-              className="btn btn-outline btn-sm"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white' }}
-            >
-              <Download size={14} /> Download Form Document (PDF)
-            </a>
-          </div>
-        )}
-
-        {app.product_approval_form?.form_text ? (
-          <div style={{ background: 'white', padding: 16, borderRadius: 10, border: '1px solid #fde68a', fontSize: 13.5, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-            {app.product_approval_form.form_text}
-          </div>
-        ) : !app.product_approval_form?.form_file_url && (
-          <div style={{ fontSize: 13, color: '#854d0e', italic: 'true' }}>Form instructions provided by HFA team.</div>
-        )}
       </div>
 
-      {/* ─── Progress Banner ────────────────────────────────────────────── */}
-      {!isSubmitted && (
-        <div style={{
-          marginBottom: 24, padding: '14px 20px', borderRadius: 12,
-          background: isAllSaved ? '#f0fdf4' : '#f0f9ff',
-          border: isAllSaved ? '1px solid #bbf7d0' : '1px solid #bae6fd',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12
-        }}>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: isAllSaved ? '#166534' : '#0369a1' }}>
-              {isAllSaved ? '🎉 All Product Responses Saved!' : `Product Response Progress: ${savedCount} of ${products.length} completed`}
-            </div>
-            <div style={{ fontSize: 12, color: isAllSaved ? '#15803d' : '#0284c7', marginTop: 2 }}>
-              {isAllSaved
-                ? 'Click "Submit Product Approval Form" below to lock in all responses.'
-                : 'Save a response for each product below to enable final submission.'}
-            </div>
+      {/* Admin Form Instructions */}
+      {formText && (
+        <div style={{ background: '#fdf4ff', border: '1px solid #e9d5ff', borderRadius: 14, padding: '20px 24px', marginBottom: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FileText size={13} /> Form Instructions from HFA
           </div>
-
-          <div style={{ fontWeight: 800, fontSize: 14, color: isAllSaved ? '#16a34a' : '#0284c7' }}>
-            {savedCount} / {products.length} Saved
+          <div style={{ fontSize: 13, color: '#4c1d95', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
+            {formText}
           </div>
         </div>
       )}
 
-      {/* ─── Per-Product Response Cards List ───────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {products.map((p, idx) => {
-          const input = productInputs[idx] || { text: '', fileUrl: '', file: null, isSaved: false };
-          const savedItem = savedResponses.find(r => r.product_index === idx && r.is_saved);
-          const isItemSaved = !!savedItem || input.isSaved;
+      {/* All Submitted Banner */}
+      {allSubmitted && (
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '16px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <CheckCircle size={20} style={{ color: '#16a34a', flexShrink: 0 }} />
+          <div>
+            <div style={{ fontWeight: 700, color: '#166534', fontSize: 14 }}>All Responses Submitted</div>
+            <div style={{ fontSize: 12, color: '#4ade80', marginTop: 2 }}>
+              Submitted on {new Date(app.product_approval_form.submitted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Progress summary */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>
+          Products ({savedCount} / {(app.products || []).length} completed)
+        </div>
+        <div style={{ height: 6, flex: 1, maxWidth: 200, background: '#e2e8f0', borderRadius: 10, margin: '0 16px', overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            width: `${(app.products || []).length > 0 ? Math.round((savedCount / (app.products || []).length) * 100) : 0}%`,
+            background: '#7c3aed',
+            borderRadius: 10,
+            transition: 'width 0.4s ease'
+          }} />
+        </div>
+        <div style={{ fontSize: 12, color: '#7c3aed', fontWeight: 700 }}>
+          {(app.products || []).length > 0 ? Math.round((savedCount / (app.products || []).length) * 100) : 0}%
+        </div>
+      </div>
+
+      {/* Product Cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
+        {(app.products || []).map((product, idx) => {
+          const saved = getSavedResponse(idx);
+          const isSaved = saved?.is_saved && saved?.response_text?.trim();
+          const hasDraft = saved?.response_text?.trim() && !saved?.is_saved;
+          const isDisabled = !!allSubmitted;
 
           return (
-            <div key={idx} className="card shadow-sm" style={{ padding: 24, borderRadius: 12, background: 'white', border: isItemSaved ? '1px solid #bbf7d0' : '1px solid #e2e8f0' }}>
-              {/* Product Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, pb: 12, borderBottom: '1px solid #f1f5f9', flexWrap: 'wrap', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 26, height: 26, borderRadius: '50%', background: isItemSaved ? '#16a34a' : '#f1f5f9', color: isItemSaved ? 'white' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12 }}>
-                    {isItemSaved ? '✓' : idx + 1}
-                  </span>
-                  <div>
-                    <h3 style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                      Product #{idx + 1}: {p.name}
-                    </h3>
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                      {p.code ? `Code: ${p.code} • ` : ''}Action: <strong>{p.type}</strong>
-                    </div>
-                  </div>
-                </div>
-
-                {isItemSaved ? (
-                  <span className="badge badge-green" style={{ fontSize: 10, fontWeight: 700 }}>
-                    <Check size={11} style={{ marginRight: 2 }} /> SAVED
-                  </span>
-                ) : (
-                  <span className="badge badge-gray" style={{ fontSize: 10, fontWeight: 700 }}>
-                    PENDING RESPONSE
-                  </span>
-                )}
+            <div
+              key={idx}
+              onClick={() => !isDisabled && navigate(`/addon-applications/${addonId}/approval-form/${idx}`)}
+              style={{
+                background: 'white',
+                borderRadius: 12,
+                border: `1px solid ${isSaved ? '#bbf7d0' : hasDraft ? '#fde68a' : '#e2e8f0'}`,
+                padding: '16px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 16,
+                cursor: isDisabled ? 'default' : 'pointer',
+                transition: 'all 0.15s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+              }}
+              onMouseEnter={e => { if (!isDisabled) e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(124,58,237,0.12)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = isSaved ? '#bbf7d0' : hasDraft ? '#fde68a' : '#e2e8f0'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; }}
+            >
+              {/* Serial number */}
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                background: isSaved ? '#dcfce7' : hasDraft ? '#fef9c3' : '#f1f5f9',
+                color: isSaved ? '#16a34a' : hasDraft ? '#92400e' : '#94a3b8',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 13, fontWeight: 800
+              }}>
+                {isSaved ? <CheckCircle size={16} /> : product.sn || idx + 1}
               </div>
 
-              {/* Read-Only State if Already Submitted */}
-              {isSubmitted ? (
-                <div style={{ fontSize: 13, color: '#334155', background: '#f8fafc', padding: 14, borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                  {savedItem?.response_text && (
-                    <div style={{ whiteSpace: 'pre-wrap', marginBottom: 8 }}>{savedItem.response_text}</div>
-                  )}
-                  {savedItem?.response_url && (
-                    <a href={getPdfUrl(savedItem.response_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <FileText size={13} /> View Attached Response File
-                    </a>
-                  )}
-                  {!savedItem?.response_text && !savedItem?.response_url && (
-                    <div style={{ color: '#94a3b8', italic: 'true' }}>Acknowledged.</div>
-                  )}
+              {/* Product info */}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a', marginBottom: 2 }}>
+                  {product.name}
+                  {product.code && <span style={{ fontWeight: 400, color: '#94a3b8', fontSize: 12, marginLeft: 6 }}>({product.code})</span>}
                 </div>
-              ) : (
-                /* Editable Response Section */
-                <div>
-                  {/* Textarea */}
-                  <div className="form-group" style={{ marginBottom: 14 }}>
-                    <label className="form-label" style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>
-                      Written Response / Remarks for {p.name}
-                    </label>
-                    <textarea
-                      className="form-control"
-                      rows={3}
-                      value={input.text}
-                      onChange={e => handleInputChange(idx, 'text', e.target.value)}
-                      placeholder={`Enter specific response or remarks for ${p.name}...`}
-                      style={{ fontSize: 13 }}
-                    />
-                  </div>
-
-                  {/* File Upload */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-                    <div>
-                      <input
-                        type="file"
-                        accept=".pdf,image/*"
-                        ref={el => fileInputRefs.current[idx] = el}
-                        style={{ display: 'none' }}
-                        onChange={e => handleInputChange(idx, 'file', e.target.files[0] || null)}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-sm"
-                        onClick={() => fileInputRefs.current[idx]?.click()}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                      >
-                        <Upload size={13} /> {input.file ? input.file.name : input.fileUrl ? 'Replace Uploaded File' : 'Upload Document (PDF/Image)'}
-                      </button>
-
-                      {input.file && (
-                        <button type="button" onClick={() => handleInputChange(idx, 'file', null)} style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}>
-                          <X size={14} />
-                        </button>
-                      )}
-
-                      {input.fileUrl && !input.file && (
-                        <a href={getPdfUrl(input.fileUrl)} target="_blank" rel="noreferrer" style={{ marginLeft: 10, fontSize: 11, color: '#00853b', fontWeight: 600 }}>
-                          View Attached File
-                        </a>
-                      )}
-                    </div>
-
-                    {/* Per-Product Save Button */}
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => handleSaveProductResponse(idx)}
-                      disabled={savingIndex === idx}
-                      style={{
-                        borderColor: '#00853b', color: '#00853b', fontWeight: 700,
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        background: '#f0fdf4'
-                      }}
-                    >
-                      <Save size={13} /> {savingIndex === idx ? 'Saving...' : isItemSaved ? 'Update Saved Response' : 'Save Response for Product'}
-                    </button>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5,
+                    background: product.type === 'Add product' ? '#dcfce7' : product.type === 'Remove product' ? '#fee2e2' : '#e0f2fe',
+                    color: product.type === 'Add product' ? '#166534' : product.type === 'Remove product' ? '#991b1b' : '#0369a1'
+                  }}>{product.type}</span>
+                  {isSaved && <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}><CheckCircle size={10} /> Response saved</span>}
+                  {hasDraft && !isSaved && <span style={{ fontSize: 11, color: '#92400e', fontWeight: 600 }}>Draft saved</span>}
+                  {!isSaved && !hasDraft && !isDisabled && <span style={{ fontSize: 11, color: '#94a3b8' }}>Tap to fill in your response</span>}
                 </div>
+              </div>
+
+              {/* Arrow */}
+              {!isDisabled && (
+                <ChevronRight size={18} style={{ color: '#94a3b8', flexShrink: 0 }} />
               )}
-
             </div>
           );
         })}
       </div>
 
-      {/* ─── Final Submit Button Section ─────────────────────────────────── */}
-      {!isSubmitted && (
-        <div className="card shadow-sm" style={{ marginTop: 32, padding: 24, textAlign: 'center', background: 'white', borderRadius: 12, border: isAllSaved ? '2px solid #16a34a' : '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', marginBottom: 6 }}>
-            Final Form Submission
+      {/* Final Submit Button */}
+      {canSubmitAll && (
+        <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e2e8f0', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Ready to Submit?</div>
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+              {allSaved
+                ? 'All responses completed. You can now submit to HFA.'
+                : `Complete all ${(app.products || []).length} product responses before submitting.`}
+            </div>
           </div>
-          <p style={{ fontSize: 13, color: '#64748b', marginTop: 0, marginBottom: 18, maxWidth: 500, margin: '0 auto 18px' }}>
-            {isAllSaved
-              ? 'All product responses are saved. Click below to lock in all responses and submit the form to HFA.'
-              : 'You must save a response for each product above before you can perform the final submission.'}
-          </p>
-
           <button
-            type="button"
             className="btn btn-primary"
-            onClick={handleSubmitAll}
-            disabled={!isAllSaved || submittingAll}
-            style={{
-              padding: '12px 32px', fontSize: 15, fontWeight: 800,
-              background: isAllSaved ? '#00853b' : '#94a3b8',
-              borderColor: isAllSaved ? '#00853b' : '#94a3b8',
-              cursor: isAllSaved ? 'pointer' : 'not-allowed'
-            }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#7c3aed', borderColor: '#7c3aed', fontWeight: 700, opacity: allSaved ? 1 : 0.5, cursor: allSaved ? 'pointer' : 'not-allowed' }}
+            onClick={allSaved ? handleSubmitAll : undefined}
+            disabled={submittingAll || !allSaved}
           >
-            {submittingAll ? 'Submitting...' : 'Submit Product Approval Form'}
+            <Send size={14} />
+            {submittingAll ? 'Submitting...' : 'Submit All Responses to HFA'}
           </button>
         </div>
       )}
-
     </div>
   );
 }
