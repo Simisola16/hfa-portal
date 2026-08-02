@@ -264,10 +264,10 @@ export default function AddOnApplicationPage() {
                       {needsFormSubmit && (
                         <button
                           className="btn btn-primary btn-sm"
-                          style={{ display: 'flex', alignItems: 'center', gap: 6, animation: 'pulse 2s infinite' }}
-                          onClick={() => { setFormResponseApp(app); setResponseText(''); setResponseFile(null); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                          onClick={() => navigate(`/addon-applications/${app._id}/approval-form`)}
                         >
-                          <FileText size={13} /> Submit Product Approval Form
+                          <FileText size={13} /> Complete Product Approval Form
                         </button>
                       )}
                       {app.status === 'completed' && (

@@ -48,6 +48,7 @@ export default function App() {
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/new" element={<ApplicationsPage openNew />} />
             <Route path="/addon-applications" element={<AddOnApplicationPage />} />
+            <Route path="/addon-applications/:addonId/approval-form" element={<ClientAddOnApprovalForm />} />
             <Route path="/addon-applications/new" element={<AddOnApplicationPage />} />
             <Route path="/proposals" element={<ProposalsPage />} />
             <Route path="/proposals/new" element={<ProposalsPage openNew />} />
