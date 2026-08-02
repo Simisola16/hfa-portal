@@ -26,6 +26,7 @@ const navItems = [
     children: [
       { label: 'Product List', path: '/products' },
       { label: 'Add Product', path: '/products/new' },
+      { label: 'Add-on Products Application', path: '/addon-applications/new' },
     ]
   },
   {
