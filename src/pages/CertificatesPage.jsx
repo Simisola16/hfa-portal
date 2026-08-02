@@ -116,6 +116,10 @@ export default function CertificatesPage() {
                     const certReqs = survRequests.filter(r => (r.certificate_id?._id || r.certificate_id) === (cert.id || cert._id));
                     const pendingReq = certReqs.find(r => r.status === 'requested');
                     const fulfilledReqs = certReqs.filter(r => r.status === 'fulfilled');
+                    const effectiveStatus =
+                      cert.status === 'active' && cert.expiry_date && new Date(cert.expiry_date) < new Date()
+                        ? 'expired'
+                        : cert.status;
 
                     return (
                       <React.Fragment key={cert.id || cert._id}>
@@ -134,12 +138,12 @@ export default function CertificatesPage() {
                             {isExpiringSoon(cert.expiry_date) && <span className="badge badge-orange" style={{ marginLeft: 6, fontSize: 10 }}>Expiring Soon</span>}
                           </td>
                           <td>
-                            <span className={`badge ${cert.status === 'active' ? 'badge-green' : cert.status === 'revoked' ? 'badge-red' : 'badge-gray'}`}>
-                              {cert.status}
+                            <span className={`badge ${effectiveStatus === 'active' ? 'badge-green' : effectiveStatus === 'revoked' ? 'badge-red' : 'badge-gray'}`}>
+                              {effectiveStatus}
                             </span>
                           </td>
                           <td style={{ display: 'flex', gap: 6 }}>
-                            {cert.status === 'active' && (
+                            {effectiveStatus === 'active' && (
                               <a
                                 href={getPdfUrl(cert.certificate_url || cert.document_url || cert.pdf_url || `/api/certificates/${cert.id || cert._id}/download?token=${localStorage.getItem('hfa_token') || ''}`)}
                                 target="_blank"
