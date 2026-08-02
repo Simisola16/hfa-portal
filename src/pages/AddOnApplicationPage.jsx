@@ -14,21 +14,26 @@ const getPdfUrl = (url) => {
   return `${API_URL}${url.startsWith('/') ? url : '/' + url}`;
 };
 
+const formatSiteName = (str) => {
+  if (!str) return 'Site';
+  return str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1));
+};
+
 const getSiteName = (c) => {
   if (!c) return 'Site';
+  let raw = '';
   const siteObj = c.site_id;
   if (siteObj && typeof siteObj === 'object') {
-    if (siteObj.name) return siteObj.name;
-    if (siteObj.est_name) return siteObj.est_name;
-    if (siteObj.trading_name) return siteObj.trading_name;
+    raw = siteObj.name || siteObj.est_name || siteObj.trading_name;
   }
-  const appObj = c.application_id;
-  if (appObj && typeof appObj === 'object') {
-    if (appObj.establishment_name) return appObj.establishment_name;
-    if (appObj.site_name) return appObj.site_name;
+  if (!raw) {
+    const appObj = c.application_id;
+    if (appObj && typeof appObj === 'object') {
+      raw = appObj.establishment_name || appObj.site_name;
+    }
   }
-  if (c.site_name) return c.site_name;
-  return 'Main Facility';
+  if (!raw) raw = c.site_name || 'Main Facility';
+  return formatSiteName(raw);
 };
 
 const PRODUCT_TYPES = ['Add product', 'Remove product', 'Change name/code', 'Change ingredients'];
