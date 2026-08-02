@@ -14,6 +14,22 @@ const getPdfUrl = (url) => {
   return `${API_URL}${url.startsWith('/') ? url : '/' + url}`;
 };
 
+const getSiteName = (c) => {
+  if (!c) return 'Site';
+  const siteObj = c.site_id;
+  if (siteObj && typeof siteObj === 'object') {
+    if (siteObj.name) return siteObj.name;
+    if (siteObj.est_name) return siteObj.est_name;
+    if (siteObj.trading_name) return siteObj.trading_name;
+  }
+  const appObj = c.application_id;
+  if (appObj && typeof appObj === 'object') {
+    if (appObj.establishment_name) return appObj.establishment_name;
+    if (appObj.site_name) return appObj.site_name;
+  }
+  return c.certificate_number ? `Site (${c.certificate_number})` : 'Site';
+};
+
 const PRODUCT_TYPES = ['Add product', 'Remove product', 'Change name/code', 'Change ingredients'];
 
 const STATUS_LABELS = {
@@ -316,16 +332,16 @@ export default function AddOnApplicationPage() {
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>1. Site</div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Select Active Certificate <span>*</span></label>
+                    <label className="form-label">Select Site <span>*</span></label>
                     {certs.length === 1 ? (
                       <div style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, fontWeight: 600, fontSize: 14 }}>
-                        {certs[0].certificate_number} ({certs[0].certificate_type})
+                        {getSiteName(certs[0])}
                       </div>
                     ) : (
                       <select className="form-control" value={form.certificate_id} onChange={e => setForm(f => ({ ...f, certificate_id: e.target.value }))} required>
-                        <option value="">-- Choose Certificate --</option>
+                        <option value="">-- Select Site --</option>
                         {certs.map(c => (
-                          <option key={c._id || c.id} value={c._id || c.id}>{c.certificate_number} ({c.certificate_type})</option>
+                          <option key={c._id || c.id} value={c._id || c.id}>{getSiteName(c)}</option>
                         ))}
                       </select>
                     )}
