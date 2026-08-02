@@ -39,13 +39,13 @@ const getSiteName = (c) => {
 const PRODUCT_TYPES = ['Add product', 'Remove product', 'Change name/code', 'Change ingredients'];
 
 const STATUS_LABELS = {
-  submitted: 'Submitted',
+  submitted: 'Submit Add-On',
   accepted: 'Application Accepted',
   rejected: 'Application Rejected',
-  ft_assigned: 'FT Assigned',
+  ft_assigned: 'Assign FT Food Technologies',
   product_approval_form_enabled: 'Product Approval Form Enabled',
   all_forms_received: 'All Product Approval Form Received',
-  logsheet_created: 'Logsheet Created',
+  logsheet_created: 'Create Logsheet',
   waiting_sharia_signature: 'Waiting For Shari\'a Board Signature',
   product_form_approved: 'Product Form Approved',
   ready_for_certificate: 'Ready For Certificate',
@@ -233,7 +233,7 @@ export default function AddOnApplicationPage() {
               const needsFormSubmit = app.status === 'product_approval_form_enabled';
 
               return (
-                <div key={app._id} style={{ padding: '16px 24px', borderBottom: '1px solid #f1f5f9' }}>
+                <div key={app._id} style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                     <div style={{ flex: 1, minWidth: 200 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -277,6 +277,57 @@ export default function AddOnApplicationPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* 10-Step Canonical Flow Progress Indicator */}
+                  {app.status !== 'rejected' && (
+                    <div style={{ marginTop: 16, background: '#fafbfc', padding: '14px 16px', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                        Workflow Progress ({STATUS_LABELS[app.status] || app.status})
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, overflowX: 'auto', paddingBottom: 4 }}>
+                        {[
+                          { id: 'submitted', label: 'Submit Add-On' },
+                          { id: 'accepted', label: 'Accepted' },
+                          { id: 'ft_assigned', label: 'Assign FT' },
+                          { id: 'product_approval_form_enabled', label: 'Form Enabled' },
+                          { id: 'all_forms_received', label: 'Form Received' },
+                          { id: 'logsheet_created', label: 'Create Logsheet' },
+                          { id: 'waiting_sharia_signature', label: 'Shari\'a Signature' },
+                          { id: 'product_form_approved', label: 'Form Approved' },
+                          { id: 'ready_for_certificate', label: 'Ready for Cert' },
+                          { id: 'completed', label: 'Certificate' }
+                        ].map((step, idx, arr) => {
+                          const order = ['submitted', 'accepted', 'ft_assigned', 'product_approval_form_enabled', 'all_forms_received', 'logsheet_created', 'waiting_sharia_signature', 'product_form_approved', 'ready_for_certificate', 'completed'];
+                          const currentIdx = order.indexOf(app.status);
+                          const stepIdx = order.indexOf(step.id);
+                          const isDone = currentIdx > stepIdx || app.status === 'completed';
+                          const isCurrent = currentIdx === stepIdx && app.status !== 'completed';
+
+                          return (
+                            <div key={step.id} style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 65, textAlign: 'center', flexDirection: 'column' }}>
+                              <div style={{
+                                width: 22, height: 22, borderRadius: '50%',
+                                background: isDone ? '#16a34a' : isCurrent ? '#2563eb' : '#e2e8f0',
+                                color: isDone || isCurrent ? 'white' : '#94a3b8',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 10, fontWeight: 700, margin: '0 auto 4px',
+                                boxShadow: isCurrent ? '0 0 0 3px rgba(37,99,235,0.2)' : 'none'
+                              }}>
+                                {isDone ? '✓' : idx + 1}
+                              </div>
+                              <span style={{
+                                fontSize: 9.5, fontWeight: isCurrent ? 700 : 500,
+                                color: isDone ? '#16a34a' : isCurrent ? '#2563eb' : '#94a3b8',
+                                lineHeight: 1.1
+                              }}>
+                                {step.label}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Product Approval Form — view admin form content if enabled */}
                   {needsFormSubmit && app.product_approval_form && (
