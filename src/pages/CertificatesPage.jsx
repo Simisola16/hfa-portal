@@ -229,22 +229,75 @@ export default function CertificatesPage() {
 
                                       {/* Surveillance Actions & Statuses */}
                                       <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: 12, marginTop: 4 }}>
-                                        {pendingReq ? (
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#fefce8', borderRadius: 8, border: '1px solid #fde68a', fontSize: 12, color: '#854d0e' }}>
-                                            <AlertCircle size={14} style={{ color: '#a16207' }} />
-                                            <span>Surveillance request pending administrator review.</span>
-                                          </div>
-                                        ) : (
-                                          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                                            <button
-                                              className="btn btn-primary btn-sm"
-                                              onClick={() => handleRequestSurveillance(cert.id || cert._id)}
-                                            >
-                                              Request Surveillance Letter
-                                            </button>
-                                            <span style={{ fontSize: 11, color: '#64748b' }}>Submit request to schedule your annual review.</span>
-                                          </div>
-                                        )}
+                                        {(() => {
+                                          if (pendingReq) {
+                                            return (
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#fefce8', borderRadius: 8, border: '1px solid #fde68a', fontSize: 12, color: '#854d0e' }}>
+                                                <AlertCircle size={14} style={{ color: '#a16207' }} />
+                                                <span>Surveillance request pending administrator review.</span>
+                                              </div>
+                                            );
+                                          }
+
+                                          // Calculate next surveillance due date
+                                          let nextDueDate = dates.y1;
+                                          if (fulfilledReqs.length === 1 && dates.y2) {
+                                            nextDueDate = dates.y2;
+                                          } else if (fulfilledReqs.length >= 2 || !nextDueDate) {
+                                            nextDueDate = cert.expiry_date ? new Date(cert.expiry_date) : null;
+                                          }
+
+                                          if (!nextDueDate) {
+                                            return null;
+                                          }
+
+                                          const now = new Date();
+                                          const diffMs = nextDueDate.getTime() - now.getTime();
+                                          const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                                          const availableDate = new Date(nextDueDate.getTime() - 90 * 24 * 60 * 60 * 1000);
+
+                                          if (diffDays > 90) {
+                                            // More than 3 months out: Locked state
+                                            return (
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px dashed #cbd5e1' }}>
+                                                <Lock size={14} style={{ color: '#94a3b8' }} />
+                                                <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>
+                                                  Surveillance Request Locked — Available starting {availableDate.toLocaleDateString('en-GB')} (3 months before due date)
+                                                </span>
+                                              </div>
+                                            );
+                                          } else if (diffDays <= 60) {
+                                            // 2 months or less out: Urgent flag + Request button
+                                            return (
+                                              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                                                <span className="badge badge-red" style={{ padding: '6px 10px', fontSize: 11, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
+                                                  🚨 URGENT: Surveillance Due in {diffDays <= 0 ? '0' : diffDays} Days!
+                                                </span>
+                                                <button
+                                                  className="btn btn-primary btn-sm"
+                                                  style={{ background: '#dc2626', borderColor: '#dc2626', fontWeight: 700 }}
+                                                  onClick={() => handleRequestSurveillance(cert.id || cert._id)}
+                                                >
+                                                  Request Surveillance Letter
+                                                </button>
+                                                <span style={{ fontSize: 11, color: '#991b1b', fontWeight: 600 }}>Submit request urgently before deadline.</span>
+                                              </div>
+                                            );
+                                          } else {
+                                            // 3 to 2 months out: Standard request button available
+                                            return (
+                                              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                                                <button
+                                                  className="btn btn-primary btn-sm"
+                                                  onClick={() => handleRequestSurveillance(cert.id || cert._id)}
+                                                >
+                                                  Request Surveillance Letter
+                                                </button>
+                                                <span style={{ fontSize: 11, color: '#64748b' }}>Surveillance window open ({diffDays} days left until due date).</span>
+                                              </div>
+                                            );
+                                          }
+                                        })()}
 
                                         {/* Download fulfilled letter */}
                                         {fulfilledReqs.length > 0 && (

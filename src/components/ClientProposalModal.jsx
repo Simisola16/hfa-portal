@@ -211,10 +211,18 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
         {proposal && (
           <div className="modal-footer" style={{ gap: 10 }}>
             <button className="btn btn-ghost" onClick={onClose} disabled={submitting}>
-              Cancel
+              Close
             </button>
             
-            {!showRejectForm ? (
+            {['accepted', 'approved'].includes(proposal.status) ? (
+              <span className="badge badge-green" style={{ padding: '8px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <CheckCircle size={16} /> ✓ Proposal Approved
+              </span>
+            ) : proposal.status === 'rejected' ? (
+              <span className="badge badge-red" style={{ padding: '8px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <XCircle size={16} /> Proposal Rejected
+              </span>
+            ) : !showRejectForm ? (
               <>
                 <button
                   className="btn btn-danger"

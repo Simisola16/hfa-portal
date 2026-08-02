@@ -200,15 +200,21 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
           )}
         </div>
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose} disabled={submitting}>Cancel</button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSubmit}
-            disabled={submitting || !agreement || loading || !signName.trim() || (!selectedSigId && !sigFile)}
-            style={{ background: '#0e7490' }}
-          >
-            {submitting ? 'Signing...' : 'Sign & Submit'}
-          </button>
+          <button className="btn btn-ghost" onClick={onClose} disabled={submitting}>Close</button>
+          {agreement?.client_signed ? (
+            <span className="badge badge-green" style={{ padding: '8px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <CheckCircle size={16} /> ✓ Agreement Signed &amp; Submitted
+            </span>
+          ) : (
+            <button
+              className="btn btn-primary"
+              onClick={handleSubmit}
+              disabled={submitting || !agreement || loading || !signName.trim() || (!selectedSigId && !sigFile)}
+              style={{ background: '#0e7490' }}
+            >
+              {submitting ? 'Signing...' : 'Sign & Submit'}
+            </button>
+          )}
         </div>
       </div>
     </div>
