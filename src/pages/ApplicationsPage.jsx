@@ -682,26 +682,29 @@ export default function ApplicationsPage({ openNew }) {
                   <div className="form-grid">
                     <div className="form-group">
                       <label className="form-label">Application Type <span>*</span></label>
-                      <select
-                        className="form-control"
-                        value={form.application_type}
-                        onChange={e => {
-                          const val = e.target.value;
-                          if (val === 'renewal' && form.site_id && !checkRenewalEligibility(form.site_id)) {
-                            toast.error('Renewal is only allowed when an existing certificate is within 3 months of expiration or has expired.');
-                            setForm(f => ({ ...f, application_type: 'new' }));
-                            return;
-                          }
-                          setForm(f => ({ ...f, application_type: val }));
-                        }}
-                      >
-                        <option value="new">New Application</option>
-                        <option value="renewal" disabled={Boolean(form.site_id && !checkRenewalEligibility(form.site_id))}>
-                          Renewal {form.site_id && !checkRenewalEligibility(form.site_id) ? '(Available 3 months before expiry)' : ''}
-                        </option>
-                        <option value="surveillance">Surveillance</option>
-                        <option value="addon">Add-on</option>
-                      </select>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        background: '#f8fafc', border: '1px solid #e2e8f0',
+                        borderRadius: 8, padding: '10px 14px', minHeight: 42
+                      }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 800,
+                          textTransform: 'uppercase', letterSpacing: '0.04em',
+                          background: form.application_type === 'renewal' ? '#fef3c7' : '#f0fdf4',
+                          color: form.application_type === 'renewal' ? '#92400e' : '#15803d',
+                          border: `1px solid ${form.application_type === 'renewal' ? '#fde68a' : '#bbf7d0'}`
+                        }}>
+                          {form.application_type === 'renewal' ? '🔄' : '✨'} {form.application_type === 'renewal' ? 'Renewal' : 'New Application'}
+                        </span>
+                        <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500 }}>
+                          {form.site_id
+                            ? form.application_type === 'renewal'
+                              ? 'Auto-set: this site has an expiring or expired certificate'
+                              : 'Auto-set: no prior certificate found for this site'
+                            : 'Select a site above to determine type'}
+                        </span>
+                      </div>
                     </div>
                     <div className="form-group">
                       <label className="form-label">Category <span>*</span></label>
