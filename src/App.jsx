@@ -12,6 +12,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import AddOnApplicationPage from './pages/AddOnApplicationPage';
+import ClientAddOnApprovalForm from './pages/ClientAddOnApprovalForm';
 import ApplicationsPage from './pages/ApplicationsPage';
 import CertificatesPage from './pages/CertificatesPage';
 import ProductsPage from './pages/ProductsPage';
