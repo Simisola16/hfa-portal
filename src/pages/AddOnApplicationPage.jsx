@@ -312,9 +312,9 @@ export default function AddOnApplicationPage() {
             <form onSubmit={handleSubmit}>
               <div className="modal-body" style={{ padding: 28, display: 'grid', gap: 20 }}>
 
-                {/* 1. Site / Certificate */}
+                {/* 1. Site */}
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>1. Site / Certificate</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>1. Site</div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">Select Active Certificate <span>*</span></label>
                     {certs.length === 1 ? (
