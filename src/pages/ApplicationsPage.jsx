@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
-import { Plus, HelpCircle, PlusCircle, Search, RefreshCw, X, Upload, Check, ChevronRight, ChevronLeft, Trash2, ShieldCheck, FileText, AlertTriangle } from 'lucide-react';
+import { Plus, HelpCircle, PlusCircle, Search, RefreshCw, X, Upload, Check, ChevronRight, ChevronLeft, Trash2, ShieldCheck, FileText, AlertTriangle, RotateCcw } from 'lucide-react';
 import { STATUS_LABELS, STATUS_BADGE } from '../lib/applicationStatuses';
 
 const CATEGORIES = [
@@ -80,6 +80,7 @@ export default function ApplicationsPage({ openNew }) {
   const [certs, setCerts] = useState([]);
   const [addOnApps, setAddOnApps] = useState([]);
   const [addOnLoading, setAddOnLoading] = useState(false);
+  const [renewalFiles, setRenewalFiles] = useState([]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -287,22 +288,28 @@ export default function ApplicationsPage({ openNew }) {
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
 
-    // Final validation
-    if (!form.site_id) return toast.error('Please select a business site (Step 1).');
-    if (!form.scope?.trim()) return toast.error('Please enter the scope of certification (Step 1).');
-    if (!form.halal_coordinator?.trim()) return toast.error('Please enter the Halal Coordinator name (Step 3).');
-    if (!form.qa_contact?.trim()) return toast.error('Please enter the Quality Assurance (QA) contact (Step 3).');
-    if (!form.employee_count || Number(form.employee_count) <= 0) return toast.error('Please enter a valid employee count (Step 3).');
-    if (!form.production_schedule?.trim()) return toast.error('Please enter the production schedule (Step 3).');
-    
-    if (form.has_porcine && !form.porcine_details?.trim()) {
-      return toast.error('Please provide porcine segregation/control details (Step 5).');
-    }
-    if (form.has_intoxicants && !form.intoxicants_details?.trim()) {
-      return toast.error('Please provide intoxicants usage details (Step 5).');
-    }
+    if (form.application_type === 'renewal') {
+      if (!form.site_id) return toast.error('Please select a business site.');
+      if (!form.managing_director?.trim()) return toast.error('Please enter contact person details.');
+      if (!form.declared_true) return toast.error('You must declare that the information is true and correct.');
+    } else {
+      // Final validation for new applications
+      if (!form.site_id) return toast.error('Please select a business site (Step 1).');
+      if (!form.scope?.trim()) return toast.error('Please enter the scope of certification (Step 1).');
+      if (!form.halal_coordinator?.trim()) return toast.error('Please enter the Halal Coordinator name (Step 3).');
+      if (!form.qa_contact?.trim()) return toast.error('Please enter the Quality Assurance (QA) contact (Step 3).');
+      if (!form.employee_count || Number(form.employee_count) <= 0) return toast.error('Please enter a valid employee count (Step 3).');
+      if (!form.production_schedule?.trim()) return toast.error('Please enter the production schedule (Step 3).');
+      
+      if (form.has_porcine && !form.porcine_details?.trim()) {
+        return toast.error('Please provide porcine segregation/control details (Step 5).');
+      }
+      if (form.has_intoxicants && !form.intoxicants_details?.trim()) {
+        return toast.error('Please provide intoxicants usage details (Step 5).');
+      }
 
-    if (!form.declared_true) return toast.error('You must declare that the information is true and correct (Step 6).');
+      if (!form.declared_true) return toast.error('You must declare that the information is true and correct (Step 6).');
+    }
 
     setSubmitting(true);
     try {
@@ -312,8 +319,12 @@ export default function ApplicationsPage({ openNew }) {
       
       Object.entries(submissionData).forEach(([k, v]) => fd.append(k, v));
 
+      if (form.application_type === 'renewal' && renewalFiles.length > 0) {
+        renewalFiles.forEach(f => fd.append('supporting_docs', f));
+      }
+
       await api.post('/api/applications', fd, true);
-      toast.success('Application submitted successfully!');
+      toast.success(form.application_type === 'renewal' ? 'Renewal application submitted successfully!' : 'Application submitted successfully!');
       setShowModal(false);
       setModalStep(1);
       resetForm();
@@ -334,6 +345,7 @@ export default function ApplicationsPage({ openNew }) {
       production_schedule: '', employee_count: '', has_porcine: false, has_intoxicants: false,
       porcine_details: '', intoxicants_details: '', declared_true: false, notes: '', products: []
     });
+    setRenewalFiles([]);
     setModalStep(1);
   };
 
@@ -650,18 +662,27 @@ export default function ApplicationsPage({ openNew }) {
               <button className="modal-close" onClick={handleCloseModal}><X size={18} /></button>
             </div>
 
-            <div className="modal-steps">
-              {[1, 2, 3, 4, 5, 6].map(s => (
-                <div key={s} className={`step-item ${modalStep === s ? 'active' : ''} ${modalStep > s ? 'completed' : ''}`}>
-                  <div className="step-number">{modalStep > s ? <Check size={14} /> : s}</div>
+            {form.application_type === 'renewal' ? (
+              <div style={{ padding: '16px 24px', background: '#fef3c7', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <RotateCcw size={20} style={{ color: '#d97706' }} />
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: '#92400e' }}>Renewal Application</div>
+                  <div style={{ fontSize: 12, color: '#b45309' }}>Simplified renewal for your certified site</div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="modal-steps">
+                {[1, 2, 3, 4, 5, 6].map(s => (
+                  <div key={s} className={`step-item ${modalStep === s ? 'active' : ''} ${modalStep > s ? 'completed' : ''}`}>
+                    <div className="step-number">{modalStep > s ? <Check size={14} /> : s}</div>
+                  </div>
+                ))}
+              </div>
+            )}
 
-            <div className="modal-body" style={{ minHeight: 450 }}>
-              {modalStep === 1 && (
-                <div className="animate-fade-in">
-                  <h3 className="section-title">Step 1: Application Basics</h3>
+            <div className="modal-body" style={{ minHeight: 400 }}>
+              {form.application_type === 'renewal' ? (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                   <div className="form-group">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <label className="form-label" style={{ marginBottom: 0 }}>Select Site <span>*</span></label>
@@ -679,52 +700,24 @@ export default function ApplicationsPage({ openNew }) {
                       {sites.map(s => <option key={s._id} value={s._id}>{s.name} ({s.city})</option>)}
                     </select>
                   </div>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label className="form-label">Application Type <span>*</span></label>
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        background: '#f8fafc', border: '1px solid #e2e8f0',
-                        borderRadius: 8, padding: '10px 14px', minHeight: 42
-                      }}>
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 800,
-                          textTransform: 'uppercase', letterSpacing: '0.04em',
-                          background: form.application_type === 'renewal' ? '#fef3c7' : '#f0fdf4',
-                          color: form.application_type === 'renewal' ? '#92400e' : '#15803d',
-                          border: `1px solid ${form.application_type === 'renewal' ? '#fde68a' : '#bbf7d0'}`
-                        }}>
-                          {form.application_type === 'renewal' ? '🔄' : '✨'} {form.application_type === 'renewal' ? 'Renewal' : 'New Application'}
-                        </span>
-                        <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500 }}>
-                          {form.site_id
-                            ? form.application_type === 'renewal'
-                              ? 'Auto-set: this site has an expiring or expired certificate'
-                              : 'Auto-set: no prior certificate found for this site'
-                            : 'Select a site above to determine type'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Category <span>*</span></label>
-                      <select className="form-control" value={form.category} onChange={e => setForm(f => ({...f, category: e.target.value}))}>
-                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
+
+                  <div style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 12,
+                    background: '#f0fdf4', border: '1px solid #bbf7d0',
+                    borderRadius: 10, padding: '14px 16px'
+                  }}>
+                    <CheckCircle size={18} style={{ color: '#16a34a', flexShrink: 0, marginTop: 2 }} />
+                    <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.5 }}>
+                      <strong>Automatic Data Inheritance:</strong> This renewal application will automatically carry over your certified scope, product categories, facility details, and HACCP compliance documents from your previous application for this site.
                     </div>
                   </div>
-                  {CATEGORY_DETAILS[form.category] && (
-                    <div style={{ marginTop: 12, padding: '14px 16px', background: '#f0fdf9', borderRadius: 8, border: '1px solid #99e6d3' }}>
-                      <p style={{ margin: 0, fontSize: 13, color: '#1B7A7A', lineHeight: 1.6 }}>{CATEGORY_DETAILS[form.category]}</p>
-                    </div>
-                  )}
 
                   {/* Gating warnings */}
                   {(() => {
                     const gating = getGatingStatus();
                     if (gating?.blocked) {
                       return (
-                        <div style={{ marginTop: 12, padding: '14px 16px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fef08a', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        <div style={{ padding: '14px 16px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fef08a', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                           <AlertTriangle size={18} style={{ color: '#d97706', flexShrink: 0, marginTop: 2 }} />
                           <p style={{ margin: 0, fontSize: 13, color: '#854d0e', lineHeight: 1.6 }}>{gating.message}</p>
                         </div>
@@ -733,157 +726,321 @@ export default function ApplicationsPage({ openNew }) {
                     return null;
                   })()}
 
-                  <div className="form-group" style={{ marginTop: 16 }}>
-                    <label className="form-label">Scope of Certification <span>*</span></label>
-                    <textarea className="form-control" rows={3} placeholder="Describe the activities to be certified (e.g., Slaughtering and processing of poultry...)" value={form.scope} onChange={e => setForm(f => ({...f, scope: e.target.value}))} required />
-                  </div>
-                </div>
-              )}
-
-              {modalStep === 2 && (
-                <div className="animate-fade-in">
-                  <h3 className="section-title">Step 2: Company Details</h3>
                   <div className="form-group">
-                    <label className="form-label">Legal Establishment Name</label>
-                    <input type="text" className="form-control" value={form.establishment_name} readOnly />
+                    <label className="form-label">Contact Person Details <span>*</span></label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Full Name and Role of Main Contact Person (e.g. John Doe, Managing Director)"
+                      value={form.managing_director}
+                      onChange={e => setForm(f => ({ ...f, managing_director: e.target.value }))}
+                      required
+                    />
                   </div>
+
                   <div className="form-group">
-                    <label className="form-label">Establishment Address</label>
-                    <textarea className="form-control" rows={2} value={form.establishment_address} readOnly />
-                  </div>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label className="form-label">Managing Director</label>
-                      <input type="text" className="form-control" value={form.managing_director} onChange={e => setForm(f => ({...f, managing_director: e.target.value}))} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Production Manager</label>
-                      <input type="text" className="form-control" value={form.production_contact} onChange={e => setForm(f => ({...f, production_contact: e.target.value}))} />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {modalStep === 3 && (
-                <div className="animate-fade-in">
-                  <h3 className="section-title">Step 3: Certification Contacts</h3>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label className="form-label">Halal Coordinator <span>*</span></label>
-                      <input type="text" className="form-control" value={form.halal_coordinator} onChange={e => setForm(f => ({...f, halal_coordinator: e.target.value}))} required />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Quality Assurance (QA) <span>*</span></label>
-                      <input type="text" className="form-control" value={form.qa_contact} onChange={e => setForm(f => ({...f, qa_contact: e.target.value}))} required />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Finance / Accounts Contact</label>
-                      <input type="text" className="form-control" value={form.finance_contact} onChange={e => setForm(f => ({...f, finance_contact: e.target.value}))} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Employee Count <span>*</span></label>
-                      <input type="number" className="form-control" value={form.employee_count} onChange={e => setForm(f => ({...f, employee_count: e.target.value}))} required />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Production Schedule (Hours of Operation) <span>*</span></label>
-                    <input type="text" className="form-control" placeholder="e.g. 08:00 - 17:00, Mon-Fri" value={form.production_schedule} onChange={e => setForm(f => ({...f, production_schedule: e.target.value}))} required />
-                  </div>
-                </div>
-              )}
-
-              {modalStep === 4 && (
-                <div className="animate-fade-in">
-                  <h3 className="section-title">Step 4: Product List</h3>
-                  <div className="card p-4 mb-4 bg-light">
-                    <div className="form-grid">
-                      <input type="text" className="form-control" placeholder="Product Name" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
-                      <input type="text" className="form-control" placeholder="Brand" value={newProduct.brand} onChange={e => setNewProduct({...newProduct, brand: e.target.value})} />
-                      <button type="button" className="btn btn-primary" onClick={addProduct}><Plus size={14} /> Add</button>
-                    </div>
-                  </div>
-                  <div className="table-wrap" style={{ maxHeight: 250, overflowY: 'auto' }}>
-                    <table className="table-sm">
-                      <thead>
-                        <tr><th>Product Name</th><th>Brand</th><th>Action</th></tr>
-                      </thead>
-                      <tbody>
-                        {form.products.map(p => (
-                          <tr key={p.id}>
-                            <td>{p.name}</td><td>{p.brand}</td>
-                            <td><button type="button" onClick={() => removeProduct(p.id)} className="btn-icon text-red"><Trash2 size={14} /></button></td>
-                          </tr>
-                        ))}
-                        {form.products.length === 0 && <tr><td colSpan="3" className="text-center py-4">No products added yet</td></tr>}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {modalStep === 5 && (
-                <div className="animate-fade-in">
-                  <h3 className="section-title">Step 5: Declarations</h3>
-                  <div className="card p-4 border-teal bg-teal-light mb-4">
-                    <div className="form-group mb-0">
-                      <label className="checkbox-label font-bold">
-                        <input type="checkbox" checked={form.has_porcine} onChange={e => setForm(f => ({...f, has_porcine: e.target.checked}))} />
-                        Does the site handle any Porcine (Pork) related materials?
-                      </label>
-                      {form.has_porcine && (
-                        <textarea className="form-control mt-3" placeholder="Provide details on segregation and control..." value={form.porcine_details} onChange={e => setForm(f => ({...f, porcine_details: e.target.value}))} />
+                    <label className="form-label">Updated Supporting Documents <span style={{ fontSize: 11, color: '#94a3b8' }}>(optional — attach any new licenses or updated certificates)</span></label>
+                    <div
+                      style={{
+                        border: '2px dashed #cbd5e1', borderRadius: 12, padding: '20px',
+                        textAlign: 'center', cursor: 'pointer', background: renewalFiles.length > 0 ? '#f0fdf4' : '#fafafa',
+                        borderColor: renewalFiles.length > 0 ? '#86efac' : '#cbd5e1'
+                      }}
+                      onClick={() => document.getElementById('modal-renewal-docs-input').click()}
+                    >
+                      <Upload size={24} style={{ color: renewalFiles.length > 0 ? '#16a34a' : '#94a3b8', margin: '0 auto 8px', display: 'block' }} />
+                      {renewalFiles.length > 0 ? (
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>{renewalFiles.length} file(s) attached for renewal</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginTop: 6 }}>
+                            {renewalFiles.map((f, i) => (
+                              <span key={i} style={{ fontSize: 11, background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: 12 }}>
+                                {f.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>Click to select supporting files (PDF, images)</div>
+                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Attach any updated supporting documentation</div>
+                        </div>
                       )}
+                      <input
+                        id="modal-renewal-docs-input"
+                        type="file"
+                        hidden
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        onChange={e => setRenewalFiles(Array.from(e.target.files))}
+                      />
                     </div>
                   </div>
-                  <div className="card p-4 border-teal bg-teal-light mb-4">
-                    <div className="form-group mb-0">
-                      <label className="checkbox-label font-bold">
-                        <input type="checkbox" checked={form.has_intoxicants} onChange={e => setForm(f => ({...f, has_intoxicants: e.target.checked}))} />
-                        Does the site handle any Intoxicants (Alcohol)?
-                      </label>
-                      {form.has_intoxicants && (
-                        <textarea className="form-control mt-3" placeholder="Describe usage (e.g., cleaning, ingredient)..." value={form.intoxicants_details} onChange={e => setForm(f => ({...f, intoxicants_details: e.target.value}))} />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
 
-              {modalStep === 6 && (
-                <div className="animate-fade-in">
-                  <h3 className="section-title">Step 6: Declaration &amp; Submission</h3>
-                  <div className="form-group mt-2">
-                    <label className="form-label">Additional Notes</label>
-                    <textarea className="form-control" rows={3} placeholder="Any additional details or comments for the certification body..." value={form.notes} onChange={e => setForm(f => ({...f, notes: e.target.value}))} />
+                  <div className="form-group">
+                    <label className="form-label">Renewal Notes / Comments</label>
+                    <textarea
+                      className="form-control"
+                      rows={2}
+                      placeholder="Any additional notes for the certification body..."
+                      value={form.notes}
+                      onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                    />
                   </div>
-                  <label className="checkbox-label p-4 bg-light rounded-lg border border-dashed mt-4" style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <input type="checkbox" checked={form.declared_true} onChange={e => setForm(f => ({...f, declared_true: e.target.checked}))} required style={{ marginTop: 3 }} />
+
+                  <label className="checkbox-label p-4 bg-light rounded-lg border border-dashed" style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <input type="checkbox" checked={form.declared_true} onChange={e => setForm(f => ({ ...f, declared_true: e.target.checked }))} required style={{ marginTop: 3 }} />
                     <span className="text-sm font-semibold" style={{ lineHeight: 1.5 }}>
-                      I hereby declare that all information provided in this application is true, complete, and correct to the best of my knowledge.
+                      I hereby declare that all information provided for this renewal application is true, complete, and correct.
                     </span>
                   </label>
                 </div>
+              ) : (
+                <>
+                  {modalStep === 1 && (
+                    <div className="animate-fade-in">
+                      <h3 className="section-title">Step 1: Application Basics</h3>
+                      <div className="form-group">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <label className="form-label" style={{ marginBottom: 0 }}>Select Site <span>*</span></label>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, padding: '2px 8px' }}
+                            onClick={() => navigate('/add-site')}
+                          >
+                            + Add Manufacturing Site
+                          </button>
+                        </div>
+                        <select className="form-control" value={form.site_id} onChange={e => handleSiteChange(e.target.value)} required>
+                          <option value="">-- Select Site --</option>
+                          {sites.map(s => <option key={s._id} value={s._id}>{s.name} ({s.city})</option>)}
+                        </select>
+                      </div>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label className="form-label">Application Type <span>*</span></label>
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            background: '#f8fafc', border: '1px solid #e2e8f0',
+                            borderRadius: 8, padding: '10px 14px', minHeight: 42
+                          }}>
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 6,
+                              padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 800,
+                              textTransform: 'uppercase', letterSpacing: '0.04em',
+                              background: form.application_type === 'renewal' ? '#fef3c7' : '#f0fdf4',
+                              color: form.application_type === 'renewal' ? '#92400e' : '#15803d',
+                              border: `1px solid ${form.application_type === 'renewal' ? '#fde68a' : '#bbf7d0'}`
+                            }}>
+                              {form.application_type === 'renewal' ? '🔄' : '✨'} {form.application_type === 'renewal' ? 'Renewal' : 'New Application'}
+                            </span>
+                            <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500 }}>
+                              {form.site_id
+                                ? form.application_type === 'renewal'
+                                  ? 'Auto-set: this site has an expiring or expired certificate'
+                                  : 'Auto-set: no prior certificate found for this site'
+                                : 'Select a site above to determine type'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Category <span>*</span></label>
+                          <select className="form-control" value={form.category} onChange={e => setForm(f => ({...f, category: e.target.value}))}>
+                            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      {CATEGORY_DETAILS[form.category] && (
+                        <div style={{ marginTop: 12, padding: '14px 16px', background: '#f0fdf9', borderRadius: 8, border: '1px solid #99e6d3' }}>
+                          <p style={{ margin: 0, fontSize: 13, color: '#1B7A7A', lineHeight: 1.6 }}>{CATEGORY_DETAILS[form.category]}</p>
+                        </div>
+                      )}
+
+                      {/* Gating warnings */}
+                      {(() => {
+                        const gating = getGatingStatus();
+                        if (gating?.blocked) {
+                          return (
+                            <div style={{ marginTop: 12, padding: '14px 16px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fef08a', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                              <AlertTriangle size={18} style={{ color: '#d97706', flexShrink: 0, marginTop: 2 }} />
+                              <p style={{ margin: 0, fontSize: 13, color: '#854d0e', lineHeight: 1.6 }}>{gating.message}</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+
+                      <div className="form-group" style={{ marginTop: 16 }}>
+                        <label className="form-label">Scope of Certification <span>*</span></label>
+                        <textarea className="form-control" rows={3} placeholder="Describe the activities to be certified (e.g., Slaughtering and processing of poultry...)" value={form.scope} onChange={e => setForm(f => ({...f, scope: e.target.value}))} required />
+                      </div>
+                    </div>
+                  )}
+
+                  {modalStep === 2 && (
+                    <div className="animate-fade-in">
+                      <h3 className="section-title">Step 2: Company Details</h3>
+                      <div className="form-group">
+                        <label className="form-label">Legal Establishment Name</label>
+                        <input type="text" className="form-control" value={form.establishment_name} readOnly />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Establishment Address</label>
+                        <textarea className="form-control" rows={2} value={form.establishment_address} readOnly />
+                      </div>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label className="form-label">Managing Director</label>
+                          <input type="text" className="form-control" value={form.managing_director} onChange={e => setForm(f => ({...f, managing_director: e.target.value}))} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Production Manager</label>
+                          <input type="text" className="form-control" value={form.production_contact} onChange={e => setForm(f => ({...f, production_contact: e.target.value}))} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {modalStep === 3 && (
+                    <div className="animate-fade-in">
+                      <h3 className="section-title">Step 3: Certification Contacts</h3>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label className="form-label">Halal Coordinator <span>*</span></label>
+                          <input type="text" className="form-control" value={form.halal_coordinator} onChange={e => setForm(f => ({...f, halal_coordinator: e.target.value}))} required />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Quality Assurance (QA) <span>*</span></label>
+                          <input type="text" className="form-control" value={form.qa_contact} onChange={e => setForm(f => ({...f, qa_contact: e.target.value}))} required />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Finance / Accounts Contact</label>
+                          <input type="text" className="form-control" value={form.finance_contact} onChange={e => setForm(f => ({...f, finance_contact: e.target.value}))} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Employee Count <span>*</span></label>
+                          <input type="number" className="form-control" value={form.employee_count} onChange={e => setForm(f => ({...f, employee_count: e.target.value}))} required />
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Production Schedule (Hours of Operation) <span>*</span></label>
+                        <input type="text" className="form-control" placeholder="e.g. 08:00 - 17:00, Mon-Fri" value={form.production_schedule} onChange={e => setForm(f => ({...f, production_schedule: e.target.value}))} required />
+                      </div>
+                    </div>
+                  )}
+
+                  {modalStep === 4 && (
+                    <div className="animate-fade-in">
+                      <h3 className="section-title">Step 4: Product List</h3>
+                      <div className="card p-4 mb-4 bg-light">
+                        <div className="form-grid">
+                          <input type="text" className="form-control" placeholder="Product Name" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
+                          <input type="text" className="form-control" placeholder="Brand" value={newProduct.brand} onChange={e => setNewProduct({...newProduct, brand: e.target.value})} />
+                          <button type="button" className="btn btn-primary" onClick={addProduct}><Plus size={14} /> Add</button>
+                        </div>
+                      </div>
+                      <div className="table-wrap" style={{ maxHeight: 250, overflowY: 'auto' }}>
+                        <table className="table-sm">
+                          <thead>
+                            <tr><th>Product Name</th><th>Brand</th><th>Action</th></tr>
+                          </thead>
+                          <tbody>
+                            {form.products.map(p => (
+                              <tr key={p.id}>
+                                <td>{p.name}</td><td>{p.brand}</td>
+                                <td><button type="button" onClick={() => removeProduct(p.id)} className="btn-icon text-red"><Trash2 size={14} /></button></td>
+                              </tr>
+                            ))}
+                            {form.products.length === 0 && <tr><td colSpan="3" className="text-center py-4">No products added yet</td></tr>}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {modalStep === 5 && (
+                    <div className="animate-fade-in">
+                      <h3 className="section-title">Step 5: Declarations</h3>
+                      <div className="card p-4 border-teal bg-teal-light mb-4">
+                        <div className="form-group mb-0">
+                          <label className="checkbox-label font-bold">
+                            <input type="checkbox" checked={form.has_porcine} onChange={e => setForm(f => ({...f, has_porcine: e.target.checked}))} />
+                            Does the site handle any Porcine (Pork) related materials?
+                          </label>
+                          {form.has_porcine && (
+                            <textarea className="form-control mt-3" placeholder="Provide details on segregation and control..." value={form.porcine_details} onChange={e => setForm(f => ({...f, porcine_details: e.target.value}))} />
+                          )}
+                        </div>
+                      </div>
+                      <div className="card p-4 border-teal bg-teal-light mb-4">
+                        <div className="form-group mb-0">
+                          <label className="checkbox-label font-bold">
+                            <input type="checkbox" checked={form.has_intoxicants} onChange={e => setForm(f => ({...f, has_intoxicants: e.target.checked}))} />
+                            Does the site handle any Intoxicants (Alcohol)?
+                          </label>
+                          {form.has_intoxicants && (
+                            <textarea className="form-control mt-3" placeholder="Describe usage (e.g., cleaning, ingredient)..." value={form.intoxicants_details} onChange={e => setForm(f => ({...f, intoxicants_details: e.target.value}))} />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {modalStep === 6 && (
+                    <div className="animate-fade-in">
+                      <h3 className="section-title">Step 6: Declaration &amp; Submission</h3>
+                      <div className="form-group mt-2">
+                        <label className="form-label">Additional Notes</label>
+                        <textarea className="form-control" rows={3} placeholder="Any additional details or comments for the certification body..." value={form.notes} onChange={e => setForm(f => ({...f, notes: e.target.value}))} />
+                      </div>
+                      <label className="checkbox-label p-4 bg-light rounded-lg border border-dashed mt-4" style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                        <input type="checkbox" checked={form.declared_true} onChange={e => setForm(f => ({...f, declared_true: e.target.checked}))} required style={{ marginTop: 3 }} />
+                        <span className="text-sm font-semibold" style={{ lineHeight: 1.5 }}>
+                          I hereby declare that all information provided in this application is true, complete, and correct to the best of my knowledge.
+                        </span>
+                      </label>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
             <div className="modal-footer">
-              {modalStep > 1 && (
-                <button type="button" className="btn btn-ghost" onClick={() => setModalStep(s => s - 1)}>
-                  <ChevronLeft size={16} /> Previous
-                </button>
+              {form.application_type === 'renewal' ? (
+                <div className="ml-auto flex gap-3">
+                  <button type="button" className="btn btn-ghost" onClick={handleCloseModal}>Cancel</button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={submitting || !form.declared_true || !form.managing_director?.trim() || !form.site_id || getGatingStatus()?.blocked}
+                    onClick={handleSubmit}
+                    style={{ background: 'linear-gradient(135deg, #d97706, #b45309)', borderColor: '#d97706' }}
+                  >
+                    {submitting ? <span className="spinner-white" /> : <><ShieldCheck size={18} /> Submit Renewal Application</>}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {modalStep > 1 && (
+                    <button type="button" className="btn btn-ghost" onClick={() => setModalStep(s => s - 1)}>
+                      <ChevronLeft size={16} /> Previous
+                    </button>
+                  )}
+                  <div className="ml-auto flex gap-3">
+                    <button type="button" className="btn btn-ghost" onClick={handleCloseModal}>Cancel</button>
+                    {modalStep < 6 ? (
+                      <button type="button" className="btn btn-primary" disabled={getGatingStatus()?.blocked} onClick={() => { if (validateStep(modalStep)) setModalStep(s => s + 1); }}>
+                        Next Step <ChevronRight size={16} />
+                      </button>
+                    ) : (
+                      <button type="button" className="btn btn-primary" disabled={submitting || !form.declared_true} onClick={handleSubmit}>
+                        {submitting ? <span className="spinner-white" /> : <><ShieldCheck size={18} /> Submit Application</>}
+                      </button>
+                    )}
+                  </div>
+                </>
               )}
-              <div className="ml-auto flex gap-3">
-                <button type="button" className="btn btn-ghost" onClick={handleCloseModal}>Cancel</button>
-                {modalStep < 6 ? (
-                  <button type="button" className="btn btn-primary" disabled={getGatingStatus()?.blocked} onClick={() => { if (validateStep(modalStep)) setModalStep(s => s + 1); }}>
-                    Next Step <ChevronRight size={16} />
-                  </button>
-                ) : (
-                  <button type="button" className="btn btn-primary" disabled={submitting || !form.declared_true} onClick={handleSubmit}>
-                    {submitting ? <span className="spinner-white" /> : <><ShieldCheck size={18} /> Submit Application</>}
-                  </button>
-                )}
-              </div>
             </div>
           </div>
         </div>,
