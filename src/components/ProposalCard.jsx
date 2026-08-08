@@ -18,7 +18,7 @@ export default function ProposalCard({ proposal, status }) {
       <div style={{ background: '#f8fafc', opacity: 0.65, border: '1px dashed #cbd5e1', borderRadius: 20, padding: '24px 20px', textAlign: 'center' }}>
         <Lock size={20} style={{ color: '#94a3b8', margin: '0 auto 8px' }} />
         <div style={{ fontWeight: 700, fontSize: 13, color: '#64748b' }}>Certification Proposal (Locked)</div>
-        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Available once application is approved</div>
+        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Available once application is accepted</div>
       </div>
     );
   }

@@ -628,7 +628,7 @@ export default function ApplicationsPage({ openNew }) {
                         {[
                           { label: 'Submitted', key: 'submitted' },
                           { label: 'Under Review', key: 'under_review' },
-                          { label: isRejected ? 'Rejected' : 'Approved', key: 'approved_or_rejected' },
+                          { label: isRejected ? 'Rejected' : 'Accepted', key: 'approved_or_rejected' },
                           { label: 'Inspection', key: 'inspection_assigned' },
                           { label: 'Inspected', key: 'inspection_completed' },
                           { label: 'Completed', key: 'completed' }

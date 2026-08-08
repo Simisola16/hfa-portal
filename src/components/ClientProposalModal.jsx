@@ -80,11 +80,11 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
         note: 'Proposal approved by client via quick action.',
       });
       
-      toast.success('Proposal approved successfully!');
+      toast.success('Proposal accepted successfully!');
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      toast.error(err.message || 'Failed to approve proposal');
+      toast.error(err.message || 'Failed to accept proposal');
     } finally {
       setSubmitting(false);
     }
@@ -216,7 +216,7 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
             
             {['accepted', 'approved'].includes(proposal.status) ? (
               <span className="badge badge-green" style={{ padding: '8px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <CheckCircle size={16} /> ✓ Proposal Approved
+                <CheckCircle size={16} /> ✓ Proposal Accepted
               </span>
             ) : proposal.status === 'rejected' ? (
               <span className="badge badge-red" style={{ padding: '8px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -238,7 +238,7 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
                   onClick={handleApprove}
                   disabled={submitting}
                 >
-                  <CheckCircle size={16} /> {submitting ? 'Approving...' : 'Approve Proposal'}
+                  <CheckCircle size={16} /> {submitting ? 'Accepting...' : 'Accept Proposal'}
                 </button>
               </>
             ) : (

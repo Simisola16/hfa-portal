@@ -135,14 +135,14 @@ export default function TrackProcessing() {
       await api.put(`/api/proposals/${proposal._id || proposal.id}`, { status: 'accepted' });
       const res = await api.put(`/api/applications/${appId}/status`, {
         status: 'proposal_approved',
-        note: 'Proposal approved by client.',
+        note: 'Proposal accepted by client.',
       });
       setApp(res.data);
       setShowApproveModal(false);
-      toast.success('Proposal approved successfully!');
+      toast.success('Proposal accepted successfully!');
       fetchApp(true);
     } catch (err) {
-      toast.error(err.message || 'Approval failed.');
+      toast.error(err.message || 'Acceptance failed.');
     } finally {
       setActionSubmitting(false);
     }
@@ -755,23 +755,23 @@ export default function TrackProcessing() {
         </div>
       </div>
 
-      {/* Proposal Approve Confirmation Modal */}
+      {/* Proposal Accept Confirmation Modal */}
       {showApproveModal && (
         <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowApproveModal(false)}>
           <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header" style={{ borderBottom: '2px solid #86efac', background: '#f0fdf4' }}>
-              <div className="modal-title" style={{ color: '#166534' }}>Approve Certification Proposal</div>
+              <div className="modal-title" style={{ color: '#166534' }}>Accept Certification Proposal</div>
               <button className="modal-close" onClick={() => setShowApproveModal(false)}><X size={18} /></button>
             </div>
             <div className="modal-body">
               <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                Are you sure you want to approve this proposal? By approving, you agree to the estimated cost of <strong>£{Number(proposal?.estimated_cost).toFixed(2)}</strong>. This will notify HFA to issue an invoice.
+                Are you sure you want to accept this proposal? By accepting, you agree to the estimated cost of <strong>£{Number(proposal?.estimated_cost).toFixed(2)}</strong>. This will notify HFA to issue an invoice.
               </p>
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setShowApproveModal(false)} disabled={actionSubmitting}>Cancel</button>
               <button className="btn btn-primary" style={{ background: '#16a34a' }} onClick={handleApproveProposal} disabled={actionSubmitting}>
-                {actionSubmitting ? 'Approving...' : 'Yes, Approve Proposal'}
+                {actionSubmitting ? 'Accepting...' : 'Yes, Accept Proposal'}
               </button>
             </div>
           </div>
