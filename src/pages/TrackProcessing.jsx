@@ -224,6 +224,15 @@ export default function TrackProcessing() {
   const stage2 = auditsArr?.find(a => a.stage === 2);
   const activeAudit = auditsArr?.find(a => a.status === 'dates_proposed') || (isDualStage ? (stage2 || stage1) : stage1);
 
+  // NC state
+  const isNcFlagged = status === 'nc_flagged';
+  const isNcClosed = status === 'nc_closed' || status === 'audit_report_submitted';
+  const latestNcReport = app.nc_reports?.length > 0 ? app.nc_reports[app.nc_reports.length - 1] : null;
+
+  // Logsheet / post-audit states (no action needed from client — just informational)
+  const isLogsheetStage = ['nc_closed', 'audit_report_submitted', 'logsheet_created', 'logsheet_signed', 'logsheet_sign_requested', 'application_successful'].includes(status);
+
+  // Agreement states
   const showProposalAction = status === 'proposal_sent';
   const showPaymentAction = (status === 'invoice_sent' || status === 'final_invoice_sent') && invoice && invoice.status !== 'client_paid' && invoice.status !== 'paid';
   const showPaymentPending = ((status === 'invoice_sent' || status === 'final_invoice_sent') && invoice && invoice.status === 'client_paid') || ((status === 'payment_received' || status === 'final_invoice_paid') && invoice && invoice.status !== 'paid');
@@ -232,7 +241,9 @@ export default function TrackProcessing() {
   const showAuditDatesRejected = status === 'dates_rejected' || activeAudit?.status === 'dates_rejected';
   const showAuditDatesAccepted = status === 'dates_accepted' || activeAudit?.status === 'dates_accepted';
   const showAuditScheduled = status === 'date_finalized' || status === 'audit_assigned' || activeAudit?.status === 'date_finalized' || activeAudit?.status === 'auditors_assigned';
+  const showAuditComplete = status === 'audit_successful' || status === 'audit_completed';
   const showAgreementAction = status === 'agreement_sent';
+
 
   return (
     <div className="page-content">
@@ -542,7 +553,116 @@ export default function TrackProcessing() {
         </div>
       )}
 
+      {/* Audit Complete — awaiting admin post-audit decision */}
+      {showAuditComplete && (
+        <div style={{
+          background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
+          border: '1.5px solid #a7f3d0', borderRadius: 16,
+          padding: '20px 24px', marginBottom: 24,
+          display: 'flex', alignItems: 'flex-start', gap: 16
+        }}>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <CheckCircle size={22} style={{ color: '#10b981' }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: '#065f46', marginBottom: 4 }}>Audit Completed Successfully</div>
+            <div style={{ fontSize: 13, color: '#047857', lineHeight: 1.6 }}>
+              Your halal audit has been completed. Our certification team is currently reviewing the audit findings. You will be notified of the next steps shortly.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NC Flagged — client must upload corrective action */}
+      {isNcFlagged && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fff7ed, #fef2f2)',
+          border: '1.5px solid #fecaca', borderRadius: 16,
+          padding: '20px 24px', marginBottom: 24,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: latestNcReport ? 16 : 0 }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <AlertTriangle size={22} style={{ color: '#dc2626' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#991b1b', marginBottom: 4 }}>⚠️ Non-Conformity (NC) Report Flagged</div>
+              <div style={{ fontSize: 13, color: '#7f1d1d', lineHeight: 1.6 }}>
+                Our audit team has identified one or more non-conformities during your audit. Please review the findings below and upload your corrective action evidence.
+              </div>
+            </div>
+          </div>
+          {latestNcReport && (
+            <div style={{ background: '#fff', border: '1px solid #fecaca', borderRadius: 10, padding: 14, marginTop: 4 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#b91c1c', marginBottom: 6 }}>Flagged NC Observation</div>
+              <div style={{ fontSize: 13, color: '#1e293b', lineHeight: 1.6, marginBottom: latestNcReport.url ? 10 : 0 }}>
+                {latestNcReport.text || 'Non-conformity identified during audit — please contact HFA for details.'}
+              </div>
+              {latestNcReport.url && (
+                <a href={latestNcReport.url} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ color: '#dc2626', borderColor: '#fecaca', gap: 6 }}>
+                  <Download size={13} /> View NC Report Sheet
+                </a>
+              )}
+              {latestNcReport.admin_reply && (
+                <div style={{ marginTop: 12, padding: 10, background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#0369a1', marginBottom: 4 }}>💬 HFA Response / Guidance</div>
+                  <div style={{ fontSize: 13, color: '#075985' }}>{latestNcReport.admin_reply}</div>
+                </div>
+              )}
+            </div>
+          )}
+          <div style={{ marginTop: 12, padding: '12px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, fontSize: 13, color: '#92400e', fontWeight: 600 }}>
+            📋 To proceed, please submit your corrective action evidence to HFA at <strong>info@hfa.org.uk</strong> or contact your assigned coordinator.
+          </div>
+        </div>
+      )}
+
+      {/* NC Closed — correction accepted, moving to logsheet */}
+      {isNcClosed && (
+        <div style={{
+          background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
+          border: '1.5px solid #bbf7d0', borderRadius: 16,
+          padding: '20px 24px', marginBottom: 24,
+          display: 'flex', alignItems: 'flex-start', gap: 16
+        }}>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <CheckCircle size={22} style={{ color: '#15803d' }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>✅ Non-Conformity Closed</div>
+            <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
+              Your corrective actions have been reviewed and accepted by HFA. The non-conformity has been officially closed. We are now preparing your LogSheet for final sign-off.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Logsheet Stage — admin processing, client just waits */}
+      {isLogsheetStage && !isNcClosed && (
+        <div style={{
+          background: 'linear-gradient(135deg, #f0f9ff, #e0f2fe)',
+          border: '1.5px solid #bae6fd', borderRadius: 16,
+          padding: '20px 24px', marginBottom: 24,
+          display: 'flex', alignItems: 'flex-start', gap: 16
+        }}>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#bae6fd', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <FileText size={22} style={{ color: '#0284c7' }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: '#0369a1', marginBottom: 4 }}>
+              {status === 'logsheet_signed' ? 'LogSheet Signed — Preparing Certificate' : 'LogSheet Being Prepared'}
+            </div>
+            <div style={{ fontSize: 13, color: '#075985', lineHeight: 1.6 }}>
+              {status === 'logsheet_signed'
+                ? 'Your LogSheet has been signed and verified. HFA is now finalising and issuing your Halal certificate. You will be notified once it is ready.'
+                : 'HFA is currently preparing your Inspection LogSheet for final review and sign-off. No action is required from you at this stage. You will be notified once complete.'
+              }
+            </div>
+          </div>
+        </div>
+      )}
+
       {isRejected && (
+
         <div style={{
           background: 'linear-gradient(135deg, #fef2f2, #fff5f5)',
           border: '1.5px solid #fecaca', borderRadius: 16,

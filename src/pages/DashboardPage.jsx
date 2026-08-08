@@ -126,7 +126,7 @@ export default function DashboardPage() {
   const daysToUrgent = urgentRenewalCert?.expiry_date ? Math.ceil((new Date(urgentRenewalCert.expiry_date) - now) / (1000 * 60 * 60 * 24)) : null;
 
   const recentApps = data.applications.slice(0, 5);
-  const pendingApps = data.applications.filter(a => ['submitted', 'under_review'].includes(a.status)).length;
+  const totalApps = data.applications.length;
 
   const getDaysRemaining = (expiryDate) => {
     if (!expiryDate) return null;
@@ -169,113 +169,76 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="stats-grid">
-        <div className="stat-card" onClick={() => navigate('/applications')} style={{ cursor: 'pointer' }}>
-          <div className="stat-icon" style={{ background: '#dbeafe', color: '#3b82f6' }}><FileText size={22} /></div>
+        {/* 1. Active Certificates */}
+        <div
+          className="stat-card"
+          style={{ cursor: 'pointer', border: '1px solid var(--border)', background: '#fff' }}
+          onClick={() => navigate('/certificates')}
+        >
+          <div className="stat-icon" style={{ background: '#dcfce7', color: '#15803d' }}>
+            <Award size={22} />
+          </div>
           <div className="stat-info">
-            <div className="stat-label">Total Applications</div>
-            <div className="stat-value">{loading ? '—' : data.applications.length}</div>
+            <div className="stat-label">Active Certificates</div>
+            <div className="stat-value">{loading ? '—' : activeCertList.length}</div>
           </div>
         </div>
 
-        {/* Certificate Overview Stat Card (Active / Expiring Soon / Expired & Clickable Renewal) */}
+        {/* 2. Certificates Expiring Soon or Expired */}
         <div
           className="stat-card"
           style={{
             cursor: 'pointer',
-            border: urgentRenewalCert ? '1.5px solid #fbcfe8' : '1px solid var(--border)',
-            background: urgentRenewalCert ? 'linear-gradient(135deg, #fff, #fdf4ff)' : '#fff',
-            position: 'relative'
+            border: (expiringSoonCertList.length > 0 || expiredCertList.length > 0) ? '1.5px solid #fde68a' : '1px solid var(--border)',
+            background: expiredCertList.length > 0 ? 'linear-gradient(135deg, #fff, #fef2f2)' : expiringSoonCertList.length > 0 ? 'linear-gradient(135deg, #fff, #fffbeb)' : '#fff',
           }}
           onClick={() => navigate('/certificates')}
         >
-          <div className="stat-icon" style={{ background: urgentRenewalCert ? '#fae8ff' : '#dcfce7', color: urgentRenewalCert ? '#a21caf' : '#15803d' }}>
-            <Award size={22} />
+          <div className="stat-icon" style={{
+            background: expiredCertList.length > 0 ? '#fee2e2' : expiringSoonCertList.length > 0 ? '#fef3c7' : '#f1f5f9',
+            color: expiredCertList.length > 0 ? '#dc2626' : expiringSoonCertList.length > 0 ? '#d97706' : '#94a3b8'
+          }}>
+            <AlertCircle size={22} />
           </div>
-          <div className="stat-info" style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div className="stat-label">Certificates</div>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#15803d', background: '#dcfce7', padding: '2px 8px', borderRadius: 12 }}>
-                {activeCertList.length} Active
-              </span>
+          <div className="stat-info">
+            <div className="stat-label">Expiring / Expired</div>
+            <div className="stat-value" style={{ color: expiredCertList.length > 0 ? '#dc2626' : expiringSoonCertList.length > 0 ? '#d97706' : 'var(--text-primary)' }}>
+              {loading ? '—' : expiringSoonCertList.length + expiredCertList.length}
             </div>
-            <div className="stat-value" style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
-              <span>{loading ? '—' : activeCertList.length}</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>active certs</span>
-            </div>
-
-            {/* Clickable Status Breakdown Pills */}
-            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
-              <span
-                onClick={() => navigate('/certificates?status=active')}
-                style={{
-                  fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 6,
-                  background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', cursor: 'pointer'
-                }}
-                title="View active certificates"
-              >
-                ✓ {activeCertList.length} Active
-              </span>
-
+            <div style={{ display: 'flex', gap: 5, marginTop: 4, flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
               {expiringSoonCertList.length > 0 && (
                 <span
                   onClick={() => navigate('/certificates?status=expiring')}
-                  style={{
-                    fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 6,
-                    background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', cursor: 'pointer'
-                  }}
-                  title="View certificates expiring soon"
+                  style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', cursor: 'pointer' }}
                 >
-                  ⚠️ {expiringSoonCertList.length} Expiring Soon
+                  ⚠️ {expiringSoonCertList.length} Expiring
                 </span>
               )}
-
               {expiredCertList.length > 0 && (
                 <span
                   onClick={() => navigate('/certificates?status=expired')}
-                  style={{
-                    fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 6,
-                    background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', cursor: 'pointer'
-                  }}
-                  title="View expired certificates"
+                  style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', cursor: 'pointer' }}
                 >
                   🔴 {expiredCertList.length} Expired
                 </span>
               )}
+              {expiringSoonCertList.length === 0 && expiredCertList.length === 0 && (
+                <span style={{ fontSize: 10.5, fontWeight: 600, color: '#64748b' }}>All certificates up to date</span>
+              )}
             </div>
-
-            {/* Urgent Renewal Callout */}
-            {urgentRenewalCert && (
-              <div
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/certificates?renewCertId=${urgentRenewalCert._id || urgentRenewalCert.id}`);
-                }}
-                style={{
-                  marginTop: 8, padding: '4px 8px', borderRadius: 6, background: daysToUrgent <= 0 ? '#fee2e2' : '#fef3c7',
-                  border: daysToUrgent <= 0 ? '1px solid #fca5a5' : '1px solid #fde68a',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  fontSize: 11, fontWeight: 700, color: daysToUrgent <= 0 ? '#991b1b' : '#92400e', cursor: 'pointer'
-                }}
-              >
-                <span>
-                  {daysToUrgent <= 0 ? `Expired ${Math.abs(daysToUrgent)}d ago` : `Expires in ${daysToUrgent}d`}
-                </span>
-                <span style={{ textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: 2 }}>
-                  Renew <ChevronRight size={12} />
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
+        {/* 3. Total Applications (All) */}
         <div className="stat-card" onClick={() => navigate('/applications')} style={{ cursor: 'pointer' }}>
-          <div className="stat-icon" style={{ background: '#fef3c7', color: '#d97706' }}><Clock size={22} /></div>
+          <div className="stat-icon" style={{ background: '#dbeafe', color: '#3b82f6' }}><FileText size={22} /></div>
           <div className="stat-info">
-            <div className="stat-label">Pending Review</div>
-            <div className="stat-value">{loading ? '—' : pendingApps}</div>
+            <div className="stat-label">Total Applications</div>
+            <div className="stat-value">{loading ? '—' : totalApps}</div>
           </div>
         </div>
 
+        {/* 4. Products Registered (unchanged) */}
         <div className="stat-card" onClick={() => navigate('/products')} style={{ cursor: 'pointer' }}>
           <div className="stat-icon" style={{ background: '#f3e8ff', color: '#7c3aed' }}><Package size={22} /></div>
           <div className="stat-info">
