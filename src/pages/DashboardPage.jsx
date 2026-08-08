@@ -5,6 +5,7 @@ import api from '../lib/api';
 import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, RefreshCw, Download, X, MapPin, RotateCcw, ChevronRight } from 'lucide-react';
 import ActionsNeededWidget from '../components/ActionsNeededWidget';
 import FirstSiteCreatedModal from '../components/FirstSiteCreatedModal';
+import NewUserSitePromptModal from '../components/NewUserSitePromptModal';
 
 const STATUS_BADGE = {
   submitted: 'badge-blue',
@@ -531,51 +532,11 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* DISMISSIBLE SITE ONBOARDING MODAL */}
-      {showSiteModal && (
-        <div className="modal-overlay" style={{ zIndex: 1200 }} onClick={() => handleDismissSiteModal()}>
-          <div className="modal" style={{ maxWidth: 480, padding: 0 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <MapPin size={20} style={{ color: 'var(--primary)' }} />
-                </div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>Add Manufacturing Site</div>
-              </div>
-              <button className="modal-close" onClick={() => handleDismissSiteModal()}><X size={18} /></button>
-            </div>
-
-            <div className="modal-body" style={{ padding: 24 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>
-                Get started by adding your first manufacturing site
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.5, margin: 0 }}>
-                Register your primary operating manufacturing site to begin applying for Halal certification.
-              </p>
-            </div>
-
-            <div className="modal-footer" style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={() => handleDismissSiteModal()}
-              >
-                Maybe Later
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => {
-                  handleDismissSiteModal();
-                  navigate('/add-site');
-                }}
-              >
-                Add Manufacturing Site
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* DISMISSIBLE NEW USER SITE ONBOARDING POP-UP */}
+      <NewUserSitePromptModal
+        isOpen={showSiteModal}
+        onClose={handleDismissSiteModal}
+      />
 
       {/* Pop up when first site is created to guide client to create application */}
       <FirstSiteCreatedModal
