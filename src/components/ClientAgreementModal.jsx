@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, PenTool } from 'lucide-react';
+import { X, PenTool, CheckCircle } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
-import { Award, Download, Search, RefreshCw, Eye, EyeOff, Calendar, AlertCircle, FileText, RotateCcw, Upload, X, CheckCircle, ShieldCheck } from 'lucide-react';
+import { Award, Download, Search, RefreshCw, Eye, EyeOff, Calendar, AlertCircle, FileText, RotateCcw, Upload, X, CheckCircle, ShieldCheck, Lock } from 'lucide-react';
 
 const getPdfUrl = (url) => {
   if (!url) return '#';
