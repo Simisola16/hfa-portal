@@ -348,7 +348,7 @@ export default function ApplicationsPage({ openNew }) {
       setModalStep(1);
       resetForm();
       fetchData();
-      navigate('/applications');
+      navigate('/applications', { replace: true });
     } catch (err) {
       toast.error(err.message || 'Submission failed');
     } finally {
@@ -371,8 +371,8 @@ export default function ApplicationsPage({ openNew }) {
   const handleCloseModal = () => {
     setShowModal(false);
     resetForm();
-    if (openNew) {
-      navigate('/applications');
+    if (openNew || searchParams.get('action') || searchParams.get('create')) {
+      navigate('/applications', { replace: true });
     }
   };
 
