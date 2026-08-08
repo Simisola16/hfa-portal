@@ -81,6 +81,19 @@ export default function Layout() {
     }
   }, [profile]);
 
+  const isInactiveBlocked = profile?.is_active === false && !['/dashboard', '/sites', '/products', '/profile', '/add-site'].includes(location.pathname);
+
+  useEffect(() => {
+    if (isInactiveBlocked) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isInactiveBlocked]);
+
   const [animateBell, setAnimateBell] = useState(false);
   const [socketConnected, setSocketConnected] = useState(true);
 
