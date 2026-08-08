@@ -685,414 +685,674 @@ export default function ApplicationsPage({ openNew }) {
 
 
       {showModal && createPortal(
-        <div className="modal-overlay" onClick={e => e.target===e.currentTarget && handleCloseModal()}>
-          <div className="modal" style={{ maxWidth: 800 }}>
-            <div className="modal-header">
-              <h2 className="modal-title">HFA Certification Application</h2>
-              <button className="modal-close" onClick={handleCloseModal}><X size={18} /></button>
+        <div
+          onClick={e => e.target === e.currentTarget && handleCloseModal()}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div style={{
+            background: '#fff', borderRadius: 20, width: '100%', maxWidth: 1100,
+            maxHeight: '94vh', display: 'flex', flexDirection: 'column',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.22)',
+            overflow: 'hidden',
+          }}>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #065f46 0%, #1B7A7A 100%)',
+              padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ShieldCheck size={26} color="white" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: '-0.01em' }}>HFA Halal Certification Application</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>Complete all required sections marked with *</div>
+                </div>
+              </div>
+              <button onClick={handleCloseModal} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}>
+                <X size={18} />
+              </button>
             </div>
 
             {form.application_type === 'renewal' ? (
-              <div style={{ padding: '16px 24px', background: '#fef3c7', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <RotateCcw size={20} style={{ color: '#d97706' }} />
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: 14, color: '#92400e' }}>Renewal Application</div>
-                  <div style={{ fontSize: 12, color: '#b45309' }}>Simplified renewal for your certified site</div>
-                </div>
-              </div>
-            ) : (
-              <div className="modal-steps">
-                {[1, 2, 3, 4, 5, 6].map(s => (
-                  <div key={s} className={`step-item ${modalStep === s ? 'active' : ''} ${modalStep > s ? 'completed' : ''}`}>
-                    <div className="step-number">{modalStep > s ? <Check size={14} /> : s}</div>
+              /* ── RENEWAL FORM ──────────────────────────────── */
+              <>
+                <div style={{ padding: '16px 32px', background: '#fef3c7', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                  <RotateCcw size={20} style={{ color: '#d97706' }} />
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: '#92400e' }}>Renewal Application</div>
+                    <div style={{ fontSize: 12, color: '#b45309' }}>Simplified renewal for your certified site</div>
                   </div>
-                ))}
-              </div>
-            )}
-
-            <div className="modal-body" style={{ minHeight: 400 }}>
-              {form.application_type === 'renewal' ? (
-                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '32px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
                   <div className="form-group">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <label className="form-label" style={{ marginBottom: 0 }}>Select Site <span>*</span></label>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, padding: '2px 8px' }}
-                        onClick={() => navigate('/add-site')}
-                      >
-                        + Add Manufacturing Site
-                      </button>
+                      <button type="button" className="btn btn-ghost btn-sm" style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, padding: '2px 8px' }} onClick={() => navigate('/add-site')}>+ Add Manufacturing Site</button>
                     </div>
                     <select className="form-control" value={form.site_id} onChange={e => handleSiteChange(e.target.value)} required>
                       <option value="">-- Select Site --</option>
                       {sites.map(s => <option key={s._id} value={s._id}>{s.name} ({s.city})</option>)}
                     </select>
                   </div>
-
-                  <div style={{
-                    display: 'flex', alignItems: 'flex-start', gap: 12,
-                    background: '#f0fdf4', border: '1px solid #bbf7d0',
-                    borderRadius: 10, padding: '14px 16px'
-                  }}>
-                    <CheckCircle size={18} style={{ color: '#16a34a', flexShrink: 0, marginTop: 2 }} />
-                    <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.5 }}>
-                      <strong>Automatic Data Inheritance:</strong> This renewal application will automatically carry over your certified scope, product categories, facility details, and HACCP compliance documents from your previous application for this site.
+                  {(() => { const g = getGatingStatus(); return g?.blocked ? (
+                    <div style={{ padding: '14px 16px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fef08a', display: 'flex', gap: 10 }}>
+                      <AlertTriangle size={18} style={{ color: '#d97706', flexShrink: 0 }} />
+                      <p style={{ margin: 0, fontSize: 13, color: '#854d0e' }}>{g.message}</p>
                     </div>
-                  </div>
-
-                  {/* Gating warnings */}
-                  {(() => {
-                    const gating = getGatingStatus();
-                    if (gating?.blocked) {
-                      return (
-                        <div style={{ padding: '14px 16px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fef08a', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                          <AlertTriangle size={18} style={{ color: '#d97706', flexShrink: 0, marginTop: 2 }} />
-                          <p style={{ margin: 0, fontSize: 13, color: '#854d0e', lineHeight: 1.6 }}>{gating.message}</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-
+                  ) : null; })()}
                   <div className="form-group">
                     <label className="form-label">Contact Person Details <span>*</span></label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Full Name and Role of Main Contact Person (e.g. John Doe, Managing Director)"
-                      value={form.managing_director}
-                      onChange={e => setForm(f => ({ ...f, managing_director: e.target.value }))}
-                      required
-                    />
+                    <input type="text" className="form-control" placeholder="Full Name and Role" value={form.managing_director} onChange={e => setForm(f => ({ ...f, managing_director: e.target.value }))} required />
                   </div>
-
                   <div className="form-group">
-                    <label className="form-label">Updated Supporting Documents <span style={{ fontSize: 11, color: '#94a3b8' }}>(optional — attach any new licenses or updated certificates)</span></label>
-                    <div
-                      style={{
-                        border: '2px dashed #cbd5e1', borderRadius: 12, padding: '20px',
-                        textAlign: 'center', cursor: 'pointer', background: renewalFiles.length > 0 ? '#f0fdf4' : '#fafafa',
-                        borderColor: renewalFiles.length > 0 ? '#86efac' : '#cbd5e1'
-                      }}
-                      onClick={() => document.getElementById('modal-renewal-docs-input').click()}
-                    >
+                    <label className="form-label">Updated Supporting Documents <span style={{ fontSize: 11, color: '#94a3b8' }}>(optional)</span></label>
+                    <div style={{ border: '2px dashed #cbd5e1', borderRadius: 12, padding: 20, textAlign: 'center', cursor: 'pointer', background: renewalFiles.length > 0 ? '#f0fdf4' : '#fafafa' }} onClick={() => document.getElementById('modal-renewal-docs-input').click()}>
                       <Upload size={24} style={{ color: renewalFiles.length > 0 ? '#16a34a' : '#94a3b8', margin: '0 auto 8px', display: 'block' }} />
-                      {renewalFiles.length > 0 ? (
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>{renewalFiles.length} file(s) attached for renewal</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginTop: 6 }}>
-                            {renewalFiles.map((f, i) => (
-                              <span key={i} style={{ fontSize: 11, background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: 12 }}>
-                                {f.name}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>Click to select supporting files (PDF, images)</div>
-                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Attach any updated supporting documentation</div>
-                        </div>
-                      )}
-                      <input
-                        id="modal-renewal-docs-input"
-                        type="file"
-                        hidden
-                        multiple
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                        onChange={e => setRenewalFiles(Array.from(e.target.files))}
-                      />
+                      {renewalFiles.length > 0 ? <div style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>{renewalFiles.length} file(s) attached</div> : <div style={{ fontSize: 13, color: '#475569' }}>Click to attach supporting files</div>}
+                      <input id="modal-renewal-docs-input" type="file" hidden multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={e => setRenewalFiles(Array.from(e.target.files))} />
                     </div>
                   </div>
-
                   <div className="form-group">
-                    <label className="form-label">Renewal Notes / Comments</label>
-                    <textarea
-                      className="form-control"
-                      rows={2}
-                      placeholder="Any additional notes for the certification body..."
-                      value={form.notes}
-                      onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                    />
+                    <label className="form-label">Renewal Notes</label>
+                    <textarea className="form-control" rows={2} placeholder="Any additional notes..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
                   </div>
-
-                  <label className="checkbox-label p-4 bg-light rounded-lg border border-dashed" style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <input type="checkbox" checked={form.declared_true} onChange={e => setForm(f => ({ ...f, declared_true: e.target.checked }))} required style={{ marginTop: 3 }} />
-                    <span className="text-sm font-semibold" style={{ lineHeight: 1.5 }}>
-                      I hereby declare that all information provided for this renewal application is true, complete, and correct.
-                    </span>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '14px 16px', background: '#f8fafc', borderRadius: 10, border: '1.5px dashed #cbd5e1' }}>
+                    <input type="checkbox" checked={form.declared_true} onChange={e => setForm(f => ({ ...f, declared_true: e.target.checked }))} style={{ marginTop: 3, width: 16, height: 16 }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.5 }}>I hereby declare that all information provided is true, complete, and correct.</span>
                   </label>
                 </div>
-              ) : (
-                <>
-                  {modalStep === 1 && (
-                    <div className="animate-fade-in">
-                      <h3 className="section-title">Step 1: Application Basics</h3>
-                      <div className="form-group">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                          <label className="form-label" style={{ marginBottom: 0 }}>Select Site <span>*</span></label>
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-sm"
-                            style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, padding: '2px 8px' }}
-                            onClick={() => navigate('/add-site')}
-                          >
-                            + Add Manufacturing Site
-                          </button>
-                        </div>
-                        <select className="form-control" value={form.site_id} onChange={e => handleSiteChange(e.target.value)} required>
-                          <option value="">-- Select Site --</option>
-                          {sites.map(s => <option key={s._id} value={s._id}>{s.name} ({s.city})</option>)}
-                        </select>
-                      </div>
-                      <div className="form-grid">
-                        <div className="form-group">
-                          <label className="form-label">Application Type <span>*</span></label>
-                          <div style={{
-                            display: 'flex', alignItems: 'center', gap: 10,
-                            background: '#f8fafc', border: '1px solid #e2e8f0',
-                            borderRadius: 8, padding: '10px 14px', minHeight: 42
-                          }}>
-                            <span style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 6,
-                              padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 800,
-                              textTransform: 'uppercase', letterSpacing: '0.04em',
-                              background: form.application_type === 'renewal' ? '#fef3c7' : '#f0fdf4',
-                              color: form.application_type === 'renewal' ? '#92400e' : '#15803d',
-                              border: `1px solid ${form.application_type === 'renewal' ? '#fde68a' : '#bbf7d0'}`
-                            }}>
-                              {form.application_type === 'renewal' ? '🔄' : '✨'} {form.application_type === 'renewal' ? 'Renewal' : 'New Application'}
-                            </span>
-                            <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500 }}>
-                              {form.site_id
-                                ? form.application_type === 'renewal'
-                                  ? 'Auto-set: this site has an expiring or expired certificate'
-                                  : 'Auto-set: no prior certificate found for this site'
-                                : 'Select a site above to determine type'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Category <span>*</span></label>
-                          <select className="form-control" value={form.category} onChange={e => setForm(f => ({...f, category: e.target.value}))}>
-                            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                      {CATEGORY_DETAILS[form.category] && (
-                        <div style={{ marginTop: 12, padding: '14px 16px', background: '#f0fdf9', borderRadius: 8, border: '1px solid #99e6d3' }}>
-                          <p style={{ margin: 0, fontSize: 13, color: '#1B7A7A', lineHeight: 1.6 }}>{CATEGORY_DETAILS[form.category]}</p>
-                        </div>
-                      )}
-
-                      {/* Gating warnings */}
-                      {(() => {
-                        const gating = getGatingStatus();
-                        if (gating?.blocked) {
-                          return (
-                            <div style={{ marginTop: 12, padding: '14px 16px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fef08a', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                              <AlertTriangle size={18} style={{ color: '#d97706', flexShrink: 0, marginTop: 2 }} />
-                              <p style={{ margin: 0, fontSize: 13, color: '#854d0e', lineHeight: 1.6 }}>{gating.message}</p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
-
-                      <div className="form-group" style={{ marginTop: 16 }}>
-                        <label className="form-label">Scope of Certification <span>*</span></label>
-                        <textarea className="form-control" rows={3} placeholder="Describe the activities to be certified (e.g., Slaughtering and processing of poultry...)" value={form.scope} onChange={e => setForm(f => ({...f, scope: e.target.value}))} required />
-                      </div>
-                    </div>
-                  )}
-
-                  {modalStep === 2 && (
-                    <div className="animate-fade-in">
-                      <h3 className="section-title">Step 2: Company Details</h3>
-                      <div className="form-group">
-                        <label className="form-label">Legal Establishment Name</label>
-                        <input type="text" className="form-control" value={form.establishment_name} readOnly />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Establishment Address</label>
-                        <textarea className="form-control" rows={2} value={form.establishment_address} readOnly />
-                      </div>
-                      <div className="form-grid">
-                        <div className="form-group">
-                          <label className="form-label">Managing Director</label>
-                          <input type="text" className="form-control" value={form.managing_director} onChange={e => setForm(f => ({...f, managing_director: e.target.value}))} />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Production Manager</label>
-                          <input type="text" className="form-control" value={form.production_contact} onChange={e => setForm(f => ({...f, production_contact: e.target.value}))} />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {modalStep === 3 && (
-                    <div className="animate-fade-in">
-                      <h3 className="section-title">Step 3: Certification Contacts</h3>
-                      <div className="form-grid">
-                        <div className="form-group">
-                          <label className="form-label">Halal Coordinator <span>*</span></label>
-                          <input type="text" className="form-control" value={form.halal_coordinator} onChange={e => setForm(f => ({...f, halal_coordinator: e.target.value}))} required />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Quality Assurance (QA) <span>*</span></label>
-                          <input type="text" className="form-control" value={form.qa_contact} onChange={e => setForm(f => ({...f, qa_contact: e.target.value}))} required />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Finance / Accounts Contact</label>
-                          <input type="text" className="form-control" value={form.finance_contact} onChange={e => setForm(f => ({...f, finance_contact: e.target.value}))} />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Employee Count <span>*</span></label>
-                          <input type="number" className="form-control" value={form.employee_count} onChange={e => setForm(f => ({...f, employee_count: e.target.value}))} required />
-                        </div>
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Production Schedule (Hours of Operation) <span>*</span></label>
-                        <input type="text" className="form-control" placeholder="e.g. 08:00 - 17:00, Mon-Fri" value={form.production_schedule} onChange={e => setForm(f => ({...f, production_schedule: e.target.value}))} required />
-                      </div>
-                    </div>
-                  )}
-
-                  {modalStep === 4 && (
-                    <div className="animate-fade-in">
-                      <h3 className="section-title">Step 4: Product List</h3>
-                      <div className="card p-4 mb-4 bg-light">
-                        <div className="form-grid">
-                          <input type="text" className="form-control" placeholder="Product Name" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
-                          <input type="text" className="form-control" placeholder="Brand" value={newProduct.brand} onChange={e => setNewProduct({...newProduct, brand: e.target.value})} />
-                          <button type="button" className="btn btn-primary" onClick={addProduct}><Plus size={14} /> Add</button>
-                        </div>
-                      </div>
-                      <div className="table-wrap" style={{ maxHeight: 250, overflowY: 'auto' }}>
-                        <table className="table-sm">
-                          <thead>
-                            <tr><th>Product Name</th><th>Brand</th><th>Action</th></tr>
-                          </thead>
-                          <tbody>
-                            {form.products.map(p => (
-                              <tr key={p.id}>
-                                <td>{p.name}</td><td>{p.brand}</td>
-                                <td><button type="button" onClick={() => removeProduct(p.id)} className="btn-icon text-red"><Trash2 size={14} /></button></td>
-                              </tr>
-                            ))}
-                            {form.products.length === 0 && <tr><td colSpan="3" className="text-center py-4">No products added yet</td></tr>}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-                  {modalStep === 5 && (
-                    <div className="animate-fade-in">
-                      <h3 className="section-title">Step 5: Declarations</h3>
-                      <div className="card p-4 border-teal bg-teal-light mb-4">
-                        <div className="form-group mb-0">
-                          <label className="checkbox-label font-bold">
-                            <input type="checkbox" checked={form.has_porcine} onChange={e => setForm(f => ({...f, has_porcine: e.target.checked}))} />
-                            Does the site handle any Porcine (Pork) related materials?
-                          </label>
-                          {form.has_porcine && (
-                            <textarea className="form-control mt-3" placeholder="Provide details on segregation and control..." value={form.porcine_details} onChange={e => setForm(f => ({...f, porcine_details: e.target.value}))} />
-                          )}
-                        </div>
-                      </div>
-                      <div className="card p-4 border-teal bg-teal-light mb-4">
-                        <div className="form-group mb-0">
-                          <label className="checkbox-label font-bold">
-                            <input type="checkbox" checked={form.has_intoxicants} onChange={e => setForm(f => ({...f, has_intoxicants: e.target.checked}))} />
-                            Does the site handle any Intoxicants (Alcohol)?
-                          </label>
-                          {form.has_intoxicants && (
-                            <textarea className="form-control mt-3" placeholder="Describe usage (e.g., cleaning, ingredient)..." value={form.intoxicants_details} onChange={e => setForm(f => ({...f, intoxicants_details: e.target.value}))} />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {modalStep === 6 && (
-                    <div className="animate-fade-in">
-                      <h3 className="section-title">Step 6: Declaration &amp; Submission</h3>
-                      <div className="form-group mt-2">
-                        <label className="form-label">Additional Notes</label>
-                        <textarea className="form-control" rows={3} placeholder="Any additional details or comments for the certification body..." value={form.notes} onChange={e => setForm(f => ({...f, notes: e.target.value}))} />
-                      </div>
-                      <label className="checkbox-label p-4 bg-light rounded-lg border border-dashed mt-4" style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                        <input type="checkbox" checked={form.declared_true} onChange={e => setForm(f => ({...f, declared_true: e.target.checked}))} required style={{ marginTop: 3 }} />
-                        <span className="text-sm font-semibold" style={{ lineHeight: 1.5 }}>
-                          I hereby declare that all information provided in this application is true, complete, and correct to the best of my knowledge.
-                        </span>
-                      </label>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            <div className="modal-footer">
-              {form.application_type === 'renewal' ? (
-                <div className="ml-auto flex gap-3">
+                <div style={{ padding: '16px 32px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: 12, flexShrink: 0 }}>
                   <button type="button" className="btn btn-ghost" onClick={handleCloseModal}>Cancel</button>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={submitting || !form.declared_true || !form.managing_director?.trim() || !form.site_id || getGatingStatus()?.blocked}
-                    onClick={handleSubmit}
-                    style={{ background: 'linear-gradient(135deg, #d97706, #b45309)', borderColor: '#d97706' }}
-                  >
+                  <button type="button" className="btn btn-primary" disabled={submitting || !form.declared_true || !form.managing_director?.trim() || !form.site_id || getGatingStatus()?.blocked} onClick={handleSubmit} style={{ background: 'linear-gradient(135deg, #d97706, #b45309)', borderColor: '#d97706' }}>
                     {submitting ? <span className="spinner-white" /> : <><ShieldCheck size={18} /> Submit Renewal Application</>}
                   </button>
                 </div>
-              ) : (
-                <>
-                  {modalStep > 1 && (
-                    <button type="button" className="btn btn-ghost" onClick={() => setModalStep(s => s - 1)}>
-                      <ChevronLeft size={16} /> Previous
+              </>
+            ) : (
+              /* ── NEW APPLICATION FORM (Sections A–F) ──────── */
+              <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                {/* Left sidebar: section navigator */}
+                <div style={{ width: 220, background: '#f8fafc', borderRight: '1px solid #e2e8f0', overflowY: 'auto', padding: '24px 0', flexShrink: 0 }}>
+                  {[
+                    { key: 1, label: 'Section A', sub: 'Company Details' },
+                    { key: 2, label: 'Section B', sub: 'Site Details' },
+                    { key: 3, label: 'Section C', sub: 'Manufacturer' },
+                    { key: 4, label: 'Section D', sub: 'Contact Details' },
+                    { key: 5, label: 'Section E', sub: 'Process & Products' },
+                    { key: 6, label: 'Section F', sub: 'Add Product' },
+                  ].map(s => (
+                    <button
+                      key={s.key}
+                      type="button"
+                      onClick={() => { if (validateStep(modalStep)) setModalStep(s.key); }}
+                      style={{
+                        width: '100%', textAlign: 'left', padding: '12px 20px',
+                        background: modalStep === s.key ? 'linear-gradient(135deg, #065f46, #1B7A7A)' : 'transparent',
+                        border: 'none', cursor: 'pointer', borderLeft: modalStep === s.key ? '4px solid #34d399' : '4px solid transparent',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: modalStep === s.key ? 'rgba(255,255,255,0.7)' : '#94a3b8', marginBottom: 2 }}>{s.label}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: modalStep === s.key ? '#fff' : '#334155' }}>{s.sub}</div>
+                      {modalStep > s.key && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#10b981', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                          <Check size={11} /> Complete
+                        </span>
+                      )}
                     </button>
-                  )}
-                  <div className="ml-auto flex gap-3">
-                    <button type="button" className="btn btn-ghost" onClick={handleCloseModal}>Cancel</button>
-                    {modalStep < 6 ? (
-                      <button type="button" className="btn btn-primary" disabled={getGatingStatus()?.blocked} onClick={() => { if (validateStep(modalStep)) setModalStep(s => s + 1); }}>
-                        Next Step <ChevronRight size={16} />
-                      </button>
-                    ) : (
-                      <button type="button" className="btn btn-primary" disabled={submitting || !form.declared_true} onClick={handleSubmit}>
-                        {submitting ? <span className="spinner-white" /> : <><ShieldCheck size={18} /> Submit Application</>}
-                      </button>
+                  ))}
+                </div>
+
+                {/* Form body */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }}>
+
+                    {/* ── SECTION A: Company Details ────────────────── */}
+                    {modalStep === 1 && (
+                      <div>
+                        <div style={{ marginBottom: 28 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#f0fdf4', border: '1.5px solid #a7f3d0', borderRadius: 10, padding: '6px 14px', marginBottom: 12 }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#065f46' }}>Section A</span>
+                          </div>
+                          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', margin: 0 }}>Company Details</h2>
+                          <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Legal information about your company</p>
+                        </div>
+
+                        {/* Site selector + category */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+                          <div className="form-group">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                              <label className="form-label" style={{ marginBottom: 0 }}>Select Business Site <span>*</span></label>
+                              <button type="button" className="btn btn-ghost btn-sm" style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 700 }} onClick={() => navigate('/add-site')}>+ Add Site</button>
+                            </div>
+                            <select className="form-control" value={form.site_id} onChange={e => handleSiteChange(e.target.value)} required>
+                              <option value="">-- Select Site --</option>
+                              {sites.map(s => <option key={s._id} value={s._id}>{s.name} ({s.city})</option>)}
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Certification Category <span>*</span></label>
+                            <select className="form-control" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                          </div>
+                        </div>
+
+                        {CATEGORY_DETAILS[form.category] && (
+                          <div style={{ marginBottom: 20, padding: '12px 16px', background: '#f0fdf9', borderRadius: 10, border: '1px solid #99e6d3' }}>
+                            <p style={{ margin: 0, fontSize: 13, color: '#1B7A7A', lineHeight: 1.6 }}>{CATEGORY_DETAILS[form.category]}</p>
+                          </div>
+                        )}
+
+                        {(() => { const g = getGatingStatus(); return g?.blocked ? (
+                          <div style={{ marginBottom: 20, padding: '14px 16px', background: '#fffbeb', borderRadius: 10, border: '1px solid #fef08a', display: 'flex', gap: 10 }}>
+                            <AlertTriangle size={18} style={{ color: '#d97706', flexShrink: 0 }} />
+                            <p style={{ margin: 0, fontSize: 13, color: '#854d0e', lineHeight: 1.6 }}>{g.message}</p>
+                          </div>
+                        ) : null; })()}
+
+                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '20px 24px', display: 'grid', gap: 18 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Name of the Establishment <span>*</span></label>
+                              <input type="text" className="form-control" placeholder="e.g. Anike Foods Ltd" value={form.establishment_name} onChange={e => setForm(f => ({ ...f, establishment_name: e.target.value }))} required />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Company Registration Number <span>*</span></label>
+                              <input type="text" className="form-control" placeholder="e.g. 12345678" value={form.company_reg_number || ''} onChange={e => setForm(f => ({ ...f, company_reg_number: e.target.value }))} required />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">VAT Number <span>*</span></label>
+                              <input type="text" className="form-control" placeholder="e.g. GB123456789" value={form.vat_number || ''} onChange={e => setForm(f => ({ ...f, vat_number: e.target.value }))} required />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Are you a Manufacturer of Halal Products? <span>*</span></label>
+                              <select className="form-control" value={form.is_manufacturer || ''} onChange={e => setForm(f => ({ ...f, is_manufacturer: e.target.value }))} required>
+                                <option value="">Select Option</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label className="form-label">Company Head Office Address</label>
+                            <textarea className="form-control" rows={2} placeholder="Full head office address" value={form.establishment_address} onChange={e => setForm(f => ({ ...f, establishment_address: e.target.value }))} />
+                          </div>
+                        </div>
+                      </div>
                     )}
+
+                    {/* ── SECTION B: Site Details ───────────────────── */}
+                    {modalStep === 2 && (
+                      <div>
+                        <div style={{ marginBottom: 28 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 10, padding: '6px 14px', marginBottom: 12 }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#1d4ed8' }}>Section B</span>
+                          </div>
+                          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', margin: 0 }}>Site / Factory Details</h2>
+                          <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Details about the site/factory to be certified</p>
+                        </div>
+                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '20px 24px', display: 'grid', gap: 18 }}>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label className="form-label">Site / Factory Address <span>*</span></label>
+                            <textarea className="form-control" rows={2} placeholder="Full site/factory address" value={form.site_address || ''} onChange={e => setForm(f => ({ ...f, site_address: e.target.value }))} required />
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Number of Years in Business / Production</label>
+                              <input type="text" className="form-control" placeholder="e.g. 5 years" value={form.years_in_business || ''} onChange={e => setForm(f => ({ ...f, years_in_business: e.target.value }))} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Trading Name (if different)</label>
+                              <input type="text" className="form-control" placeholder="Trading name" value={form.trading_name || ''} onChange={e => setForm(f => ({ ...f, trading_name: e.target.value }))} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Website Address</label>
+                              <input type="url" className="form-control" placeholder="https://example.com" value={form.website || ''} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Email Address <span>*</span></label>
+                              <input type="email" className="form-control" placeholder="company@example.com" value={form.company_email || ''} onChange={e => setForm(f => ({ ...f, company_email: e.target.value }))} required />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Operating Hours / Shift Pattern</label>
+                              <input type="text" className="form-control" placeholder="e.g. 08:00–18:00, Mon–Fri" value={form.production_schedule} onChange={e => setForm(f => ({ ...f, production_schedule: e.target.value }))} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Number of Employees <span>*</span></label>
+                              <input type="number" className="form-control" placeholder="0" value={form.employee_count} onChange={e => setForm(f => ({ ...f, employee_count: e.target.value }))} required min="1" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── SECTION C: Manufacturer Details ──────────── */}
+                    {modalStep === 3 && (
+                      <div>
+                        <div style={{ marginBottom: 28 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 10, padding: '6px 14px', marginBottom: 12 }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#c2410c' }}>Section C</span>
+                          </div>
+                          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', margin: 0 }}>Manufacturer Details</h2>
+                          <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Complete only if manufacturer differs from company above</p>
+                        </div>
+                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '20px 24px', display: 'grid', gap: 18 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Name of Establishment</label>
+                              <input type="text" className="form-control" placeholder="Manufacturer name" value={form.mfr_name || ''} onChange={e => setForm(f => ({ ...f, mfr_name: e.target.value }))} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Company Registration No.</label>
+                              <input type="text" className="form-control" placeholder="Registration number" value={form.mfr_reg_number || ''} onChange={e => setForm(f => ({ ...f, mfr_reg_number: e.target.value }))} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">VAT No.</label>
+                              <input type="text" className="form-control" placeholder="VAT number" value={form.mfr_vat || ''} onChange={e => setForm(f => ({ ...f, mfr_vat: e.target.value }))} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Number of Years in Business</label>
+                              <input type="text" className="form-control" placeholder="e.g. 10 years" value={form.mfr_years || ''} onChange={e => setForm(f => ({ ...f, mfr_years: e.target.value }))} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Trading Name (if different)</label>
+                              <input type="text" className="form-control" placeholder="Trading name" value={form.mfr_trading_name || ''} onChange={e => setForm(f => ({ ...f, mfr_trading_name: e.target.value }))} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Website Address</label>
+                              <input type="url" className="form-control" placeholder="https://example.com" value={form.mfr_website || ''} onChange={e => setForm(f => ({ ...f, mfr_website: e.target.value }))} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Email</label>
+                              <input type="email" className="form-control" placeholder="manufacturer@example.com" value={form.mfr_email || ''} onChange={e => setForm(f => ({ ...f, mfr_email: e.target.value }))} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Operating Hours / Shift Pattern</label>
+                              <input type="text" className="form-control" placeholder="e.g. 07:00–19:00, Mon–Sat" value={form.mfr_hours || ''} onChange={e => setForm(f => ({ ...f, mfr_hours: e.target.value }))} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">No. of Employees</label>
+                              <input type="number" className="form-control" placeholder="0" value={form.mfr_employees || ''} onChange={e => setForm(f => ({ ...f, mfr_employees: e.target.value }))} min="0" />
+                            </div>
+                          </div>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label className="form-label">Address</label>
+                            <textarea className="form-control" rows={2} placeholder="Full manufacturer address" value={form.mfr_address || ''} onChange={e => setForm(f => ({ ...f, mfr_address: e.target.value }))} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── SECTION D: Official Contact Details ──────── */}
+                    {modalStep === 4 && (
+                      <div>
+                        <div style={{ marginBottom: 28 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fdf4ff', border: '1.5px solid #e9d5ff', borderRadius: 10, padding: '6px 14px', marginBottom: 12 }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7e22ce' }}>Section D</span>
+                          </div>
+                          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', margin: 0 }}>Official Contact Details</h2>
+                          <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Primary and technical points of contact</p>
+                        </div>
+
+                        {/* Primary Contact */}
+                        <div style={{ marginBottom: 20 }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: '#334155', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#7e22ce' }} /> Primary Contact Details
+                          </div>
+                          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Primary Contact Name <span>*</span></label>
+                              <input type="text" className="form-control" placeholder="Full name" value={form.primary_contact_name || ''} onChange={e => setForm(f => ({ ...f, primary_contact_name: e.target.value }))} required />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Work Telephone <span>*</span></label>
+                              <input type="tel" className="form-control" placeholder="+44 20 0000 0000" value={form.primary_work_tel || ''} onChange={e => setForm(f => ({ ...f, primary_work_tel: e.target.value }))} required />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Mobile Phone <span>*</span></label>
+                              <input type="tel" className="form-control" placeholder="+44 7700 000000" value={form.primary_mobile || ''} onChange={e => setForm(f => ({ ...f, primary_mobile: e.target.value }))} required />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Email Address <span>*</span></label>
+                              <input type="email" className="form-control" placeholder="primary@example.com" value={form.primary_email || ''} onChange={e => setForm(f => ({ ...f, primary_email: e.target.value }))} required />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Technical Contact */}
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: '#334155', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#0284c7' }} /> Technical Contact Details
+                          </div>
+                          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Technical Contact Name <span>*</span></label>
+                              <input type="text" className="form-control" placeholder="Full name" value={form.halal_coordinator} onChange={e => setForm(f => ({ ...f, halal_coordinator: e.target.value }))} required />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Work Telephone <span>*</span></label>
+                              <input type="tel" className="form-control" placeholder="+44 20 0000 0000" value={form.tech_work_tel || ''} onChange={e => setForm(f => ({ ...f, tech_work_tel: e.target.value }))} required />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Mobile Phone <span>*</span></label>
+                              <input type="tel" className="form-control" placeholder="+44 7700 000000" value={form.tech_mobile || ''} onChange={e => setForm(f => ({ ...f, tech_mobile: e.target.value }))} required />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Email Address <span>*</span></label>
+                              <input type="email" className="form-control" placeholder="tech@example.com" value={form.qa_contact} onChange={e => setForm(f => ({ ...f, qa_contact: e.target.value }))} required />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── SECTION E: Process / Product Details ─────── */}
+                    {modalStep === 5 && (
+                      <div>
+                        <div style={{ marginBottom: 28 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fff1f2', border: '1.5px solid #fecdd3', borderRadius: 10, padding: '6px 14px', marginBottom: 12 }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#be123c' }}>Section E</span>
+                          </div>
+                          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', margin: 0 }}>Process / Product Details</h2>
+                          <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Describe your production processes and product scope</p>
+                        </div>
+                        <div style={{ display: 'grid', gap: 18 }}>
+
+                          {/* Nature of business */}
+                          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '20px 24px' }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 14 }}>1. Nature of the Business</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                              <div className="form-group" style={{ margin: 0 }}>
+                                <label className="form-label">Food Manufacturers <span>*</span></label>
+                                <select className="form-control" value={form.food_nature || ''} onChange={e => setForm(f => ({ ...f, food_nature: e.target.value }))}>
+                                  <option value="">Select nature of the business</option>
+                                  <option value="abattoir">Abattoir / Slaughterhouse</option>
+                                  <option value="meat_processing">Meat Processing</option>
+                                  <option value="food_manufacturing">Food Manufacturing</option>
+                                  <option value="catering">Catering / Food Service</option>
+                                  <option value="food_retail">Food Retail</option>
+                                  <option value="food_other">Others</option>
+                                </select>
+                                {form.food_nature === 'food_other' && (
+                                  <input type="text" className="form-control" style={{ marginTop: 8 }} placeholder="Please specify..." value={form.food_nature_other || ''} onChange={e => setForm(f => ({ ...f, food_nature_other: e.target.value }))} />
+                                )}
+                              </div>
+                              <div className="form-group" style={{ margin: 0 }}>
+                                <label className="form-label">Non-Food Manufacturers <span>*</span></label>
+                                <select className="form-control" value={form.nonfood_nature || ''} onChange={e => setForm(f => ({ ...f, nonfood_nature: e.target.value }))}>
+                                  <option value="">Select nature of the business</option>
+                                  <option value="cosmetics">Cosmetics</option>
+                                  <option value="pharmaceuticals">Pharmaceuticals</option>
+                                  <option value="packaging">Packaging</option>
+                                  <option value="logistics">Logistics / Storage</option>
+                                  <option value="nonfood_other">Others</option>
+                                </select>
+                                {form.nonfood_nature === 'nonfood_other' && (
+                                  <input type="text" className="form-control" style={{ marginTop: 8 }} placeholder="Please specify..." value={form.nonfood_nature_other || ''} onChange={e => setForm(f => ({ ...f, nonfood_nature_other: e.target.value }))} />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Type + export */}
+                          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">2. Type of Business <span>*</span></label>
+                              <select className="form-control" value={form.business_type || ''} onChange={e => setForm(f => ({ ...f, business_type: e.target.value }))}>
+                                <option value="">Select type of business</option>
+                                <option value="manufacturer">Manufacturer</option>
+                                <option value="distributor">Distributor</option>
+                                <option value="importer">Importer</option>
+                                <option value="exporter">Exporter</option>
+                                <option value="retailer">Retailer</option>
+                                <option value="other">Others</option>
+                              </select>
+                              {form.business_type === 'other' && (
+                                <input type="text" className="form-control" style={{ marginTop: 8 }} placeholder="Please specify..." value={form.business_type_other || ''} onChange={e => setForm(f => ({ ...f, business_type_other: e.target.value }))} />
+                              )}
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">3. Certification for Export Purposes Only? <span>*</span></label>
+                              <select className="form-control" value={form.export_only || ''} onChange={e => setForm(f => ({ ...f, export_only: e.target.value }))} required>
+                                <option value="">Select Option</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                              </select>
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">4. Previous GSO/UAE Certificate Application? <span>*</span></label>
+                              <select className="form-control" value={form.prev_gso_app || ''} onChange={e => setForm(f => ({ ...f, prev_gso_app: e.target.value }))} required>
+                                <option value="">Select Option</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                              </select>
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">5. Previously Refused Certification? <span>*</span></label>
+                              <select className="form-control" value={form.prev_refused || ''} onChange={e => setForm(f => ({ ...f, prev_refused: e.target.value }))} required>
+                                <option value="">Select Option</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Product details */}
+                          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '20px 24px', display: 'grid', gap: 16 }}>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">6. Product Description / Type / Category <span>*</span></label>
+                              <textarea className="form-control" rows={3} placeholder="Describe the products, their types and categories to be certified..." value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value }))} required />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                              <div className="form-group" style={{ margin: 0 }}>
+                                <label className="form-label">7. Brand Name (if any)</label>
+                                <input type="text" className="form-control" placeholder="Brand name" value={form.brand_name || ''} onChange={e => setForm(f => ({ ...f, brand_name: e.target.value }))} />
+                              </div>
+                              <div className="form-group" style={{ margin: 0 }}>
+                                <label className="form-label">8. No. of Products Processed on Site <span>*</span></label>
+                                <input type="number" className="form-control" placeholder="0" value={form.products_on_site_count || ''} onChange={e => setForm(f => ({ ...f, products_on_site_count: e.target.value }))} required min="1" />
+                              </div>
+                              <div className="form-group" style={{ margin: 0 }}>
+                                <label className="form-label">9. No. of Products for Halal Approval <span>*</span></label>
+                                <input type="number" className="form-control" placeholder="0" value={form.products_halal_count || ''} onChange={e => setForm(f => ({ ...f, products_halal_count: e.target.value }))} required min="1" />
+                              </div>
+                              <div className="form-group" style={{ margin: 0 }}>
+                                <label className="form-label">10. Schedule for Halal Production</label>
+                                <select className="form-control" value={form.halal_schedule || ''} onChange={e => setForm(f => ({ ...f, halal_schedule: e.target.value }))}>
+                                  <option value="">Select Option</option>
+                                  <option value="dedicated">Dedicated Halal line</option>
+                                  <option value="shared">Shared line (cleaned between runs)</option>
+                                  <option value="alternating">Alternating Halal / non-Halal</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Declarations */}
+                          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">11. Pork / Porcine Material on Site? <span>*</span></label>
+                              <select className="form-control" value={form.has_porcine ? 'yes' : form.has_porcine === false ? 'no' : ''} onChange={e => setForm(f => ({ ...f, has_porcine: e.target.value === 'yes' }))} required>
+                                <option value="">Select Option</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                              </select>
+                              {form.has_porcine && (
+                                <textarea className="form-control" style={{ marginTop: 8 }} rows={2} placeholder="Details on segregation / control..." value={form.porcine_details} onChange={e => setForm(f => ({ ...f, porcine_details: e.target.value }))} />
+                              )}
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">12. Intoxicants Used as Ingredient? <span>*</span></label>
+                              <select className="form-control" value={form.has_intoxicants ? 'yes' : form.has_intoxicants === false ? 'no' : ''} onChange={e => setForm(f => ({ ...f, has_intoxicants: e.target.value === 'yes' }))} required>
+                                <option value="">Select Option</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                              </select>
+                              {form.has_intoxicants && (
+                                <textarea className="form-control" style={{ marginTop: 8 }} rows={2} placeholder="Describe usage..." value={form.intoxicants_details} onChange={e => setForm(f => ({ ...f, intoxicants_details: e.target.value }))} />
+                              )}
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">13. Willing to Depict HFA Logo on Products? <span>*</span></label>
+                              <select className="form-control" value={form.use_hfa_logo || ''} onChange={e => setForm(f => ({ ...f, use_hfa_logo: e.target.value }))} required>
+                                <option value="">Select Option</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                              </select>
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">14. How Did You Hear About Us? <span>*</span></label>
+                              <select className="form-control" value={form.referral_source || ''} onChange={e => setForm(f => ({ ...f, referral_source: e.target.value }))} required>
+                                <option value="">Select Option</option>
+                                <option value="website">Website</option>
+                                <option value="google">Google Search</option>
+                                <option value="social_media">Social Media</option>
+                                <option value="word_of_mouth">Word of Mouth</option>
+                                <option value="trade_show">Trade Show / Event</option>
+                                <option value="other">Other</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Declaration signature */}
+                          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">15. Name <span>*</span></label>
+                              <input type="text" className="form-control" placeholder="Full name" value={form.managing_director} onChange={e => setForm(f => ({ ...f, managing_director: e.target.value }))} required />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">16. Position <span>*</span></label>
+                              <input type="text" className="form-control" placeholder="Job title / position" value={form.signatory_position || ''} onChange={e => setForm(f => ({ ...f, signatory_position: e.target.value }))} required />
+                            </div>
+                            <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
+                              <label className="form-label">17. Date <span>*</span></label>
+                              <input type="date" className="form-control" value={form.signatory_date || new Date().toISOString().split('T')[0]} onChange={e => setForm(f => ({ ...f, signatory_date: e.target.value }))} required />
+                            </div>
+                          </div>
+
+                          {/* Declaration checkbox */}
+                          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer', padding: '14px 18px', background: '#f0fdf4', borderRadius: 12, border: '1.5px solid #a7f3d0' }}>
+                            <input type="checkbox" checked={form.declared_true} onChange={e => setForm(f => ({ ...f, declared_true: e.target.checked }))} required style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0 }} />
+                            <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.6, color: '#065f46' }}>
+                              I hereby declare that all information provided in this application is true, complete, and correct to the best of my knowledge and I agree to comply with all HFA certification requirements.
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── SECTION F: Add Product ────────────────────── */}
+                    {modalStep === 6 && (
+                      <div>
+                        <div style={{ marginBottom: 28 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 10, padding: '6px 14px', marginBottom: 12 }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#0369a1' }}>Section F</span>
+                          </div>
+                          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', margin: 0 }}>Add Products</h2>
+                          <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>List the products to be included in this application</p>
+                        </div>
+
+                        {/* Add product form */}
+                        <div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 14, padding: '20px 24px', marginBottom: 20 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#0369a1', marginBottom: 14 }}>Add New Product</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, alignItems: 'end' }}>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Product Name <span>*</span></label>
+                              <input type="text" className="form-control" placeholder="e.g. Halal Chicken Strips" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Product Code <span>*</span></label>
+                              <input type="text" className="form-control" placeholder="e.g. HCS-001" value={newProduct.code || ''} onChange={e => setNewProduct({ ...newProduct, code: e.target.value })} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Manufacturer <span>*</span></label>
+                              <input type="text" className="form-control" placeholder="Manufacturer name" value={newProduct.manufacturer || ''} onChange={e => setNewProduct({ ...newProduct, manufacturer: e.target.value })} />
+                            </div>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label">Category <span>*</span></label>
+                              <input type="text" className="form-control" placeholder="e.g. Poultry" value={newProduct.category || ''} onChange={e => setNewProduct({ ...newProduct, category: e.target.value })} />
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+                            <button type="button" className="btn btn-primary" onClick={addProduct} style={{ gap: 6, background: '#0369a1', borderColor: '#0369a1' }}>
+                              <Plus size={15} /> Add Product
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Product list */}
+                        {form.products.length > 0 ? (
+                          <div style={{ border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+                            <div style={{ background: '#f8fafc', padding: '12px 20px', borderBottom: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 1.2fr 40px', gap: 12 }}>
+                              {['Product Name', 'Code', 'Manufacturer', 'Category', ''].map((h, i) => (
+                                <div key={i} style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#94a3b8' }}>{h}</div>
+                              ))}
+                            </div>
+                            {form.products.map((p, idx) => (
+                              <div key={p.id} style={{ padding: '13px 20px', borderBottom: idx < form.products.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 1.2fr 40px', gap: 12, alignItems: 'center', background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{p.name}</div>
+                                <div style={{ fontSize: 12, color: '#64748b' }}>{p.code || '—'}</div>
+                                <div style={{ fontSize: 12, color: '#64748b' }}>{p.manufacturer || '—'}</div>
+                                <div><span style={{ fontSize: 11, fontWeight: 700, background: '#f0f9ff', color: '#0369a1', padding: '3px 8px', borderRadius: 6 }}>{p.category || '—'}</span></div>
+                                <button type="button" onClick={() => removeProduct(p.id)} style={{ background: '#fee2e2', border: 'none', borderRadius: 6, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                  <Trash2 size={13} color="#dc2626" />
+                                </button>
+                              </div>
+                            ))}
+                            <div style={{ padding: '10px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', fontSize: 12, color: '#64748b', fontWeight: 600 }}>
+                              {form.products.length} product{form.products.length !== 1 ? 's' : ''} added
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8fafc', border: '2px dashed #e2e8f0', borderRadius: 14 }}>
+                            <FileText size={40} style={{ color: '#cbd5e1', margin: '0 auto 12px', display: 'block' }} />
+                            <div style={{ fontSize: 15, fontWeight: 700, color: '#475569', marginBottom: 4 }}>No Products Added Yet</div>
+                            <div style={{ fontSize: 13, color: '#94a3b8' }}>Use the form above to add products to this application</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                   </div>
-                </>
-              )}
-            </div>
+
+                  {/* Modal Footer */}
+                  <div style={{ padding: '16px 32px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                    <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>
+                      Section {modalStep} of 6
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      {modalStep > 1 && (
+                        <button type="button" className="btn btn-ghost" onClick={() => setModalStep(s => s - 1)} style={{ gap: 6 }}>
+                          <ChevronLeft size={16} /> Previous
+                        </button>
+                      )}
+                      <button type="button" className="btn btn-ghost" onClick={handleCloseModal}>Cancel</button>
+                      {modalStep < 6 ? (
+                        <button type="button" className="btn btn-primary" disabled={getGatingStatus()?.blocked} onClick={() => { if (validateStep(modalStep)) setModalStep(s => s + 1); }} style={{ gap: 6, background: 'linear-gradient(135deg, #065f46, #1B7A7A)', borderColor: '#065f46' }}>
+                          Next <ChevronRight size={16} />
+                        </button>
+                      ) : (
+                        <button type="button" className="btn btn-primary" disabled={submitting || !form.declared_true} onClick={handleSubmit} style={{ gap: 8, background: 'linear-gradient(135deg, #065f46, #1B7A7A)', borderColor: '#065f46', padding: '10px 24px' }}>
+                          {submitting ? <span className="spinner-white" /> : <><ShieldCheck size={18} /> Submit Application</>}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>,
         document.body
       )}
 
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        .modal-steps { display: flex; justify-content: center; gap: 12px; padding: 20px 0; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
-        .step-item { width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0; color: #64748b; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; position: relative; }
-        .step-item.active { background: var(--primary); color: white; box-shadow: 0 0 0 4px rgba(27, 122, 122, 0.2); }
-        .step-item.completed { background: #10b981; color: white; }
-        .step-item:not(:last-child):after { content: ''; position: absolute; right: -12px; top: 50%; width: 12px; height: 2px; background: #e2e8f0; }
-        .step-item.completed:after { background: #10b981; }
-        .section-title { font-size: 18px; font-weight: 800; margin-bottom: 24px; color: #1e293b; display: flex; align-items: center; gap: 8px; }
-        .border-teal { border: 1px solid #1B7A7A; }
-        .bg-teal-light { background: #f0fdfa; }
-        .file-upload-box { border: 2px dashed #e2e8f0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; color: #64748b; }
-        .file-upload-box:hover { border-color: var(--primary); background: #f0fdfa; color: var(--primary); }
-        .checkbox-label { display: flex; gap: 12px; cursor: pointer; align-items: flex-start; }
-        .checkbox-label input { width: 18px; height: 18px; margin-top: 2px; }
-      `}} />
     </div>
   );
 }
+
