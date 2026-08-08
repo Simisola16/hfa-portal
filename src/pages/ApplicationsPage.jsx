@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
-import { Plus, HelpCircle, PlusCircle, Search, RefreshCw, X, Upload, Check, ChevronRight, ChevronLeft, Trash2, ShieldCheck, FileText, AlertTriangle, RotateCcw, CheckCircle } from 'lucide-react';
+import { Plus, HelpCircle, PlusCircle, Search, RefreshCw, X, Upload, Check, ChevronRight, ChevronLeft, Trash2, ShieldCheck, FileText, AlertTriangle, RotateCcw, CheckCircle, Package } from 'lucide-react';
 import { STATUS_LABELS, STATUS_BADGE } from '../lib/applicationStatuses';
 
 const CATEGORIES = [
@@ -100,6 +100,14 @@ export default function ApplicationsPage({ openNew }) {
   const [addOnApps, setAddOnApps] = useState([]);
   const [addOnLoading, setAddOnLoading] = useState(false);
   const [renewalFiles, setRenewalFiles] = useState([]);
+
+  // Post-submit "Add Product?" prompt state
+  const [showAddProductPrompt, setShowAddProductPrompt] = useState(false);
+  const [addProductChoice, setAddProductChoice] = useState(null); // null | 'yes' | 'no'
+  const [addOnProductRows, setAddOnProductRows] = useState([{ name: '', code: '', type: 'Add product' }]);
+  const [addOnContact, setAddOnContact] = useState({ name: '', email: '', phone: '' });
+  const [submittedCertId, setSubmittedCertId] = useState(null); // cert to attach add-on to
+  const [addOnSubmitting, setAddOnSubmitting] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -268,30 +276,48 @@ export default function ApplicationsPage({ openNew }) {
         toast.error(gating.message);
         return false;
       }
-      if (!form.scope?.trim()) {
-        toast.error('Please enter the scope of certification.');
+      if (!form.establishment_name?.trim()) {
+        toast.error('Please enter the name of the establishment.');
         return false;
       }
     }
-    if (step === 3) {
-      if (!form.halal_coordinator?.trim()) {
-        toast.error('Please enter the Halal Coordinator name.');
+    if (step === 2) {
+      if (!form.site_address?.trim()) {
+        toast.error('Please enter the site / factory address.');
         return false;
       }
-      if (!form.qa_contact?.trim()) {
-        toast.error('Please enter the Quality Assurance (QA) contact.');
+      if (!form.company_email?.trim()) {
+        toast.error('Please enter the company email address.');
         return false;
       }
       if (!form.employee_count || Number(form.employee_count) <= 0) {
-        toast.error('Please enter a valid employee count.');
+        toast.error('Please enter a valid number of employees.');
         return false;
       }
-      if (!form.production_schedule?.trim()) {
-        toast.error('Please enter the production schedule.');
+    }
+    if (step === 4) {
+      if (!form.primary_contact_name?.trim()) {
+        toast.error('Please enter the Primary Contact Name.');
+        return false;
+      }
+      if (!form.primary_email?.trim()) {
+        toast.error('Please enter the Primary Contact Email.');
+        return false;
+      }
+      if (!form.halal_coordinator?.trim()) {
+        toast.error('Please enter the Technical Contact Name.');
+        return false;
+      }
+      if (!form.qa_contact?.trim()) {
+        toast.error('Please enter the Technical Contact Email.');
         return false;
       }
     }
     if (step === 5) {
+      if (!form.scope?.trim()) {
+        toast.error('Please provide the product description / scope in Section E.');
+        return false;
+      }
       if (form.has_porcine && !form.porcine_details?.trim()) {
         toast.error('Please provide details on porcine segregation/control.');
         return false;
@@ -312,47 +338,78 @@ export default function ApplicationsPage({ openNew }) {
       if (!form.managing_director?.trim()) return toast.error('Please enter contact person details.');
       if (!form.declared_true) return toast.error('You must declare that the information is true and correct.');
     } else {
-      // Final validation for new applications
-      if (!form.site_id) return toast.error('Please select a business site (Step 1).');
-      if (!form.scope?.trim()) return toast.error('Please enter the scope of certification (Step 1).');
-      if (!form.halal_coordinator?.trim()) return toast.error('Please enter the Halal Coordinator name (Step 3).');
-      if (!form.qa_contact?.trim()) return toast.error('Please enter the Quality Assurance (QA) contact (Step 3).');
-      if (!form.employee_count || Number(form.employee_count) <= 0) return toast.error('Please enter a valid employee count (Step 3).');
-      if (!form.production_schedule?.trim()) return toast.error('Please enter the production schedule (Step 3).');
-      
+      if (!form.site_id) return toast.error('Please select a business site (Section A).');
+      if (!form.scope?.trim()) return toast.error('Please enter the scope of certification (Section E).');
+      if (!form.halal_coordinator?.trim()) return toast.error('Please enter the Technical Contact name (Section D).');
+      if (!form.qa_contact?.trim()) return toast.error('Please enter the Technical Contact email (Section D).');
+      if (!form.employee_count || Number(form.employee_count) <= 0) return toast.error('Please enter a valid employee count (Section B).');
+      if (!form.production_schedule?.trim()) return toast.error('Please enter the production schedule (Section B).');
       if (form.has_porcine && !form.porcine_details?.trim()) {
-        return toast.error('Please provide porcine segregation/control details (Step 5).');
+        return toast.error('Please provide porcine segregation/control details (Section E).');
       }
       if (form.has_intoxicants && !form.intoxicants_details?.trim()) {
-        return toast.error('Please provide intoxicants usage details (Step 5).');
+        return toast.error('Please provide intoxicants usage details (Section E).');
       }
-
-      if (!form.declared_true) return toast.error('You must declare that the information is true and correct (Step 6).');
+      if (!form.declared_true) return toast.error('You must declare that the information is true and correct (Section E).');
     }
 
     setSubmitting(true);
     try {
       const fd = new FormData();
       const submissionData = { ...form };
-      submissionData.products = JSON.stringify(form.products);
-      
+      submissionData.products = JSON.stringify([]);
       Object.entries(submissionData).forEach(([k, v]) => fd.append(k, v));
-
       if (form.application_type === 'renewal' && renewalFiles.length > 0) {
         renewalFiles.forEach(f => fd.append('supporting_docs', f));
       }
-
       await api.post('/api/applications', fd, true);
       toast.success(form.application_type === 'renewal' ? 'Renewal application submitted successfully!' : 'Application submitted successfully!');
       setShowModal(false);
       setModalStep(1);
+      // Find the active certificate for this site (for add-on linking)
+      const activeCert = certs.find(c => {
+        const sId = typeof c.site_id === 'object' ? c.site_id?._id || c.site_id?.id : c.site_id;
+        return String(sId) === String(form.site_id) && c.status === 'active';
+      });
+      setSubmittedCertId(activeCert?._id || activeCert?.id || null);
+      setAddOnContact({ name: form.managing_director || form.primary_contact_name || '', email: form.company_email || form.primary_email || '', phone: form.primary_work_tel || form.primary_mobile || '' });
       resetForm();
       fetchData();
-      navigate('/applications', { replace: true });
+      // Show "Add product?" prompt
+      setShowAddProductPrompt(true);
+      setAddProductChoice(null);
+      setAddOnProductRows([{ name: '', code: '', type: 'Add product' }]);
     } catch (err) {
       toast.error(err.message || 'Submission failed');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleAddOnProductSubmit = async () => {
+    if (!addOnContact.name.trim()) return toast.error('Contact name is required.');
+    if (!addOnContact.email.trim()) return toast.error('Contact email is required.');
+    for (const [i, p] of addOnProductRows.entries()) {
+      if (!p.name.trim()) return toast.error(`Row ${i + 1}: Product name is required.`);
+    }
+    setAddOnSubmitting(true);
+    try {
+      await api.post('/api/add-on-applications', {
+        certificate_id: submittedCertId || '',
+        contact_name: addOnContact.name,
+        contact_email: addOnContact.email,
+        contact_phone: addOnContact.phone,
+        message: '',
+        products: addOnProductRows
+      });
+      toast.success('Products submitted as an Add-on Application!');
+      setShowAddProductPrompt(false);
+      fetchData();
+      navigate('/applications', { replace: true });
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Failed to submit add-on application.');
+    } finally {
+      setAddOnSubmitting(false);
     }
   };
 
@@ -784,7 +841,6 @@ export default function ApplicationsPage({ openNew }) {
                     { key: 3, label: 'Section C', sub: 'Manufacturer' },
                     { key: 4, label: 'Section D', sub: 'Contact Details' },
                     { key: 5, label: 'Section E', sub: 'Process & Products' },
-                    { key: 6, label: 'Section F', sub: 'Add Product' },
                   ].map(s => (
                     <button
                       key={s.key}
@@ -1247,84 +1303,12 @@ export default function ApplicationsPage({ openNew }) {
                       </div>
                     )}
 
-                    {/* ── SECTION F: Add Product ────────────────────── */}
-                    {modalStep === 6 && (
-                      <div>
-                        <div style={{ marginBottom: 28 }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 10, padding: '6px 14px', marginBottom: 12 }}>
-                            <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#0369a1' }}>Section F</span>
-                          </div>
-                          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', margin: 0 }}>Add Products</h2>
-                          <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>List the products to be included in this application</p>
-                        </div>
-
-                        {/* Add product form */}
-                        <div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 14, padding: '20px 24px', marginBottom: 20 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#0369a1', marginBottom: 14 }}>Add New Product</div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, alignItems: 'end' }}>
-                            <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">Product Name <span>*</span></label>
-                              <input type="text" className="form-control" placeholder="e.g. Halal Chicken Strips" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} />
-                            </div>
-                            <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">Product Code <span>*</span></label>
-                              <input type="text" className="form-control" placeholder="e.g. HCS-001" value={newProduct.code || ''} onChange={e => setNewProduct({ ...newProduct, code: e.target.value })} />
-                            </div>
-                            <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">Manufacturer <span>*</span></label>
-                              <input type="text" className="form-control" placeholder="Manufacturer name" value={newProduct.manufacturer || ''} onChange={e => setNewProduct({ ...newProduct, manufacturer: e.target.value })} />
-                            </div>
-                            <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">Category <span>*</span></label>
-                              <input type="text" className="form-control" placeholder="e.g. Poultry" value={newProduct.category || ''} onChange={e => setNewProduct({ ...newProduct, category: e.target.value })} />
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
-                            <button type="button" className="btn btn-primary" onClick={addProduct} style={{ gap: 6, background: '#0369a1', borderColor: '#0369a1' }}>
-                              <Plus size={15} /> Add Product
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Product list */}
-                        {form.products.length > 0 ? (
-                          <div style={{ border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
-                            <div style={{ background: '#f8fafc', padding: '12px 20px', borderBottom: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 1.2fr 40px', gap: 12 }}>
-                              {['Product Name', 'Code', 'Manufacturer', 'Category', ''].map((h, i) => (
-                                <div key={i} style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#94a3b8' }}>{h}</div>
-                              ))}
-                            </div>
-                            {form.products.map((p, idx) => (
-                              <div key={p.id} style={{ padding: '13px 20px', borderBottom: idx < form.products.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 1.2fr 40px', gap: 12, alignItems: 'center', background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{p.name}</div>
-                                <div style={{ fontSize: 12, color: '#64748b' }}>{p.code || '—'}</div>
-                                <div style={{ fontSize: 12, color: '#64748b' }}>{p.manufacturer || '—'}</div>
-                                <div><span style={{ fontSize: 11, fontWeight: 700, background: '#f0f9ff', color: '#0369a1', padding: '3px 8px', borderRadius: 6 }}>{p.category || '—'}</span></div>
-                                <button type="button" onClick={() => removeProduct(p.id)} style={{ background: '#fee2e2', border: 'none', borderRadius: 6, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                  <Trash2 size={13} color="#dc2626" />
-                                </button>
-                              </div>
-                            ))}
-                            <div style={{ padding: '10px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', fontSize: 12, color: '#64748b', fontWeight: 600 }}>
-                              {form.products.length} product{form.products.length !== 1 ? 's' : ''} added
-                            </div>
-                          </div>
-                        ) : (
-                          <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8fafc', border: '2px dashed #e2e8f0', borderRadius: 14 }}>
-                            <FileText size={40} style={{ color: '#cbd5e1', margin: '0 auto 12px', display: 'block' }} />
-                            <div style={{ fontSize: 15, fontWeight: 700, color: '#475569', marginBottom: 4 }}>No Products Added Yet</div>
-                            <div style={{ fontSize: 13, color: '#94a3b8' }}>Use the form above to add products to this application</div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
                   </div>
 
                   {/* Modal Footer */}
                   <div style={{ padding: '16px 32px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>
-                      Section {modalStep} of 6
+                      Section {modalStep} of 5
                     </div>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                       {modalStep > 1 && (
@@ -1333,7 +1317,7 @@ export default function ApplicationsPage({ openNew }) {
                         </button>
                       )}
                       <button type="button" className="btn btn-ghost" onClick={handleCloseModal}>Cancel</button>
-                      {modalStep < 6 ? (
+                      {modalStep < 5 ? (
                         <button type="button" className="btn btn-primary" disabled={getGatingStatus()?.blocked} onClick={() => { if (validateStep(modalStep)) setModalStep(s => s + 1); }} style={{ gap: 6, background: 'linear-gradient(135deg, #065f46, #1B7A7A)', borderColor: '#065f46' }}>
                           Next <ChevronRight size={16} />
                         </button>
@@ -1352,7 +1336,288 @@ export default function ApplicationsPage({ openNew }) {
         document.body
       )}
 
+      {/* ── POST-SUBMISSION "ADD PRODUCTS?" MODAL ───────────────────────── */}
+      {showAddProductPrompt && createPortal(
+        <div
+          onClick={e => {
+            if (e.target === e.currentTarget) {
+              setShowAddProductPrompt(false);
+              navigate('/applications', { replace: true });
+            }
+          }}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', zIndex: 1100,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+            backdropFilter: 'blur(5px)',
+          }}
+        >
+          <div style={{
+            background: '#fff', borderRadius: 20, width: '100%', maxWidth: addProductChoice === 'yes' ? 860 : 520,
+            boxShadow: '0 32px 80px rgba(0,0,0,0.25)',
+            overflow: 'hidden',
+            transition: 'max-width 0.3s ease',
+          }}>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #065f46 0%, #1B7A7A 100%)',
+              padding: '22px 28px', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.18)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <Package size={24} color="#fff" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: '#fff' }}>
+                    {addProductChoice === 'yes' ? 'Add Products (Add-on Product Application)' : 'Application Submitted Successfully! 🎉'}
+                  </h3>
+                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', margin: '3px 0 0' }}>
+                    {addProductChoice === 'yes'
+                      ? 'Submit product details to be processed under Add-on Products'
+                      : 'Your certification application has been recorded'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAddProductPrompt(false);
+                  navigate('/applications', { replace: true });
+                }}
+                style={{
+                  background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8,
+                  width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: 'white'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Body */}
+            {addProductChoice !== 'yes' ? (
+              <div style={{ padding: '32px 28px', textAlign: 'center' }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: '50%', background: '#ecfdf5',
+                  border: '2px solid #a7f3d0', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', margin: '0 auto 18px', color: '#059669'
+                }}>
+                  <CheckCircle size={36} />
+                </div>
+                <h4 style={{ fontSize: 19, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>
+                  Do you want to add products now?
+                </h4>
+                <p style={{ fontSize: 13, color: '#64748b', maxWidth: 440, margin: '0 auto 24px', lineHeight: 1.6 }}>
+                  You can register products for halal approval right now. Products added will automatically be submitted to your <strong>Add-on Products</strong> queue.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, maxWidth: 360, margin: '0 auto' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddProductPrompt(false);
+                      navigate('/applications', { replace: true });
+                    }}
+                    style={{
+                      padding: '12px 18px', borderRadius: 12, border: '1.5px solid #cbd5e1',
+                      background: '#f8fafc', color: '#475569', fontSize: 14, fontWeight: 700,
+                      cursor: 'pointer', transition: 'all 0.2s'
+                    }}
+                  >
+                    No, Skip for Now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddProductChoice('yes')}
+                    style={{
+                      padding: '12px 18px', borderRadius: 12, border: 'none',
+                      background: 'linear-gradient(135deg, #065f46 0%, #1B7A7A 100%)',
+                      color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(6, 95, 70, 0.25)', transition: 'all 0.2s'
+                    }}
+                  >
+                    Yes, Add Products
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding: '24px 28px', maxHeight: '72vh', overflowY: 'auto' }}>
+                {/* Site / Certificate selection or display */}
+                {certs.length > 0 && (
+                  <div className="form-group" style={{ marginBottom: 16 }}>
+                    <label className="form-label">Select Active Site / Certificate</label>
+                    <select
+                      className="form-control"
+                      value={submittedCertId || ''}
+                      onChange={e => setSubmittedCertId(e.target.value)}
+                    >
+                      <option value="">-- Select Certificate / Site --</option>
+                      {certs.filter(c => c.status === 'active').map(c => (
+                        <option key={c._id || c.id} value={c._id || c.id}>
+                          {c.certificate_number} ({c.site_name || c.scope || 'Site'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Contact details */}
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px 20px', marginBottom: 18 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 12 }}>Contact Person Details</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: 11 }}>Contact Name <span>*</span></label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Full name"
+                        value={addOnContact.name}
+                        onChange={e => setAddOnContact(c => ({ ...c, name: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: 11 }}>Contact Email <span>*</span></label>
+                      <input
+                        type="email"
+                        className="form-control"
+                        placeholder="email@example.com"
+                        value={addOnContact.email}
+                        onChange={e => setAddOnContact(c => ({ ...c, email: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: 11 }}>Contact Phone</label>
+                      <input
+                        type="tel"
+                        className="form-control"
+                        placeholder="+44 20 0000 0000"
+                        value={addOnContact.phone}
+                        onChange={e => setAddOnContact(c => ({ ...c, phone: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Products table */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#334155' }}>Products to Add</div>
+                    <button
+                      type="button"
+                      onClick={() => setAddOnProductRows(r => [...r, { name: '', code: '', type: 'Add product' }])}
+                      style={{
+                        background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534',
+                        borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700,
+                        display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer'
+                      }}
+                    >
+                      <Plus size={14} /> + Add Another Product
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {addOnProductRows.map((p, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 40px', gap: 10,
+                          alignItems: 'center', background: '#f8fafc', border: '1px solid #e2e8f0',
+                          borderRadius: 10, padding: '10px 14px'
+                        }}
+                      >
+                        <div>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Product Name *"
+                            value={p.name}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, name: val } : r));
+                            }}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Code / SKU"
+                            value={p.code}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, code: val } : r));
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <select
+                            className="form-control"
+                            value={p.type}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, type: val } : r));
+                            }}
+                          >
+                            <option value="Add product">Add product</option>
+                            <option value="Remove product">Remove product</option>
+                            <option value="Change name/code">Change name/code</option>
+                            <option value="Change ingredients">Change ingredients</option>
+                          </select>
+                        </div>
+                        <div>
+                          <button
+                            type="button"
+                            disabled={addOnProductRows.length === 1}
+                            onClick={() => setAddOnProductRows(rows => rows.filter((_, i) => i !== idx))}
+                            style={{
+                              background: addOnProductRows.length === 1 ? '#f1f5f9' : '#fee2e2',
+                              border: 'none', borderRadius: 6, width: 32, height: 32,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: addOnProductRows.length === 1 ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            <Trash2 size={14} color={addOnProductRows.length === 1 ? '#cbd5e1' : '#dc2626'} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Footer Buttons */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 14, borderTop: '1px solid #e2e8f0' }}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      setShowAddProductPrompt(false);
+                      navigate('/applications', { replace: true });
+                    }}
+                  >
+                    Skip &amp; Done
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={addOnSubmitting}
+                    onClick={handleAddOnProductSubmit}
+                    style={{ background: 'linear-gradient(135deg, #065f46 0%, #1B7A7A 100%)', borderColor: '#065f46', padding: '10px 22px' }}
+                  >
+                    {addOnSubmitting ? <span className="spinner-white" /> : <><ShieldCheck size={16} /> Submit to Add-on Products</>}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+
     </div>
   );
 }
-
