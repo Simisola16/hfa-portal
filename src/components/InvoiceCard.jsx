@@ -10,16 +10,23 @@ const getPdfUrl = (url) => {
   return url;
 };
 
-export default function InvoiceCard({ invoice, status, onPayClick }) {
+export default function InvoiceCard({ invoice, status, isInitial, isFinal, onPayClick }) {
   const normStatus = (status || '').toLowerCase().replace(/ /g, '_');
-  const isAvailable = ['proposal_approved', 'invoice_sent', 'payment_received', 'dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'audit_report_submitted', 'on_hold', 'audit_successful', 'logsheet_created', 'logsheet_signed', 'application_successful', 'agreement_sent', 'agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(normStatus) || invoice;
+  const isAvailable = isFinal
+    ? ['agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(normStatus) || invoice
+    : ['proposal_approved', 'invoice_sent', 'payment_received', 'dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'nc_flagged', 'nc_closed', 'audit_report_submitted', 'on_hold', 'audit_successful', 'logsheet_created', 'logsheet_signed', 'application_successful', 'agreement_sent', 'agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(normStatus) || invoice;
+
+  const cardTitle = isFinal ? 'Final Halal Certificate Fee Invoice' : 'Initial Certification Invoice';
+  const cardSubtitle = isFinal ? 'Final Halal Certificate Fee' : 'Stage 1 Application & Audit Fee';
 
   if (!isAvailable) {
     return (
       <div style={{ background: '#f8fafc', opacity: 0.65, border: '1px dashed #cbd5e1', borderRadius: 20, padding: '24px 20px', textAlign: 'center' }}>
         <Lock size={20} style={{ color: '#94a3b8', margin: '0 auto 8px' }} />
-        <div style={{ fontWeight: 700, fontSize: 13, color: '#64748b' }}>Initial Invoice (Locked)</div>
-        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Available once proposal is accepted</div>
+        <div style={{ fontWeight: 700, fontSize: 13, color: '#64748b' }}>{cardTitle} (Locked)</div>
+        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+          {isFinal ? 'Available once final agreement is signed' : 'Available once proposal is accepted'}
+        </div>
       </div>
     );
   }
@@ -28,8 +35,10 @@ export default function InvoiceCard({ invoice, status, onPayClick }) {
     return (
       <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', padding: 24, textAlign: 'center' }}>
         <Receipt size={28} style={{ color: '#94a3b8', margin: '0 auto 10px' }} />
-        <div style={{ fontWeight: 700, fontSize: 14, color: '#475569' }}>Invoice Pending</div>
-        <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Your invoice will be generated shortly.</div>
+        <div style={{ fontWeight: 700, fontSize: 14, color: '#475569' }}>{cardTitle} Pending</div>
+        <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
+          {isFinal ? 'Your final certificate fee invoice will be generated shortly.' : 'Your invoice will be generated shortly.'}
+        </div>
       </div>
     );
   }
@@ -38,11 +47,11 @@ export default function InvoiceCard({ invoice, status, onPayClick }) {
     <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
       <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Receipt size={18} style={{ color: '#ea580c' }} />
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: isFinal ? '#faf5ff' : '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Receipt size={18} style={{ color: isFinal ? '#7e22ce' : '#ea580c' }} />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Initial Invoice</div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: isFinal ? '#581c87' : 'var(--text-primary)' }}>{cardTitle}</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>No: {invoice.invoice_number} &middot; Status: <span style={{
               fontWeight: 700,
               color: invoice.status === 'paid' ? '#15803d' : invoice.status === 'client_paid' ? '#b45309' : '#b91c1c'
