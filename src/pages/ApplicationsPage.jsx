@@ -42,9 +42,28 @@ export default function ApplicationsPage({ openNew }) {
   useEffect(() => {
     const typeParam = searchParams.get('type');
     const statusParam = searchParams.get('status');
-    if (typeParam !== null) setFilterType(typeParam);
-    if (statusParam !== null) setFilterStatus(statusParam);
-  }, [searchParams]);
+    const actionParam = searchParams.get('action');
+
+    if (openNew || actionParam === 'new') {
+      setShowModal(true);
+      setForm(f => ({ ...f, application_type: 'new' }));
+    }
+
+    if (typeParam !== null) {
+      setFilterType(typeParam);
+      if (typeParam === 'renewal') {
+        setForm(f => ({ ...f, application_type: 'renewal' }));
+      }
+    } else {
+      setFilterType('');
+    }
+
+    if (statusParam !== null) {
+      setFilterStatus(statusParam);
+    } else {
+      setFilterStatus('');
+    }
+  }, [searchParams, openNew]);
 
   const pendingApp = apps.find(app => {
     const s = app.status?.toLowerCase();
@@ -359,7 +378,18 @@ export default function ApplicationsPage({ openNew }) {
 
   const filtered = apps.filter(a => {
     const matchSearch = !search || a.application_number?.toLowerCase().includes(search.toLowerCase()) || a.category?.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = !filterStatus || a.status === filterStatus;
+    
+    let matchStatus = true;
+    if (filterStatus) {
+      if (filterStatus === 'in_progress' || filterStatus === 'audit_scheduled') {
+        matchStatus = !['certificate_issued', 'rejected'].includes(a.status?.toLowerCase());
+      } else if (filterStatus === 'rejected') {
+        matchStatus = ['rejected', 'on_hold'].includes(a.status?.toLowerCase());
+      } else {
+        matchStatus = a.status === filterStatus;
+      }
+    }
+
     const matchType = !filterType || a.application_type === filterType;
     return matchSearch && matchStatus && matchType;
   });

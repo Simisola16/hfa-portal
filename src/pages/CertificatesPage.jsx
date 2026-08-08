@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
@@ -16,10 +16,12 @@ const getPdfUrl = (url) => {
 
 export default function CertificatesPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [certs, setCerts] = useState([]);
   const [survRequests, setSurvRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [expandedCertId, setExpandedCertId] = useState(null);
 
   // Renewal modal state
@@ -36,8 +38,17 @@ export default function CertificatesPage() {
         api.get('/api/certificates'),
         api.get('/api/surveillance/my').catch(() => ({ data: [] }))
       ]);
-      setCerts(certsRes.data || []);
+      const loadedCerts = certsRes.data || [];
+      setCerts(loadedCerts);
       setSurvRequests(survRes.data?.data || survRes.data || []);
+
+      const renewId = searchParams.get('renewCertId');
+      if (renewId) {
+        const target = loadedCerts.find(c => String(c._id || c.id) === String(renewId));
+        if (target) {
+          openRenewModal(target);
+        }
+      }
     } catch (err) {
       toast.error('Failed to load certificates data.');
     } finally {
@@ -46,18 +57,38 @@ export default function CertificatesPage() {
   };
 
   useEffect(() => {
+    const s = searchParams.get('status');
+    if (s) setStatusFilter(s);
+  }, [searchParams]);
+
+  useEffect(() => {
     fetchData();
   }, []);
-
-  const filtered = certs.filter(c =>
-    !search || c.certificate_number?.toLowerCase().includes(search.toLowerCase()) || c.certificate_type?.toLowerCase().includes(search.toLowerCase())
-  );
 
   const isExpiringSoon = (expiry) => {
     if (!expiry) return false;
     const diff = new Date(expiry) - new Date();
     return diff > 0 && diff < 60 * 24 * 60 * 60 * 1000; // within 60 days
   };
+
+  const filtered = certs.filter(c => {
+    const matchSearch = !search || c.certificate_number?.toLowerCase().includes(search.toLowerCase()) || c.certificate_type?.toLowerCase().includes(search.toLowerCase());
+    
+    let matchStatus = true;
+    if (statusFilter) {
+      const isExp = isExpiringSoon(c.expiry_date);
+      const isPast = c.status === 'expired' || (c.expiry_date && new Date(c.expiry_date) < new Date());
+      if (statusFilter === 'expired') {
+        matchStatus = isPast;
+      } else if (statusFilter === 'expiring') {
+        matchStatus = isExp && !isPast;
+      } else if (statusFilter === 'active') {
+        matchStatus = c.status === 'active' && !isPast;
+      }
+    }
+
+    return matchSearch && matchStatus;
+  });
 
   const isThreeYearCert = (cert) => {
     if (!cert.issue_date || !cert.expiry_date) return false;

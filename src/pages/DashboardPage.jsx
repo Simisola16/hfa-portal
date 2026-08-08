@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
-import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, RefreshCw, Download, X, MapPin } from 'lucide-react';
+import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, RefreshCw, Download, X, MapPin, RotateCcw, ChevronRight } from 'lucide-react';
 import ActionsNeededWidget from '../components/ActionsNeededWidget';
 
 const STATUS_BADGE = {
@@ -31,6 +31,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showForms, setShowForms] = useState(false);
   const [showSiteModal, setShowSiteModal] = useState(false);
+  const [certFilterTab, setCertFilterTab] = useState('all');
 
   useEffect(() => {
     Promise.all([
@@ -61,17 +62,49 @@ export default function DashboardPage() {
     setShowSiteModal(false);
   };
 
-  const recentApps = data.applications.slice(0, 5);
-  const activeCerts = data.certificates.filter(c => c.status === 'active').length;
-  const pendingApps = data.applications.filter(a => ['submitted', 'under_review'].includes(a.status)).length;
-  const inProgressApps = data.applications.filter(a => a.status === 'audit_scheduled').length;
+  const now = new Date();
 
-  const stats = [
-    { label: 'Total Applications', value: data.applications.length, icon: <FileText size={22} />, color: '#3b82f6', bg: '#dbeafe', path: '/applications' },
-    { label: 'Active Certificates', value: activeCerts, icon: <Award size={22} />, color: '#15803d', bg: '#dcfce7', path: '/certificates' },
-    { label: 'Pending Review', value: pendingApps, icon: <Clock size={22} />, color: '#d97706', bg: '#fef3c7', path: '/applications' },
-    { label: 'Products Registered', value: data.products.length, icon: <Package size={22} />, color: '#7c3aed', bg: '#f3e8ff', path: '/products' },
-  ];
+  // Active certificates (status active & not in past)
+  const activeCertList = data.certificates.filter(c => {
+    const isPast = c.expiry_date && new Date(c.expiry_date) < now;
+    return c.status === 'active' && !isPast;
+  });
+
+  // Expiring soon (within 90 days)
+  const expiringSoonCertList = data.certificates.filter(c => {
+    if (!c.expiry_date) return false;
+    const diff = new Date(c.expiry_date) - now;
+    return diff > 0 && diff <= 90 * 24 * 60 * 60 * 1000;
+  });
+
+  // Expired certificates
+  const expiredCertList = data.certificates.filter(c => {
+    return c.status === 'expired' || (c.expiry_date && new Date(c.expiry_date) < now);
+  });
+
+  // Most urgent certificate to renew
+  const urgentRenewalCert = expiredCertList[0] || expiringSoonCertList[0] || null;
+  const daysToUrgent = urgentRenewalCert?.expiry_date ? Math.ceil((new Date(urgentRenewalCert.expiry_date) - now) / (1000 * 60 * 60 * 24)) : null;
+
+  const recentApps = data.applications.slice(0, 5);
+  const pendingApps = data.applications.filter(a => ['submitted', 'under_review'].includes(a.status)).length;
+
+  const getDaysRemaining = (expiryDate) => {
+    if (!expiryDate) return null;
+    return Math.ceil((new Date(expiryDate) - now) / (1000 * 60 * 60 * 24));
+  };
+
+  // Filtered certificates for table
+  const displayedCerts = data.certificates.filter(c => {
+    const isPast = c.status === 'expired' || (c.expiry_date && new Date(c.expiry_date) < now);
+    const diff = c.expiry_date ? new Date(c.expiry_date) - now : null;
+    const isExpiringSoon = diff !== null && diff > 0 && diff <= 90 * 24 * 60 * 60 * 1000;
+
+    if (certFilterTab === 'active') return c.status === 'active' && !isPast;
+    if (certFilterTab === 'expiring') return isExpiringSoon && !isPast;
+    if (certFilterTab === 'expired') return isPast;
+    return true;
+  });
 
   return (
     <div>
@@ -93,17 +126,122 @@ export default function DashboardPage() {
       {/* Persistent Actions Needed Widget */}
       <ActionsNeededWidget />
 
-      {/* Stats */}
+      {/* Stats Grid */}
       <div className="stats-grid">
-        {stats.map(s => (
-          <div className="stat-card" key={s.label} onClick={() => navigate(s.path)} style={{cursor: 'pointer'}}>
-            <div className="stat-icon" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
-            <div className="stat-info">
-              <div className="stat-label">{s.label}</div>
-              <div className="stat-value">{loading ? '—' : s.value}</div>
-            </div>
+        <div className="stat-card" onClick={() => navigate('/applications')} style={{ cursor: 'pointer' }}>
+          <div className="stat-icon" style={{ background: '#dbeafe', color: '#3b82f6' }}><FileText size={22} /></div>
+          <div className="stat-info">
+            <div className="stat-label">Total Applications</div>
+            <div className="stat-value">{loading ? '—' : data.applications.length}</div>
           </div>
-        ))}
+        </div>
+
+        {/* Certificate Overview Stat Card (Active / Expiring Soon / Expired & Clickable Renewal) */}
+        <div
+          className="stat-card"
+          style={{
+            cursor: 'pointer',
+            border: urgentRenewalCert ? '1.5px solid #fbcfe8' : '1px solid var(--border)',
+            background: urgentRenewalCert ? 'linear-gradient(135deg, #fff, #fdf4ff)' : '#fff',
+            position: 'relative'
+          }}
+          onClick={() => navigate('/certificates')}
+        >
+          <div className="stat-icon" style={{ background: urgentRenewalCert ? '#fae8ff' : '#dcfce7', color: urgentRenewalCert ? '#a21caf' : '#15803d' }}>
+            <Award size={22} />
+          </div>
+          <div className="stat-info" style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div className="stat-label">Certificates</div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#15803d', background: '#dcfce7', padding: '2px 8px', borderRadius: 12 }}>
+                {activeCertList.length} Active
+              </span>
+            </div>
+            <div className="stat-value" style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
+              <span>{loading ? '—' : activeCertList.length}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>active certs</span>
+            </div>
+
+            {/* Clickable Status Breakdown Pills */}
+            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
+              <span
+                onClick={() => navigate('/certificates?status=active')}
+                style={{
+                  fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 6,
+                  background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', cursor: 'pointer'
+                }}
+                title="View active certificates"
+              >
+                ✓ {activeCertList.length} Active
+              </span>
+
+              {expiringSoonCertList.length > 0 && (
+                <span
+                  onClick={() => navigate('/certificates?status=expiring')}
+                  style={{
+                    fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 6,
+                    background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', cursor: 'pointer'
+                  }}
+                  title="View certificates expiring soon"
+                >
+                  ⚠️ {expiringSoonCertList.length} Expiring Soon
+                </span>
+              )}
+
+              {expiredCertList.length > 0 && (
+                <span
+                  onClick={() => navigate('/certificates?status=expired')}
+                  style={{
+                    fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 6,
+                    background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', cursor: 'pointer'
+                  }}
+                  title="View expired certificates"
+                >
+                  🔴 {expiredCertList.length} Expired
+                </span>
+              )}
+            </div>
+
+            {/* Urgent Renewal Callout */}
+            {urgentRenewalCert && (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/certificates?renewCertId=${urgentRenewalCert._id || urgentRenewalCert.id}`);
+                }}
+                style={{
+                  marginTop: 8, padding: '4px 8px', borderRadius: 6, background: daysToUrgent <= 0 ? '#fee2e2' : '#fef3c7',
+                  border: daysToUrgent <= 0 ? '1px solid #fca5a5' : '1px solid #fde68a',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  fontSize: 11, fontWeight: 700, color: daysToUrgent <= 0 ? '#991b1b' : '#92400e', cursor: 'pointer'
+                }}
+              >
+                <span>
+                  {daysToUrgent <= 0 ? `Expired ${Math.abs(daysToUrgent)}d ago` : `Expires in ${daysToUrgent}d`}
+                </span>
+                <span style={{ textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: 2 }}>
+                  Renew <ChevronRight size={12} />
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="stat-card" onClick={() => navigate('/applications')} style={{ cursor: 'pointer' }}>
+          <div className="stat-icon" style={{ background: '#fef3c7', color: '#d97706' }}><Clock size={22} /></div>
+          <div className="stat-info">
+            <div className="stat-label">Pending Review</div>
+            <div className="stat-value">{loading ? '—' : pendingApps}</div>
+          </div>
+        </div>
+
+        <div className="stat-card" onClick={() => navigate('/products')} style={{ cursor: 'pointer' }}>
+          <div className="stat-icon" style={{ background: '#f3e8ff', color: '#7c3aed' }}><Package size={22} /></div>
+          <div className="stat-info">
+            <div className="stat-label">Products Registered</div>
+            <div className="stat-value">{loading ? '—' : data.products.length}</div>
+          </div>
+        </div>
       </div>
 
       <div className="dashboard-grid">
@@ -147,37 +285,117 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Certificates */}
+        {/* Certificates with Expiry Periods & Direct Renewal */}
         <div className="card">
-          <div className="card-header">
+          <div className="card-header" style={{ flexWrap: 'wrap', gap: 10 }}>
             <div>
-              <div className="card-title">My Certificates</div>
-              <div className="card-subtitle">Active halal certifications</div>
+              <div className="card-title">My Certificates ({data.certificates.length})</div>
+              <div className="card-subtitle">Active, expiring, and historical halal certifications</div>
             </div>
-            <Link to="/certificates" className="btn btn-ghost btn-sm">View All</Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* Filter Tabs */}
+              <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: 2, borderRadius: 8 }}>
+                {[
+                  { id: 'all', label: `All (${data.certificates.length})` },
+                  { id: 'active', label: `Active (${activeCertList.length})` },
+                  { id: 'expiring', label: `Expiring (${expiringSoonCertList.length})` },
+                  { id: 'expired', label: `Expired (${expiredCertList.length})` },
+                ].map(t => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setCertFilterTab(t.id)}
+                    style={{
+                      background: certFilterTab === t.id ? '#fff' : 'transparent',
+                      color: certFilterTab === t.id ? 'var(--primary)' : '#64748b',
+                      border: 'none',
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: certFilterTab === t.id ? 700 : 500,
+                      cursor: 'pointer',
+                      boxShadow: certFilterTab === t.id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <Link to="/certificates" className="btn btn-ghost btn-sm">Manage</Link>
+            </div>
           </div>
           <div>
             {loading ? <div className="loading-overlay"><div className="spinner" /></div> :
-              data.certificates.length === 0 ? (
+              displayedCerts.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-state-icon"><Award /></div>
-                  <div className="empty-state-title">No Certificates Yet</div>
-                  <div className="empty-state-text">Certificates will appear here once issued</div>
+                  <div className="empty-state-title">No Certificates in this view</div>
+                  <div className="empty-state-text">Certificates will appear here once issued by HFA</div>
                 </div>
               ) : (
                 <table>
                   <thead>
-                    <tr><th>Certificate No.</th><th>Type</th><th>Expires</th><th>Status</th></tr>
+                    <tr><th>Certificate No.</th><th>Type</th><th>Expires / Period</th><th>Status & Action</th></tr>
                   </thead>
                   <tbody>
-                    {data.certificates.slice(0, 5).map(cert => (
-                      <tr key={cert.id}>
-                        <td style={{ fontWeight: 600, fontSize: 12 }}>{cert.certificate_number}</td>
-                        <td style={{ fontSize: 12 }}>{cert.certificate_type}</td>
-                        <td style={{ fontSize: 12 }}>{cert.expiry_date ? new Date(cert.expiry_date).toLocaleDateString('en-GB') : '—'}</td>
-                        <td><span className={`badge ${cert.status === 'active' ? 'badge-green' : 'badge-red'}`}>{cert.status}</span></td>
-                      </tr>
-                    ))}
+                    {displayedCerts.slice(0, 5).map(cert => {
+                      const daysLeft = getDaysRemaining(cert.expiry_date);
+                      const isPast = cert.status === 'expired' || (daysLeft !== null && daysLeft <= 0);
+                      const isExpSoon = daysLeft !== null && daysLeft > 0 && daysLeft <= 90;
+
+                      return (
+                        <tr key={cert.id || cert._id}>
+                          <td>
+                            <Link to={`/certificates`} style={{ fontWeight: 700, fontSize: 12, color: 'var(--primary)', textDecoration: 'none' }}>
+                              {cert.certificate_number}
+                            </Link>
+                          </td>
+                          <td style={{ fontSize: 12 }}>{cert.certificate_type}</td>
+                          <td style={{ fontSize: 12 }}>
+                            <div>{cert.expiry_date ? new Date(cert.expiry_date).toLocaleDateString('en-GB') : '—'}</div>
+                            {cert.expiry_date && (
+                              <div style={{ marginTop: 2 }}>
+                                {isPast ? (
+                                  <span style={{ fontSize: 10.5, fontWeight: 700, color: '#dc2626' }}>
+                                    Expired {Math.abs(daysLeft)}d ago
+                                  </span>
+                                ) : isExpSoon ? (
+                                  <span style={{ fontSize: 10.5, fontWeight: 700, color: '#d97706' }}>
+                                    ⚠️ {daysLeft} days left
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: 10.5, fontWeight: 600, color: '#16a34a' }}>
+                                    {daysLeft} days left
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span className={`badge ${isPast ? 'badge-red' : isExpSoon ? 'badge-orange' : 'badge-green'}`}>
+                                {isPast ? 'Expired' : isExpSoon ? 'Expiring Soon' : 'Active'}
+                              </span>
+                              {(isPast || isExpSoon) && (
+                                <button
+                                  className="btn btn-sm"
+                                  onClick={() => navigate(`/certificates?renewCertId=${cert._id || cert.id}`)}
+                                  style={{
+                                    padding: '3px 8px', fontSize: 10.5, fontWeight: 700, borderRadius: 6,
+                                    background: '#7c3aed', color: '#fff', border: 'none', cursor: 'pointer',
+                                    display: 'inline-flex', alignItems: 'center', gap: 4
+                                  }}
+                                  title="Renew this certificate"
+                                >
+                                  <RotateCcw size={11} /> Renew
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )
@@ -240,7 +458,7 @@ export default function DashboardPage() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowForms(false)}>
           <div className="modal" style={{ maxWidth: 540 }}>
             <div className="modal-header">
-              <span className="modal-title">Official HFA Forms & Templates</span>
+              <span className="modal-title">Official HFA Forms &amp; Templates</span>
               <button className="modal-close" onClick={() => setShowForms(false)}><X size={16} /></button>
             </div>
             <div className="modal-body">
@@ -251,7 +469,7 @@ export default function DashboardPage() {
                 {OFFICIAL_FORMS.map(f => (
                   <div key={f.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', border: '1px solid var(--border)', borderRadius: 12, background: '#f8fafc' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 36, height: 36, background: 'white', borderRadius: 8, display: 'flex', alignItems: 'center', justifyCenter: 'center', border: '1px solid var(--border)' }}>
+                      <div style={{ width: 36, height: 36, background: 'white', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
                         <FileText size={18} color="var(--primary)" />
                       </div>
                       <div>
