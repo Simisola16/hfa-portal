@@ -362,7 +362,7 @@ export default function Layout() {
               </div>
             </div>
 
-            <div className="topbar-actions">
+            <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               {!socketConnected && (
                 <div style={{
                   display: 'flex',
@@ -381,12 +381,10 @@ export default function Layout() {
                   <span>Reconnecting...</span>
                 </div>
               )}
-
-              {/* Notification Bell & Dropdown */}
-              <div style={{ position: 'relative' }} ref={panelRef}>
+              {/* Notification Bell with animated pulse & popup */}
+              <div ref={panelRef} style={{ position: 'relative' }}>
                 <button
-                  className={`icon-btn ${animateBell ? 'bell-pulse' : ''}`}
-                  title="Notifications"
+                  className={`btn btn-ghost btn-sm ${animateBell ? 'bell-pulse' : ''}`}
                   onClick={toggleNotifs}
                   style={{ position: 'relative' }}
                 >
@@ -428,15 +426,99 @@ export default function Layout() {
 
           <main className="page-content"><Outlet /></main>
 
-          {/* Activation Overlay */}
-          {profile?.is_active === false && !['/dashboard', '/sites', '/products', '/profile', '/add-site'].includes(location.pathname) && (
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 40 }}>
-              <div className="animate-in" style={{ maxWidth: 480, background: 'white', padding: 48, borderRadius: 32, boxShadow: '0 25px 60px rgba(0,0,0,0.12)', border: '1px solid #f1f5f9' }}>
-                <div style={{ fontSize: 72, marginBottom: 24 }}>🛡️</div>
-                <h2 style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', marginBottom: 16, letterSpacing: '-0.5px' }}>Account Review in Progress</h2>
-                <p style={{ color: '#475569', fontSize: 16, lineHeight: 1.6, marginBottom: 32 }}>Your organization is currently being verified by the HFA Administration. You will receive a notification and an email once your portal access is granted.</p>
-                <div style={{ padding: '16px 24px', background: '#fefce8', border: '1px solid #fef08a', color: '#854d0e', borderRadius: 16, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center' }}>
-                  <AlertCircle size={18} /> Typical review time: 24-48 business hours
+          {/* Activation Overlay - Fixed & Non-Scrollable */}
+          {isInactiveBlocked && (
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                width: '100vw',
+                height: '100vh',
+                background: 'rgba(15, 23, 42, 0.78)',
+                backdropFilter: 'blur(10px)',
+                zIndex: 99999,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                padding: '24px',
+                overflow: 'hidden',
+                userSelect: 'none'
+              }}
+            >
+              <div
+                className="animate-in"
+                style={{
+                  maxWidth: 480,
+                  width: '100%',
+                  background: '#ffffff',
+                  padding: '38px 32px 32px',
+                  borderRadius: 24,
+                  boxShadow: '0 30px 60px -12px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1)',
+                  border: '1px solid #e2e8f0',
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}
+              >
+                <div
+                  style={{
+                    width: 68,
+                    height: 68,
+                    borderRadius: 20,
+                    background: '#eff6ff',
+                    border: '1.5px solid #bfdbfe',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 18px',
+                    color: '#2563eb',
+                    fontSize: 32
+                  }}
+                >
+                  🛡️
+                </div>
+                <h2 style={{ fontSize: 24, fontWeight: 800, color: '#0f172a', marginBottom: 12, letterSpacing: '-0.02em' }}>
+                  Account Review in Progress
+                </h2>
+                <p style={{ color: '#475569', fontSize: 14.5, lineHeight: 1.6, marginBottom: 20 }}>
+                  Your organization is currently being verified by the HFA Administration. You will receive a notification and an email once your portal access is granted.
+                </p>
+                <div
+                  style={{
+                    padding: '12px 18px',
+                    background: '#fefce8',
+                    border: '1px solid #fef08a',
+                    color: '#854d0e',
+                    borderRadius: 14,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    justifyContent: 'center',
+                    marginBottom: 24
+                  }}
+                >
+                  <AlertCircle size={17} style={{ flexShrink: 0 }} /> Typical review time: 24-48 business hours
+                </div>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                  <button
+                    className="btn btn-outline"
+                    onClick={() => navigate('/dashboard')}
+                    style={{ fontSize: 13.5, fontWeight: 700, padding: '10px 20px', borderRadius: 10 }}
+                  >
+                    Return to Dashboard
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => navigate('/sites')}
+                    style={{ fontSize: 13.5, fontWeight: 700, padding: '10px 20px', borderRadius: 10, background: '#1B7A7A', borderColor: '#1B7A7A' }}
+                  >
+                    Manage Sites
+                  </button>
                 </div>
               </div>
             </div>
