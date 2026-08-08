@@ -107,21 +107,29 @@ export default function Layout() {
     };
 
     const titleLower = (notif.title || '').toLowerCase();
+    const messageLower = (notif.message || '').toLowerCase();
     let modalType = null;
-    if (titleLower.includes('proposal')) modalType = 'proposal';
-    else if (titleLower.includes('invoice')) modalType = 'payment';
-    else if (titleLower.includes('audit') || titleLower.includes('non-conformity') || titleLower.includes('nc')) modalType = 'audit';
-    else if (titleLower.includes('agreement')) modalType = 'agreement';
+    if (titleLower.includes('proposal') || messageLower.includes('proposal')) modalType = 'proposal';
+    else if (titleLower.includes('invoice') || messageLower.includes('invoice') || titleLower.includes('payment') || messageLower.includes('payment')) modalType = 'payment';
+    else if (titleLower.includes('non-conformity') || titleLower.includes('nc ') || titleLower.endsWith('nc') || messageLower.includes('non-conformity') || messageLower.includes('nc ')) modalType = 'nc';
+    else if (titleLower.includes('audit') || titleLower.includes('date') || messageLower.includes('audit') || messageLower.includes('date')) modalType = 'audit';
+    else if (titleLower.includes('agreement') || messageLower.includes('agreement')) modalType = 'agreement';
 
     const extractAppId = (notifObj) => {
       if (!notifObj) return null;
       const raw = notifObj.application_id || notifObj.appId || notifObj.app_id || 
-                  notifObj.data?.application_id || notifObj.data?.app_id || notifObj.data?.appId;
+                  notifObj.data?.application_id || notifObj.data?.app_id || notifObj.data?.appId ||
+                  notifObj.audit_id || notifObj.invoice_id || notifObj.agreement_id || notifObj.proposal_id;
       if (raw) {
         if (typeof raw === 'string') return raw;
         if (typeof raw === 'object') return String(raw._id || raw.id || '');
       }
-      const match = (notifObj.link || '').match(/([a-fA-F0-9]{24})/) || (notifObj.message || '').match(/([a-fA-F0-9]{24})/);
+      const link = notifObj.link || '';
+      const m1 = link.match(/\/applications\/([a-fA-F0-9]{24})/);
+      if (m1) return m1[1];
+      const m2 = link.match(/appId=([a-fA-F0-9]{24})/);
+      if (m2) return m2[1];
+      const match = link.match(/([a-fA-F0-9]{24})/) || (notifObj.message || '').match(/([a-fA-F0-9]{24})/);
       if (match) return match[1];
       return null;
     };
@@ -160,7 +168,7 @@ export default function Layout() {
           </button>
         </div>
 
-        {modalType && (
+        {(modalType || notif.link) && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
             <button
               className="btn btn-primary btn-sm"
@@ -168,10 +176,16 @@ export default function Layout() {
               onClick={(e) => {
                 e.stopPropagation();
                 toast.dismiss(t.id);
-                setQuickModal({ type: modalType, appId: targetAppId });
+                if (modalType && targetAppId) {
+                  setQuickModal({ type: modalType, appId: targetAppId });
+                } else if (notif.link) {
+                  navigate(notif.link);
+                } else if (modalType) {
+                  setQuickModal({ type: modalType, appId: null });
+                }
               }}
             >
-              View &amp; Respond
+              {modalType ? 'View & Respond' : 'View Details'}
             </button>
           </div>
         )}
@@ -449,11 +463,12 @@ export default function Layout() {
         />
       )}
 
-      {quickModal?.type === 'audit' && (
+      {(quickModal?.type === 'audit' || quickModal?.type === 'nc') && (
         <ClientAuditModal
           isOpen={true}
           onClose={() => setQuickModal(null)}
           appId={quickModal.appId}
+          mode={quickModal.type === 'nc' ? 'nc_upload' : 'select_dates'}
           onSuccess={() => fetchNotifs()}
         />
       )}

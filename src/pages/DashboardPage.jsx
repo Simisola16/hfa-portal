@@ -542,7 +542,7 @@ export default function DashboardPage() {
       <FirstSiteCreatedModal
         isOpen={showFirstSiteModal}
         onClose={handleDismissFirstSiteModal}
-        siteName={data.sites?.[0]?.name || data.sites?.[0]?.est_name}
+        siteName={data.sites?.[0]?.name || data.sites?.[0]?.est_name || data.sites?.[0]?.company_name || data.profile?.company_name || 'Primary Manufacturing Facility'}
       />
     </div>
   );

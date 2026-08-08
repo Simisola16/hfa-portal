@@ -131,14 +131,32 @@ export default function NotificationCenter({
     
     let modalType = null;
     if (titleLower.includes('proposal') || messageLower.includes('proposal')) modalType = 'proposal';
-    else if (titleLower.includes('invoice') || messageLower.includes('invoice') || titleLower.includes('payment')) modalType = 'payment';
-    else if (titleLower.includes('audit') || titleLower.includes('nc') || messageLower.includes('audit')) modalType = 'audit';
+    else if (titleLower.includes('invoice') || messageLower.includes('invoice') || titleLower.includes('payment') || messageLower.includes('payment')) modalType = 'payment';
+    else if (titleLower.includes('non-conformity') || titleLower.includes('nc ') || titleLower.endsWith('nc') || messageLower.includes('non-conformity') || messageLower.includes('nc ')) modalType = 'nc';
+    else if (titleLower.includes('audit') || titleLower.includes('date') || messageLower.includes('audit') || messageLower.includes('date')) modalType = 'audit';
     else if (titleLower.includes('agreement') || messageLower.includes('agreement')) modalType = 'agreement';
 
+    const getCleanId = (val) => {
+      if (!val) return '';
+      if (typeof val === 'string') return val;
+      if (typeof val === 'object') return String(val._id || val.id || '');
+      return String(val);
+    };
+
     const extractAppId = () => {
-      const raw = n.application_id || n.appId || n.app_id || n.data?.application_id || n.data?.app_id;
-      if (raw) return typeof raw === 'string' ? raw : String(raw._id || raw.id || '');
-      const match = (n.link || '').match(/([a-fA-F0-9]{24})/) || (n.message || '').match(/([a-fA-F0-9]{24})/);
+      const raw = n.application_id || n.appId || n.app_id || 
+                  n.data?.application_id || n.data?.app_id || n.data?.appId ||
+                  n.audit_id || n.invoice_id || n.agreement_id || n.proposal_id;
+      if (raw) {
+        const clean = getCleanId(raw);
+        if (clean && clean !== '[object Object]') return clean;
+      }
+      const link = n.link || '';
+      const m1 = link.match(/\/applications\/([a-fA-F0-9]{24})/);
+      if (m1) return m1[1];
+      const m2 = link.match(/appId=([a-fA-F0-9]{24})/);
+      if (m2) return m2[1];
+      const match = link.match(/([a-fA-F0-9]{24})/) || (n.message || '').match(/([a-fA-F0-9]{24})/);
       return match ? match[1] : null;
     };
 
@@ -151,6 +169,8 @@ export default function NotificationCenter({
 
     if (n.link) {
       navigate(n.link);
+    } else if (modalType && onOpenActionModal) {
+      onOpenActionModal(modalType, null);
     }
   };
 
