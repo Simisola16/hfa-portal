@@ -983,3 +983,41 @@ select.form-control { cursor: pointer; }
   .grid-cols-2, .grid-cols-3, .grid-cols-4, .grid-cols-12 { grid-template-columns: 1fr !important; }
   .col-span-4, .col-span-8, .col-span-12 { grid-column: span 1 / span 1 !important; }
 }
+
+/* ===== NOTIFICATION DROPDOWN & ANIMATIONS ===== */
+@keyframes notifDropdownIn {
+  0% { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes bellPulse {
+  0% { transform: scale(1); }
+  15% { transform: scale(1.25) rotate(12deg); }
+  30% { transform: scale(1.25) rotate(-12deg); }
+  45% { transform: scale(1.2) rotate(8deg); }
+  60% { transform: scale(1.15) rotate(-8deg); }
+  75% { transform: scale(1.05) rotate(4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.bell-pulse {
+  animation: bellPulse 0.8s ease-in-out;
+}
+
+.hover-notif:hover {
+  background: #f8fafc !important;
+}
+
+.notification-dropdown-panel::-webkit-scrollbar {
+  width: 6px;
+}
+.notification-dropdown-panel::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.notification-dropdown-panel::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.notification-dropdown-panel::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
