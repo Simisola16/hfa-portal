@@ -70,7 +70,7 @@ export default function ApplicationsPage({ openNew }) {
     return s !== 'approved' && s !== 'rejected' && s !== 'certificate_issued';
   });
 
-  const [form, setForm] = useState({
+  const initialFormState = {
     application_type: 'new',
     category: CATEGORIES[0],
     site_id: '',
@@ -78,6 +78,47 @@ export default function ApplicationsPage({ openNew }) {
     scope: '',
     establishment_name: '',
     establishment_address: '',
+    company_reg_number: '',
+    vat_number: '',
+    is_manufacturer: '',
+    site_address: '',
+    years_in_business: '',
+    trading_name: '',
+    website: '',
+    company_email: '',
+    mfr_name: '',
+    mfr_reg_number: '',
+    mfr_vat: '',
+    mfr_address: '',
+    mfr_years: '',
+    mfr_trading_name: '',
+    mfr_website: '',
+    mfr_email: '',
+    mfr_hours: '',
+    mfr_employees: '',
+    primary_contact_name: '',
+    primary_work_tel: '',
+    primary_mobile: '',
+    primary_email: '',
+    tech_work_tel: '',
+    tech_mobile: '',
+    food_nature: '',
+    food_nature_other: '',
+    nonfood_nature: '',
+    nonfood_nature_other: '',
+    business_type: '',
+    business_type_other: '',
+    export_only: '',
+    prev_gso_app: '',
+    prev_refused: '',
+    brand_name: '',
+    products_on_site_count: '',
+    products_halal_count: '',
+    halal_schedule: '',
+    use_hfa_logo: '',
+    referral_source: '',
+    signatory_position: '',
+    signatory_date: new Date().toISOString().split('T')[0],
     managing_director: '',
     finance_contact: '',
     qa_contact: '',
@@ -92,7 +133,9 @@ export default function ApplicationsPage({ openNew }) {
     declared_true: false,
     notes: '',
     products: []
-  });
+  };
+
+  const [form, setForm] = useState(initialFormState);
 
   const [newProduct, setNewProduct] = useState({ name: '', brand: '', category: '' });
   const [hasActiveCert, setHasActiveCert] = useState(false);
@@ -236,14 +279,22 @@ export default function ApplicationsPage({ openNew }) {
     if (selected) {
       const isEligible = checkRenewalEligibility(siteId);
       const autoType = isEligible ? 'renewal' : 'new';
+      const fullAddr = [selected.address, selected.address_2, selected.city, selected.state, selected.postal_code, selected.country]
+        .filter(Boolean)
+        .join(', ');
 
       setForm(f => ({
         ...f,
         site_id: siteId,
         site_name: selected.name,
-        establishment_name: selected.name,
-        establishment_address: `${selected.address || ''}, ${selected.address_2 || ''}, ${selected.city || ''}, ${selected.state || ''}`,
-        managing_director: selected.contact_person || '',
+        establishment_name: f.establishment_name || selected.name || '',
+        establishment_address: f.establishment_address || fullAddr,
+        site_address: f.site_address || fullAddr,
+        managing_director: f.managing_director || selected.contact_person || '',
+        company_email: f.company_email || selected.email || '',
+        primary_contact_name: f.primary_contact_name || selected.contact_person || '',
+        primary_email: f.primary_email || selected.email || '',
+        primary_work_tel: f.primary_work_tel || selected.phone || '',
         application_type: autoType
       }));
     }
@@ -414,13 +465,7 @@ export default function ApplicationsPage({ openNew }) {
   };
 
   const resetForm = () => {
-    setForm({
-      application_type: 'new', category: CATEGORIES[0], site_id: '', site_name: '', scope: '',
-      establishment_name: '', establishment_address: '', managing_director: '',
-      finance_contact: '', qa_contact: '', halal_coordinator: '', production_contact: '',
-      production_schedule: '', employee_count: '', has_porcine: false, has_intoxicants: false,
-      porcine_details: '', intoxicants_details: '', declared_true: false, notes: '', products: []
-    });
+    setForm(initialFormState);
     setRenewalFiles([]);
     setModalStep(1);
   };
