@@ -197,7 +197,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
                   </div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: config.badge }}>
-                      {config.title} &middot; <span style={{ color: '#64748b', fontWeight: 600 }}>#{app.application_number}</span>
+                      {config.title} &middot; <span style={{ color: '#64748b', fontWeight: 600 }}>{app.site_name || app.establishment_name || 'Site'}</span>
                     </div>
                     <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
                       {config.desc}

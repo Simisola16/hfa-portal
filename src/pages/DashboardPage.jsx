@@ -272,12 +272,12 @@ export default function DashboardPage() {
               ) : (
                 <table>
                   <thead>
-                    <tr><th>App No.</th><th>Category</th><th>Status</th></tr>
+                    <tr><th>Site Name</th><th>Category</th><th>Status</th></tr>
                   </thead>
                   <tbody>
                     {recentApps.map(app => (
                       <tr key={app.id || app._id}>
-                        <td><Link to={`/applications?appId=${app.id || app._id}`} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', fontSize: 12 }}>{app.application_number}</Link></td>
+                        <td><Link to={`/applications?appId=${app.id || app._id}`} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', fontSize: 12 }}>{app.site_name || app.establishment_name || 'Site'}</Link></td>
                         <td style={{ fontSize: 12, maxWidth: 150 }}><span className="truncate" style={{ display: 'block' }}>{app.category}</span></td>
                         <td><span className={`badge ${STATUS_BADGE[app.status] || 'badge-gray'}`}>{app.status?.replace(/_/g, ' ')}</span></td>
                       </tr>

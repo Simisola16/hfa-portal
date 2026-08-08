@@ -144,7 +144,7 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
             <div>
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18, marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>
-                  Application #{app?.application_number || 'N/A'} &middot; {app?.establishment_name}
+                  {app?.site_name || app?.establishment_name || 'Site'}
                 </div>
                 <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: '6px 0 12px' }}>
                   {proposal.title || 'Halal Certification Proposal'}

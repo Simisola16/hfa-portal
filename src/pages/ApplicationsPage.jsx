@@ -586,7 +586,7 @@ export default function ApplicationsPage({ openNew }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Header Row */}
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.5fr 1fr 1.5fr auto', gap: 16, padding: '0 20px', fontSize: 12, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                <div>App Number</div>
+                <div>Site Name</div>
                 <div>Type</div>
                 <div>Category</div>
                 <div>Date</div>
@@ -618,8 +618,8 @@ export default function ApplicationsPage({ openNew }) {
                   onClick={() => navigate(`/applications/${app._id || app.id}/track`)}
                 >
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--primary)' }}>{app.application_number}</div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{app.site_name}</div>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--primary)' }}>{app.site_name || app.establishment_name || 'Site'}</div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{app.establishment_name || app.site_name}</div>
                   </div>
                   <div>
                     <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', background: '#f1f5f9', color: '#475569', borderRadius: 6, textTransform: 'uppercase' }}>
@@ -1172,31 +1172,26 @@ export default function ApplicationsPage({ openNew }) {
                               <div className="form-group" style={{ margin: 0 }}>
                                 <label className="form-label">Food Manufacturers <span>*</span></label>
                                 <select className="form-control" value={form.food_nature || ''} onChange={e => setForm(f => ({ ...f, food_nature: e.target.value }))}>
-                                  <option value="">Select nature of the business</option>
-                                  <option value="abattoir">Abattoir / Slaughterhouse</option>
-                                  <option value="meat_processing">Meat Processing</option>
-                                  <option value="food_manufacturing">Food Manufacturing</option>
-                                  <option value="catering">Catering / Food Service</option>
-                                  <option value="food_retail">Food Retail</option>
-                                  <option value="food_other">Others</option>
+                                  <option value="">Select option</option>
+                                  <option value="Meat/ meat based products">Meat/ meat based products</option>
+                                  <option value="Dairy">Dairy</option>
+                                  <option value="Food Additives">Food Additives</option>
+                                  <option value="Confectionery">Confectionery</option>
+                                  <option value="Beverages">Beverages</option>
+                                  <option value="Ready meals">Ready meals</option>
+                                  <option value="Snacks">Snacks</option>
                                 </select>
-                                {form.food_nature === 'food_other' && (
-                                  <input type="text" className="form-control" style={{ marginTop: 8 }} placeholder="Please specify..." value={form.food_nature_other || ''} onChange={e => setForm(f => ({ ...f, food_nature_other: e.target.value }))} />
-                                )}
                               </div>
                               <div className="form-group" style={{ margin: 0 }}>
                                 <label className="form-label">Non-Food Manufacturers <span>*</span></label>
                                 <select className="form-control" value={form.nonfood_nature || ''} onChange={e => setForm(f => ({ ...f, nonfood_nature: e.target.value }))}>
-                                  <option value="">Select nature of the business</option>
-                                  <option value="cosmetics">Cosmetics</option>
-                                  <option value="pharmaceuticals">Pharmaceuticals</option>
-                                  <option value="packaging">Packaging</option>
-                                  <option value="logistics">Logistics / Storage</option>
-                                  <option value="nonfood_other">Others</option>
+                                  <option value="">Select option</option>
+                                  <option value="Cosmetics">Cosmetics</option>
+                                  <option value="Pharmaceutical">Pharmaceutical</option>
+                                  <option value="Packaging">Packaging</option>
+                                  <option value="Cleaning Agentsy">Cleaning Agentsy</option>
+                                  <option value="Filters">Filters</option>
                                 </select>
-                                {form.nonfood_nature === 'nonfood_other' && (
-                                  <input type="text" className="form-control" style={{ marginTop: 8 }} placeholder="Please specify..." value={form.nonfood_nature_other || ''} onChange={e => setForm(f => ({ ...f, nonfood_nature_other: e.target.value }))} />
-                                )}
                               </div>
                             </div>
                           </div>
@@ -1207,16 +1202,12 @@ export default function ApplicationsPage({ openNew }) {
                               <label className="form-label">2. Type of Business <span>*</span></label>
                               <select className="form-control" value={form.business_type || ''} onChange={e => setForm(f => ({ ...f, business_type: e.target.value }))}>
                                 <option value="">Select type of business</option>
-                                <option value="manufacturer">Manufacturer</option>
-                                <option value="distributor">Distributor</option>
-                                <option value="importer">Importer</option>
-                                <option value="exporter">Exporter</option>
-                                <option value="retailer">Retailer</option>
-                                <option value="other">Others</option>
+                                <option value="Manufacturer">Manufacturer</option>
+                                <option value="Retailer">Retailer</option>
+                                <option value="Importer">Importer</option>
+                                <option value="Exporter Agentsy">Exporter Agentsy</option>
+                                <option value="Distributor">Distributor</option>
                               </select>
-                              {form.business_type === 'other' && (
-                                <input type="text" className="form-control" style={{ marginTop: 8 }} placeholder="Please specify..." value={form.business_type_other || ''} onChange={e => setForm(f => ({ ...f, business_type_other: e.target.value }))} />
-                              )}
                             </div>
                             <div className="form-group" style={{ margin: 0 }}>
                               <label className="form-label">3. Certification for Export Purposes Only? <span>*</span></label>
@@ -1267,9 +1258,9 @@ export default function ApplicationsPage({ openNew }) {
                                 <label className="form-label">10. Schedule for Halal Production</label>
                                 <select className="form-control" value={form.halal_schedule || ''} onChange={e => setForm(f => ({ ...f, halal_schedule: e.target.value }))}>
                                   <option value="">Select Option</option>
-                                  <option value="dedicated">Dedicated Halal line</option>
-                                  <option value="shared">Shared line (cleaned between runs)</option>
-                                  <option value="alternating">Alternating Halal / non-Halal</option>
+                                  <option value="Regular/Routine hala product">Regular/Routine hala product</option>
+                                  <option value="Irregular/week.monthly halal production">Irregular/week.monthly halal production</option>
+                                  <option value="Seasonal/Occasional/Order based halal production">Seasonal/Occasional/Order based halal production</option>
                                 </select>
                               </div>
                             </div>
@@ -1311,12 +1302,12 @@ export default function ApplicationsPage({ openNew }) {
                               <label className="form-label">14. How Did You Hear About Us? <span>*</span></label>
                               <select className="form-control" value={form.referral_source || ''} onChange={e => setForm(f => ({ ...f, referral_source: e.target.value }))} required>
                                 <option value="">Select Option</option>
-                                <option value="website">Website</option>
-                                <option value="google">Google Search</option>
-                                <option value="social_media">Social Media</option>
-                                <option value="word_of_mouth">Word of Mouth</option>
-                                <option value="trade_show">Trade Show / Event</option>
-                                <option value="other">Other</option>
+                                <option value="Social Media/Search Engine">Social Media/Search Engine</option>
+                                <option value="Recommended by supplier/customer">Recommended by supplier/customer</option>
+                                <option value="Required by a regulatory authority">Required by a regulatory authority</option>
+                                <option value="Industry event/conference">Industry event/conference</option>
+                                <option value="HFA advertisement/communication">HFA advertisement/communication</option>
+                                <option value="Other">Other</option>
                               </select>
                             </div>
                           </div>

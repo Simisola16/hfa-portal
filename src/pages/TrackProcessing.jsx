@@ -267,7 +267,7 @@ export default function TrackProcessing() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
             <h1 style={{ fontSize: 26, fontWeight: 900, color: 'var(--text-primary)', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
-              {app.application_number}
+              {app.site_name || app.establishment_name || 'Site'}
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span className={`badge ${STATUS_BADGE[status] || 'badge-blue'}`}>

@@ -172,7 +172,7 @@ export default function AuditsPage() {
                 }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--primary)' }}>Application #{appNumber}</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--primary)' }}>{siteName || companyName}</span>
                       <span className={`badge ${STATUS_BADGE[item.status] || 'badge-blue'}`}>
                         {STATUS_LABELS[item.status] || (item.status || 'Scheduled').replace(/_/g, ' ')}
                       </span>

@@ -105,7 +105,7 @@ export default function AgreementPage() {
               <thead>
                 <tr>
                   <th>Agreement Title</th>
-                  <th>Application Ref</th>
+                  <th>Site Name</th>
                   <th>Date Received</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -117,7 +117,7 @@ export default function AgreementPage() {
                     <td>
                       <div style={{ fontWeight: 700, color: 'var(--primary)' }}>{a.title || 'Certification Agreement'}</div>
                     </td>
-                    <td>{a.application_id?.application_number || '—'}</td>
+                    <td>{a.application_id?.site_name || a.application_id?.establishment_name || '—'}</td>
                     <td>{new Date(a.createdAt || a.created_at).toLocaleDateString('en-GB')}</td>
                     <td>
                       <span className={`badge ${
@@ -158,7 +158,7 @@ export default function AgreementPage() {
                 <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1e293b', marginBottom: 4 }}>{selected.title}</h3>
                 <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                   <div style={{ fontSize: 13, color: '#64748b' }}>
-                    Application Ref: <strong>{selected.application_id?.application_number || 'N/A'}</strong>
+                    Site: <strong>{selected.application_id?.site_name || selected.application_id?.establishment_name || 'N/A'}</strong>
                   </div>
                 </div>
               </div>

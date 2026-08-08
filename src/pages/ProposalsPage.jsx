@@ -90,7 +90,7 @@ export default function ProposalsPage() {
               <thead>
                 <tr>
                   <th>Proposal Title</th>
-                  <th>Application Ref</th>
+                  <th>Site Name</th>
                   <th>Est. Cost</th>
                   <th>Date Received</th>
                   <th>Status</th>
@@ -104,7 +104,7 @@ export default function ProposalsPage() {
                       <div style={{ fontWeight: 700, color: 'var(--primary)' }}>{p.title || 'Certification Proposal'}</div>
                       <div style={{ fontSize: 11, color: '#64748b' }}>{p.reference_number || 'No Ref'}</div>
                     </td>
-                    <td>{p.application_id?.application_number || '—'}</td>
+                    <td>{p.application_id?.site_name || p.application_id?.establishment_name || '—'}</td>
                     <td style={{ fontWeight: 600 }}>£{p.estimated_cost || p.amount || '—'}</td>
                     <td>{new Date(p.createdAt).toLocaleDateString('en-GB')}</td>
                     <td>
