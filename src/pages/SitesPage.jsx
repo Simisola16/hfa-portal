@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { Plus, MapPin, Edit, Trash2, X } from 'lucide-react';
+import FirstSiteCreatedModal from '../components/FirstSiteCreatedModal';
 
 export default function SitesPage() {
   const initialForm = {
@@ -16,6 +17,8 @@ export default function SitesPage() {
   const [editing, setEditing] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(initialForm);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdSiteName, setCreatedSiteName] = useState('');
 
   const fetch = () => { setLoading(true); api.get('/api/sites').then(d => setSites(d.data || [])).catch(() => toast.error('Failed to fetch sites')).finally(() => setLoading(false)); };
   useEffect(() => { fetch(); }, []);
@@ -26,11 +29,27 @@ export default function SitesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setSubmitting(true);
+    const wasFirstSite = sites.length === 0;
+    const siteTitle = form.name || form.est_name || 'Manufacturing Site';
     try {
-      if (editing) { await api.put(`/api/sites/${editing.id}`, form); toast.success('Site updated successfully'); }
-      else { await api.post('/api/sites', form); toast.success('Site added successfully'); }
-      setShowModal(false); fetch();
-    } catch (err) { toast.error(err.message); } finally { setSubmitting(false); }
+      if (editing) {
+        await api.put(`/api/sites/${editing.id}`, form);
+        toast.success('Site updated successfully');
+      } else {
+        await api.post('/api/sites', form);
+        toast.success('Site added successfully');
+        if (wasFirstSite) {
+          setCreatedSiteName(siteTitle);
+          setShowSuccessModal(true);
+        }
+      }
+      setShowModal(false);
+      fetch();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -251,6 +270,13 @@ export default function SitesPage() {
           </div>
         </div>
       )}
+
+      {/* Pop up when first site is created to guide client to application */}
+      <FirstSiteCreatedModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        siteName={createdSiteName}
+      />
     </div>
   );
 }

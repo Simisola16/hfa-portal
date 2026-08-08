@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, RefreshCw, Download, X, MapPin, RotateCcw, ChevronRight } from 'lucide-react';
 import ActionsNeededWidget from '../components/ActionsNeededWidget';
+import FirstSiteCreatedModal from '../components/FirstSiteCreatedModal';
 
 const STATUS_BADGE = {
   submitted: 'badge-blue',
@@ -27,10 +28,12 @@ const OFFICIAL_FORMS = [
 export default function DashboardPage() {
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState({ applications: [], certificates: [], products: [], messages_count: 0, sites: [] });
   const [loading, setLoading] = useState(true);
   const [showForms, setShowForms] = useState(false);
   const [showSiteModal, setShowSiteModal] = useState(false);
+  const [showFirstSiteModal, setShowFirstSiteModal] = useState(false);
   const [certFilterTab, setCertFilterTab] = useState('all');
 
   useEffect(() => {
@@ -42,8 +45,9 @@ export default function DashboardPage() {
       api.get('/api/sites'),
     ]).then(([apps, certs, prods, msgs, sitesRes]) => {
       const userSites = sitesRes.data || [];
+      const userApps = apps.data || [];
       setData({
-        applications: apps.data || [],
+        applications: userApps,
         certificates: certs.data || [],
         products: prods.data || [],
         messages_count: msgs.count || 0,
@@ -53,13 +57,20 @@ export default function DashboardPage() {
       const isDismissed = sessionStorage.getItem('dismissed_site_prompt') === 'true';
       if (userSites.length === 0 && !isDismissed) {
         setShowSiteModal(true);
+      } else if (searchParams.get('first_site') === 'true' || (userSites.length > 0 && userApps.length === 0 && !sessionStorage.getItem('dismissed_first_app_prompt'))) {
+        setShowFirstSiteModal(true);
       }
     }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+  }, [searchParams]);
 
   const handleDismissSiteModal = () => {
     sessionStorage.setItem('dismissed_site_prompt', 'true');
     setShowSiteModal(false);
+  };
+
+  const handleDismissFirstSiteModal = () => {
+    sessionStorage.setItem('dismissed_first_app_prompt', 'true');
+    setShowFirstSiteModal(false);
   };
 
   const now = new Date();
@@ -565,6 +576,13 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Pop up when first site is created to guide client to create application */}
+      <FirstSiteCreatedModal
+        isOpen={showFirstSiteModal}
+        onClose={handleDismissFirstSiteModal}
+        siteName={data.sites?.[0]?.name || data.sites?.[0]?.est_name}
+      />
     </div>
   );
 }

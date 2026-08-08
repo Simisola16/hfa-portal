@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { MapPin, Shield, Building } from 'lucide-react';
+import FirstSiteCreatedModal from '../components/FirstSiteCreatedModal';
 
 export default function AddSitePage() {
   const initialForm = {
@@ -15,6 +16,9 @@ export default function AddSitePage() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
+
+  const [showNextStepModal, setShowNextStepModal] = useState(false);
+  const [createdSiteName, setCreatedSiteName] = useState('');
 
   const set = (k) => (e) => {
     setForm(f => ({ ...f, [k]: e.target.value }));
@@ -32,8 +36,8 @@ export default function AddSitePage() {
     try {
       await api.post('/api/sites', form);
       toast.success('Business Site registered successfully!');
-      // Navigate to dashboard — Layout will re-fetch sites and allow dashboard access
-      navigate('/dashboard');
+      setCreatedSiteName(form.name || form.est_name || 'Manufacturing Site');
+      setShowNextStepModal(true);
     } catch (err) {
       if (err.fields) {
         setErrors(err.fields);
@@ -271,6 +275,15 @@ export default function AddSitePage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', marginTop: 24, color: 'var(--text-muted)', fontSize: 13 }}>
         <Shield size={16} /> Secure Halal Food Authority (HFA) certification system
       </div>
+
+      <FirstSiteCreatedModal
+        isOpen={showNextStepModal}
+        onClose={() => {
+          setShowNextStepModal(false);
+          navigate('/dashboard');
+        }}
+        siteName={createdSiteName}
+      />
     </div>
   );
 }
