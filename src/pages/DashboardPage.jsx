@@ -64,25 +64,52 @@ export default function DashboardPage() {
 
   const now = new Date();
 
-  // Active certificates (status active & not in past)
+  // Helper: check if a certificate has already been renewed or has a renewal in-progress
+  const isCertRenewed = (cert) => {
+    if (!cert) return false;
+    if (cert.is_renewed || cert.status === 'renewed') return true;
+
+    // Check if there is an active renewal application in progress for this certificate or site
+    const hasOngoingRenewalApp = data.applications.some(app => {
+      const isNotFinished = !['rejected', 'certificate_issued'].includes(app.status?.toLowerCase());
+      const isRenewal = app.application_type === 'renewal';
+      const matchesCert = app.renewed_certificate_id && String(app.renewed_certificate_id) === String(cert._id || cert.id);
+      const matchesSite = app.site_id && String(app.site_id?._id || app.site_id) === String(cert.site_id?._id || cert.site_id);
+      return isNotFinished && isRenewal && (matchesCert || matchesSite);
+    });
+    if (hasOngoingRenewalApp) return true;
+
+    // Check if there is a newer active certificate for the same site
+    const hasNewerActiveCert = data.certificates.some(other => {
+      if (String(other._id || other.id) === String(cert._id || cert.id)) return false;
+      const sameSite = cert.site_id && String(other.site_id?._id || other.site_id || '') === String(cert.site_id?._id || cert.site_id || '');
+      const isOtherActive = other.status === 'active' && (!other.expiry_date || new Date(other.expiry_date) >= now);
+      return sameSite && isOtherActive && (!cert.expiry_date || !other.expiry_date || new Date(other.expiry_date) >= new Date(cert.expiry_date));
+    });
+
+    return hasNewerActiveCert;
+  };
+
+  // Active certificates (status active & not in past & not superseded)
   const activeCertList = data.certificates.filter(c => {
     const isPast = c.expiry_date && new Date(c.expiry_date) < now;
-    return c.status === 'active' && !isPast;
+    return c.status === 'active' && !isPast && !c.is_renewed;
   });
 
-  // Expiring soon (within 90 days)
+  // Expiring soon (within 90 days, not already renewed)
   const expiringSoonCertList = data.certificates.filter(c => {
-    if (!c.expiry_date) return false;
+    if (!c.expiry_date || isCertRenewed(c)) return false;
     const diff = new Date(c.expiry_date) - now;
-    return diff > 0 && diff <= 90 * 24 * 60 * 60 * 1000;
+    return diff > 0 && diff <= 90 * 24 * 60 * 60 * 1000 && c.status === 'active';
   });
 
-  // Expired certificates
+  // Expired certificates that have NOT been renewed yet
   const expiredCertList = data.certificates.filter(c => {
+    if (isCertRenewed(c)) return false;
     return c.status === 'expired' || (c.expiry_date && new Date(c.expiry_date) < now);
   });
 
-  // Most urgent certificate to renew
+  // Most urgent un-renewed certificate (expired first, then expiring soon)
   const urgentRenewalCert = expiredCertList[0] || expiringSoonCertList[0] || null;
   const daysToUrgent = urgentRenewalCert?.expiry_date ? Math.ceil((new Date(urgentRenewalCert.expiry_date) - now) / (1000 * 60 * 60 * 24)) : null;
 
@@ -96,14 +123,16 @@ export default function DashboardPage() {
 
   // Filtered certificates for table
   const displayedCerts = data.certificates.filter(c => {
+    const isRenewed = isCertRenewed(c);
     const isPast = c.status === 'expired' || (c.expiry_date && new Date(c.expiry_date) < now);
     const diff = c.expiry_date ? new Date(c.expiry_date) - now : null;
     const isExpiringSoon = diff !== null && diff > 0 && diff <= 90 * 24 * 60 * 60 * 1000;
 
-    if (certFilterTab === 'active') return c.status === 'active' && !isPast;
-    if (certFilterTab === 'expiring') return isExpiringSoon && !isPast;
-    if (certFilterTab === 'expired') return isPast;
-    return true;
+    if (certFilterTab === 'active') return c.status === 'active' && !isPast && !isRenewed;
+    if (certFilterTab === 'expiring') return isExpiringSoon && !isPast && !isRenewed;
+    if (certFilterTab === 'expired') return isPast && !isRenewed;
+    if (certFilterTab === 'renewed') return isRenewed;
+    return !isRenewed || certFilterTab === 'all';
   });
 
   return (

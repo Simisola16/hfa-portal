@@ -187,12 +187,12 @@ export default function CertificatesPage() {
                     const is3Yr = isThreeYearCert(cert);
                     const dates = getSurveillanceDates(cert);
                     const certReqs = survRequests.filter(r => (r.certificate_id?._id || r.certificate_id) === (cert.id || cert._id));
-                    const pendingReq = certReqs.find(r => r.status === 'requested');
-                    const fulfilledReqs = certReqs.filter(r => r.status === 'fulfilled');
                     const effectiveStatus =
-                      cert.status === 'active' && cert.expiry_date && new Date(cert.expiry_date) < new Date()
-                        ? 'expired'
-                        : cert.status;
+                      cert.is_renewed || cert.status === 'renewed'
+                        ? 'renewed'
+                        : cert.status === 'active' && cert.expiry_date && new Date(cert.expiry_date) < new Date()
+                          ? 'expired'
+                          : cert.status;
 
                     return (
                       <React.Fragment key={cert.id || cert._id}>
@@ -205,13 +205,20 @@ export default function CertificatesPage() {
                           <td>{cert.sites?.name || '—'}</td>
                           <td>{cert.issue_date ? new Date(cert.issue_date).toLocaleDateString('en-GB') : '—'}</td>
                           <td>
-                            <span style={{ color: isExpiringSoon(cert.expiry_date) ? 'var(--warning)' : 'inherit' }}>
+                            <span style={{ color: isExpiringSoon(cert.expiry_date) && effectiveStatus !== 'renewed' ? 'var(--warning)' : 'inherit' }}>
                               {cert.expiry_date ? new Date(cert.expiry_date).toLocaleDateString('en-GB') : '—'}
                             </span>
-                            {isExpiringSoon(cert.expiry_date) && <span className="badge badge-orange" style={{ marginLeft: 6, fontSize: 10 }}>Expiring Soon</span>}
+                            {isExpiringSoon(cert.expiry_date) && effectiveStatus === 'active' && (
+                              <span className="badge badge-orange" style={{ marginLeft: 6, fontSize: 10 }}>Expiring Soon</span>
+                            )}
                           </td>
                           <td>
-                            <span className={`badge ${effectiveStatus === 'active' ? 'badge-green' : effectiveStatus === 'revoked' ? 'badge-red' : 'badge-gray'}`}>
+                            <span className={`badge ${
+                              effectiveStatus === 'active' ? 'badge-green' :
+                              effectiveStatus === 'renewed' ? 'badge-blue' :
+                              effectiveStatus === 'revoked' ? 'badge-red' :
+                              'badge-gray'
+                            }`}>
                               {effectiveStatus}
                             </span>
                           </td>
