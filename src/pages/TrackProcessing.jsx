@@ -39,11 +39,13 @@ export default function TrackProcessing() {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
 
   // Core records for child components
   const [proposal, setProposal] = useState(null);
   const [invoice, setInvoice] = useState(null);
+  const [allInvoices, setAllInvoices] = useState([]);
+  const [selectedPaymentInvoice, setSelectedPaymentInvoice] = useState(null);
   const [audit, setAudit] = useState(null);
   const [agreement, setAgreement] = useState(null);
   const [signatures, setSignatures] = useState([]);
@@ -64,10 +66,11 @@ export default function TrackProcessing() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [appRes, propRes, invRes, auditRes, agreementRes, sigRes] = await Promise.all([
+      const [appRes, propRes, invRes, allInvRes, auditRes, agreementRes, sigRes] = await Promise.all([
         api.get(`/api/applications/${appId}`),
         api.get(`/api/proposals/application/${appId}`).catch(() => ({ data: null })),
         api.get(`/api/invoices/application/${appId}`).catch(() => ({ data: null })),
+        api.get(`/api/invoices/application/${appId}/all`).catch(() => ({ data: [] })),
         api.get(`/api/audits/application/${appId}`).catch(() => ({ data: null })),
         api.get(`/api/agreements/application/${appId}`).catch(() => ({ data: null })),
         api.get('/api/signatures').catch(() => ({ data: [] }))
@@ -76,6 +79,8 @@ export default function TrackProcessing() {
       setApp(appRes.data);
       setProposal(propRes.data || null);
       setInvoice(invRes.data || null);
+      const invoicesList = allInvRes.data?.data || (Array.isArray(allInvRes.data) ? allInvRes.data : []) || [];
+      setAllInvoices(invoicesList);
       setAudit(auditRes.data || null);
       setAgreement(agreementRes.data?.data || agreementRes.data || null);
       setSignatures(sigRes.data || sigRes.data?.data || []);
@@ -244,11 +249,16 @@ export default function TrackProcessing() {
 
   const isRenewal = app?.application_type === 'renewal';
 
+  // Invoice resolution (differentiate initial vs final invoice)
+  const initialInvoice = allInvoices.find(i => i.invoice_type === 'initial') || (allInvoices.length > 0 && allInvoices[0].invoice_type !== 'final' ? allInvoices[0] : (invoice?.invoice_type !== 'final' ? invoice : null));
+  const finalInvoice = allInvoices.find(i => i.invoice_type === 'final') || (invoice?.invoice_type === 'final' ? invoice : null);
+  const activeInvoiceForBanner = (status === 'final_invoice_sent' || status === 'final_invoice_paid') ? finalInvoice : (initialInvoice || invoice);
+
   // Agreement states
   const showProposalAction = !isRenewal && status === 'proposal_sent';
-  const showPaymentAction = (status === 'invoice_sent' || status === 'final_invoice_sent') && invoice && invoice.status !== 'client_paid' && invoice.status !== 'paid';
-  const showPaymentPending = ((status === 'invoice_sent' || status === 'final_invoice_sent') && invoice && invoice.status === 'client_paid') || ((status === 'payment_received' || status === 'final_invoice_paid') && invoice && invoice.status !== 'paid');
-  const showPaymentConfirmed = (status === 'payment_received' || (invoice && invoice.status === 'paid' && status === 'invoice_sent')) && (!activeAudit || activeAudit.status === 'pending' || activeAudit.status === 'scheduled');
+  const showPaymentAction = (status === 'invoice_sent' || status === 'final_invoice_sent') && activeInvoiceForBanner && activeInvoiceForBanner.status !== 'client_paid' && activeInvoiceForBanner.status !== 'paid';
+  const showPaymentPending = ((status === 'invoice_sent' || status === 'final_invoice_sent') && activeInvoiceForBanner && activeInvoiceForBanner.status === 'client_paid') || ((status === 'payment_received' || status === 'final_invoice_paid') && activeInvoiceForBanner && activeInvoiceForBanner.status !== 'paid');
+  const showPaymentConfirmed = (status === 'payment_received' || (activeInvoiceForBanner && activeInvoiceForBanner.status === 'paid' && status === 'invoice_sent')) && (!activeAudit || activeAudit.status === 'pending' || activeAudit.status === 'scheduled');
   const showAuditAction = status === 'dates_proposed' || activeAudit?.status === 'dates_proposed';
   const showAuditDatesRejected = status === 'dates_rejected' || activeAudit?.status === 'dates_rejected';
   const showAuditDatesAccepted = status === 'dates_accepted' || activeAudit?.status === 'dates_accepted';
@@ -365,7 +375,7 @@ export default function TrackProcessing() {
         </div>
       )}
 
-      {showPaymentAction && invoice && (
+      {showPaymentAction && activeInvoiceForBanner && (
         <div style={{
           background: 'linear-gradient(135deg, #ffedd5, #fffbeb)',
           border: '1.5px solid #fed7aa', borderRadius: 16,
@@ -381,12 +391,12 @@ export default function TrackProcessing() {
                 {status === 'final_invoice_sent' ? 'Final Invoice Received' : 'Action Required: Pay Invoice'}
               </div>
               <div style={{ fontSize: 13, color: '#c2410c', lineHeight: 1.6 }}>
-                {status === 'final_invoice_sent' ? 'A final invoice' : 'An invoice'} ({invoice.invoice_number}) has been issued for certification fees. Amount Due: <strong>£{Number(invoice.amount).toLocaleString('en-GB', { minimumFractionDigits: 2 })}</strong>.
+                {status === 'final_invoice_sent' ? 'A final invoice' : 'An invoice'} ({activeInvoiceForBanner.invoice_number}) has been issued for certification fees. Amount Due: <strong>£{Number(activeInvoiceForBanner.amount).toLocaleString('en-GB', { minimumFractionDigits: 2 })}</strong>.
               </div>
             </div>
           </div>
           <div>
-            {(invoice.status === 'paid' || status === 'payment_received' || status === 'final_invoice_paid') ? (
+            {(activeInvoiceForBanner.status === 'paid' || status === 'payment_received' || status === 'final_invoice_paid') ? (
               <span
                 style={{
                   background: '#f0fdf4',
@@ -404,7 +414,14 @@ export default function TrackProcessing() {
                 <CheckCircle size={16} style={{ color: '#16a34a' }} /> Paid
               </span>
             ) : (
-              <button className="btn btn-primary" style={{ background: '#ea580c' }} onClick={() => setShowPaymentModal(true)}>
+              <button
+                className="btn btn-primary"
+                style={{ background: '#ea580c' }}
+                onClick={() => {
+                  setSelectedPaymentInvoice(activeInvoiceForBanner);
+                  setShowPaymentModal(true);
+                }}
+              >
                 Pay Now
               </button>
             )}
@@ -720,9 +737,13 @@ export default function TrackProcessing() {
           {/* Initial Invoice Card (Initial only) */}
           {!isRenewal && (
             <InvoiceCard
-              invoice={invoice}
+              invoice={initialInvoice}
               status={status}
-              onPayClick={() => setShowPaymentModal(true)}
+              isInitial={true}
+              onPayClick={() => {
+                setSelectedPaymentInvoice(initialInvoice);
+                setShowPaymentModal(true);
+              }}
             />
           )}
 
@@ -743,7 +764,10 @@ export default function TrackProcessing() {
             <InvoiceCard
               invoice={invoice}
               status={status}
-              onPayClick={() => setShowPaymentModal(true)}
+              onPayClick={() => {
+                setSelectedPaymentInvoice(invoice);
+                setShowPaymentModal(true);
+              }}
             />
           )}
 
@@ -753,6 +777,19 @@ export default function TrackProcessing() {
               agreement={agreement}
               status={status}
               onSignClick={() => setShowAgreementModal(true)}
+            />
+          )}
+
+          {/* Final Invoice Card (at the bottom of certification agreement) */}
+          {!isRenewal && (finalInvoice || ['agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(status)) && (
+            <InvoiceCard
+              invoice={finalInvoice}
+              status={status}
+              isFinal={true}
+              onPayClick={() => {
+                setSelectedPaymentInvoice(finalInvoice);
+                setShowPaymentModal(true);
+              }}
             />
           )}
         </div>
@@ -955,8 +992,11 @@ export default function TrackProcessing() {
 
       <PaymentModal
         isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        invoice={invoice}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setSelectedPaymentInvoice(null);
+        }}
+        invoice={selectedPaymentInvoice || activeInvoiceForBanner || invoice}
         onSuccess={() => fetchApp(true)}
       />
 
