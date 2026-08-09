@@ -82,18 +82,20 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           buttonBg: '#854d0e',
           modalType: 'proposal'
         };
-      case 'invoice_sent':
+      case 'invoice_sent': {
+        const isRen = (app.application_type || '').toLowerCase() === 'renewal';
         return {
           icon: <Receipt size={18} style={{ color: '#ea580c' }} />,
           bg: '#ffedd5',
           badge: '#c2410c',
-          title: 'Initial Invoice Payment Required',
-          desc: `Pay initial certification fee for ${app.establishment_name}`,
+          title: isRen ? 'Renewal Invoice Payment Required' : 'Initial Invoice Payment Required',
+          desc: isRen ? `Pay renewal certification fee for ${app.establishment_name}` : `Pay initial certification fee for ${app.establishment_name}`,
           buttonText: 'Pay Invoice',
           buttonBg: '#ea580c',
           modalType: 'payment',
           invoice: linkedInvoice
         };
+      }
       case 'dates_proposed':
         return {
           icon: <Calendar size={18} style={{ color: '#0284c7' }} />,
