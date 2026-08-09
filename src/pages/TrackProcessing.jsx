@@ -609,8 +609,17 @@ export default function TrackProcessing() {
               )}
             </div>
           )}
-          <div style={{ marginTop: 12, padding: '12px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, fontSize: 13, color: '#92400e', fontWeight: 600 }}>
-            📋 To proceed, please submit your corrective action evidence to HFA at <strong>info@hfa.org.uk</strong> or contact your assigned coordinator.
+          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px', background: '#fff7ed', border: '1px solid #fde68a', borderRadius: 10, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 13, color: '#92400e', fontWeight: 600 }}>
+              📋 Please upload your corrective action evidence to resolve this non-conformity and continue your certification.
+            </div>
+            <button
+              className="btn btn-primary"
+              style={{ background: '#dc2626', borderColor: '#dc2626', fontSize: 12, padding: '8px 16px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}
+              onClick={() => handleNcResolve(activeAudit?._id, latestNcReport?._id)}
+            >
+              <FileText size={14} /> Upload Corrective Action
+            </button>
           </div>
         </div>
       )}
