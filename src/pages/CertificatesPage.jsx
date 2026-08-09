@@ -96,7 +96,7 @@ export default function CertificatesPage() {
     return diffYears > 1.5; // > 1.5 years means it's a 3-year certificate
   };
 
-  const calculateSurveillanceDates = (cert) => {
+  const getSurveillanceDates = (cert) => {
     if (!cert.issue_date) return { y1: null, y2: null };
     const d1 = new Date(cert.issue_date);
     d1.setFullYear(d1.getFullYear() + 1);
