@@ -68,7 +68,7 @@ export default function ClientAddOnApprovalForm() {
 
   const savedCount = (app.products || []).filter((_, idx) => {
     const r = getSavedResponse(idx);
-    return r?.is_saved && r?.response_text?.trim();
+    return r?.is_saved && (r?.response_text?.trim() || (r?.form_data && Object.keys(r.form_data).length > 0));
   }).length;
 
   const allSaved = savedCount === (app.products || []).length;

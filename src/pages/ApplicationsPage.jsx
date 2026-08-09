@@ -150,6 +150,9 @@ export default function ApplicationsPage({ openNew }) {
   const [addOnProductRows, setAddOnProductRows] = useState([{ name: '', code: '', type: 'Add product' }]);
   const [addOnContact, setAddOnContact] = useState({ name: '', email: '', phone: '' });
   const [submittedCertId, setSubmittedCertId] = useState(null); // cert to attach add-on to
+  const [submittedAppId, setSubmittedAppId] = useState(null);
+  const [submittedSiteId, setSubmittedSiteId] = useState(null);
+  const [submittedAppNumber, setSubmittedAppNumber] = useState('');
   const [addOnSubmitting, setAddOnSubmitting] = useState(false);
 
   const fetchData = async () => {
@@ -413,7 +416,8 @@ export default function ApplicationsPage({ openNew }) {
       if (form.application_type === 'renewal' && renewalFiles.length > 0) {
         renewalFiles.forEach(f => fd.append('supporting_docs', f));
       }
-      await api.post('/api/applications', fd, true);
+      const createdRes = await api.post('/api/applications', fd, true);
+      const createdApp = createdRes.data?.data || createdRes.data || {};
       toast.success(form.application_type === 'renewal' ? 'Renewal application submitted successfully!' : 'Application submitted successfully!');
       setShowModal(false);
       setModalStep(1);
@@ -423,6 +427,9 @@ export default function ApplicationsPage({ openNew }) {
         return String(sId) === String(form.site_id) && c.status === 'active';
       });
       setSubmittedCertId(activeCert?._id || activeCert?.id || null);
+      setSubmittedAppId(createdApp._id || createdApp.id || null);
+      setSubmittedSiteId(form.site_id || null);
+      setSubmittedAppNumber(createdApp.application_number || '');
       setAddOnContact({ name: form.managing_director || form.primary_contact_name || '', email: form.company_email || form.primary_email || '', phone: form.primary_work_tel || form.primary_mobile || '' });
       resetForm();
       fetchData();
@@ -446,11 +453,13 @@ export default function ApplicationsPage({ openNew }) {
     setAddOnSubmitting(true);
     try {
       await api.post('/api/add-on-applications', {
-        certificate_id: submittedCertId || '',
+        certificate_id: submittedCertId || undefined,
+        application_id: submittedAppId || undefined,
+        site_id: submittedSiteId || undefined,
         contact_name: addOnContact.name,
         contact_email: addOnContact.email,
         contact_phone: addOnContact.phone,
-        message: '',
+        message: submittedAppNumber ? `Products added for application #${submittedAppNumber}` : '',
         products: addOnProductRows
       });
       toast.success('Products submitted as an Add-on Application!');
