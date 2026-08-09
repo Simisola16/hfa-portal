@@ -10,22 +10,33 @@ const getPdfUrl = (url) => {
   return url;
 };
 
-export default function AuditCard({ audits, app, status, onSelectDatesClick, onNcResolve }) {
+export default function AuditCard({ audits: propAudits, app, status, onSelectDatesClick, onNcResolve }) {
   const normStatus = (status || '').toLowerCase().replace(/ /g, '_');
+  const audits = propAudits?.data || (Array.isArray(propAudits) ? propAudits : [propAudits]).filter(Boolean);
   const hasAudits = audits && audits.length > 0;
   const isAvailable = ['invoice_sent', 'payment_received', 'dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'audit_report_submitted', 'audit_successful', 'on_hold', 'final_invoice_sent', 'logsheet_created', 'logsheet_signed', 'agreement_sent', 'agreement_signed', 'certificate_issued'].includes(normStatus) || hasAudits;
 
   const isDualStage = app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE';
   const stage1 = audits?.find(a => a.stage === 1) || audits?.[0];
   const stage2 = audits?.find(a => a.stage === 2);
-  const audit = (isDualStage ? (stage2 || stage1) : stage1) || null;
+
+  const roleLabels = { 
+    lead_auditor: 'Lead Auditor', 
+    sharia_board: 'Sharia Board', 
+    audit_trainee: 'Audit Trainee' 
+  };
+  const roleColors = {
+    lead_auditor: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+    sharia_board: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+    audit_trainee: { bg: '#fefce8', color: '#a16207', border: '#fde68a' },
+  };
 
   if (!isAvailable) {
     return (
       <div style={{ background: '#f8fafc', opacity: 0.65, border: '1px dashed #cbd5e1', borderRadius: 20, padding: '24px 20px', textAlign: 'center' }}>
         <Lock size={20} style={{ color: '#94a3b8', margin: '0 auto 8px' }} />
-        <div style={{ fontWeight: 700, fontSize: 13, color: '#64748b' }}>Audit &amp; Schedule Details (Locked)</div>
-        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Available once invoice is sent</div>
+        <div style={{ fontWeight: 700, fontSize: 13, color: '#64748b' }}>Assigned Audit Team (Locked)</div>
+        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Available once invoice is sent or payment received</div>
       </div>
     );
   }
@@ -34,37 +45,141 @@ export default function AuditCard({ audits, app, status, onSelectDatesClick, onN
     return (
       <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', padding: 24, textAlign: 'center' }}>
         <Calendar size={28} style={{ color: '#94a3b8', margin: '0 auto 10px' }} />
-        <div style={{ fontWeight: 700, fontSize: 14, color: '#475569' }}>Audit Schedule Pending</div>
+        <div style={{ fontWeight: 700, fontSize: 14, color: '#475569' }}>No Audit Scheduled</div>
         <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>The HFA team is preparing proposed dates for your audit session.</div>
       </div>
     );
   }
 
-  const roleLabels = { lead_auditor: 'Lead Auditor', sharia_board: 'Sharia Board', audit_trainee: 'Audit Trainee' };
-  const roleColors = {
-    lead_auditor: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
-    sharia_board: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
-    audit_trainee: { bg: '#fefce8', color: '#a16207', border: '#fde68a' },
+  const stageStatusColor = (stageAudit) => {
+    if (!stageAudit) return { bg: '#f8fafc', border: '#e2e8f0', color: '#64748b' };
+    if (stageAudit.status === 'audit_completed') return { bg: '#f0fdf4', border: '#bbf7d0', color: '#15803d' };
+    if (['auditors_assigned', 'date_finalized', 'dates_accepted'].includes(stageAudit.status)) return { bg: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8' };
+    if (stageAudit.status === 'dates_proposed') return { bg: '#fefce8', border: '#fde68a', color: '#a16207' };
+    return { bg: '#f8fafc', border: '#e2e8f0', color: '#64748b' };
   };
 
-  const hasNcReports = audit?.nc_reports && audit.nc_reports.length > 0;
-  const showNcSection = audit && ['auditors_assigned', 'audit_completed'].includes(audit.status);
+  const renderAuditorList = (auditorList) => {
+    if (!auditorList || auditorList.length === 0) {
+      return (
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '10px 0' }}>
+          No auditors assigned to this session yet.
+        </div>
+      );
+    }
+    return (
+      <div style={{ display: 'grid', gap: 10 }}>
+        {auditorList.map((a, i) => {
+          const name = a.name || a.full_name || a.user_id?.full_name || 'Auditor';
+          const email = a.email || a.user_id?.email || '';
+          const phone = a.contact_number || a.phone || a.user_id?.phone || '';
+          const role = a.role || 'lead_auditor';
+          const rc = roleColors[role] || roleColors.lead_auditor;
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{name}</div>
+                {(email || phone) && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{email} {phone ? `• ${phone}` : ''}</div>}
+              </div>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                {role && (
+                  <span style={{ fontSize: 11, fontWeight: 700, background: rc.bg, color: rc.color, border: `1px solid ${rc.border}`, padding: '3px 12px', borderRadius: 12 }}>
+                    {roleLabels[role] || role}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderSingleStageBlock = (auditObj, stageLabel = null) => {
+    if (!auditObj) return null;
+    const isProposed = auditObj.status === 'dates_proposed';
+    const isAccepted = auditObj.status === 'dates_accepted';
+
+    return (
+      <div style={{ marginBottom: isDualStage ? 16 : 0, padding: isDualStage ? '16px' : '0', background: isDualStage ? '#ffffff' : 'transparent', borderRadius: 12, border: isDualStage ? '1px solid #e2e8f0' : 'none' }}>
+        {stageLabel && (
+          <div style={{ fontWeight: 800, fontSize: 12.5, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>{stageLabel}</span>
+            <span style={{ fontSize: 11.5, textTransform: 'capitalize', color: '#64748b', fontWeight: 600 }}>
+              {(auditObj.status || 'pending').replace(/_/g, ' ')}
+            </span>
+          </div>
+        )}
+
+        {/* Confirmed Date or Proposed Dates */}
+        {auditObj.finalized_date ? (
+          <div style={{ marginBottom: 12, padding: '10px 14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Calendar size={15} style={{ color: '#15803d' }} />
+            <span style={{ fontSize: 13, color: '#15803d', fontWeight: 700 }}>
+              Confirmed Audit Date: {new Date(auditObj.finalized_date).toDateString()}
+            </span>
+          </div>
+        ) : isProposed ? (
+          <div style={{ marginBottom: 12, padding: '12px 14px', background: '#fefce8', borderRadius: 10, border: '1px solid #fde68a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#a16207' }}>Proposed Audit Dates Available</div>
+                <div style={{ fontSize: 11, color: '#a16207', marginTop: 2 }}>Please choose 2 dates that suit your schedule.</div>
+              </div>
+              {onSelectDatesClick && (
+                <button
+                  className="btn btn-primary btn-sm"
+                  style={{ background: '#ca8a04', borderColor: '#ca8a04', fontWeight: 700, fontSize: 11.5 }}
+                  onClick={() => onSelectDatesClick(auditObj.stage)}
+                >
+                  Select Dates
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+              {auditObj.proposed_dates?.map((d, idx) => (
+                <span key={idx} style={{ fontSize: 11, background: '#fff', border: '1px solid #fde68a', padding: '3px 8px', borderRadius: 6, color: '#854d0e', fontWeight: 600 }}>
+                  {new Date(d).toLocaleDateString()}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : isAccepted ? (
+          <div style={{ marginBottom: 12, padding: '10px 14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0', fontSize: 12, color: '#166534' }}>
+            <strong>Selected Dates:</strong> {auditObj.selected_dates?.map(d => new Date(d).toLocaleDateString()).join(' and ')}. Awaiting HFA admin to confirm the final date.
+          </div>
+        ) : (
+          <div style={{ marginBottom: 12, padding: '10px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 12, color: '#64748b' }}>
+            Awaiting date finalization or scheduling setup.
+          </div>
+        )}
+
+        {/* Auditors List */}
+        {renderAuditorList(auditObj.auditors)}
+      </div>
+    );
+  };
+
+  // Check if either stage has dates awaiting selection
+  const hasProposedStage = audits.some(a => a.status === 'dates_proposed');
 
   return (
     <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
       {/* Card Header */}
-      <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Users size={18} style={{ color: '#1d4ed8' }} />
           </div>
           <div>
             <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Assigned Audit Team</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Status: <span style={{ fontWeight: 700, textTransform: 'capitalize' }}>{(audit?.status || 'pending').replace(/_/g, ' ')}</span></div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              Category: <span style={{ fontWeight: 700 }}>{isDualStage ? 'UAE/GSO Exporter (Dual Stage)' : 'Standard Audit'}</span>
+            </div>
           </div>
         </div>
-        {audit?.status === 'dates_proposed' && (
-          <button className="btn btn-primary btn-sm" onClick={onSelectDatesClick}>
+        {hasProposedStage && onSelectDatesClick && (
+          <button className="btn btn-primary btn-sm" onClick={() => onSelectDatesClick()}>
             Select Dates
           </button>
         )}
@@ -72,30 +187,19 @@ export default function AuditCard({ audits, app, status, onSelectDatesClick, onN
 
       {/* Card Body */}
       <div style={{ padding: '20px 24px' }}>
-        {/* Two-stage progress bar for UAE/GSO */}
+        {/* Two-stage progress pills for UAE/GSO */}
         {isDualStage && (
           <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
             {[1, 2].map(stageNum => {
-              const stageAudit = audits?.find(a => a.stage === stageNum);
+              const stageAudit = audits.find(a => a.stage === stageNum);
+              const sc = stageStatusColor(stageAudit);
               const isLocked = stageNum === 2 && stage1?.status !== 'audit_completed';
-              
-              // status color helper
-              let bg = '#f8fafc', border = '#e2e8f0', color = '#64748b';
-              if (stageAudit) {
-                if (stageAudit.status === 'audit_completed') {
-                  bg = '#f0fdf4'; border = '#bbf7d0'; color = '#15803d';
-                } else if (['auditors_assigned', 'date_finalized', 'dates_accepted'].includes(stageAudit.status)) {
-                  bg = '#eff6ff'; border = '#bfdbfe'; color = '#1d4ed8';
-                } else if (stageAudit.status === 'dates_proposed') {
-                  bg = '#fefce8'; border = '#fde68a'; color = '#a16207';
-                }
-              }
               return (
-                <div key={stageNum} style={{ flex: 1, padding: '10px 14px', background: bg, borderRadius: 10, border: `1px solid ${border}`, opacity: isLocked ? 0.5 : 1 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div key={stageNum} style={{ flex: 1, padding: '10px 14px', background: sc.bg, borderRadius: 10, border: `1px solid ${sc.border}`, opacity: isLocked ? 0.5 : 1 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: sc.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Stage {stageNum} {isLocked ? '🔒' : stageAudit?.status === 'audit_completed' ? '✓' : ''}
                   </div>
-                  <div style={{ fontSize: 11, color: color, marginTop: 2, textTransform: 'capitalize' }}>
+                  <div style={{ fontSize: 11, color: sc.color, marginTop: 2, textTransform: 'capitalize' }}>
                     {stageAudit ? stageAudit.status.replace(/_/g, ' ') : (isLocked ? 'Locked' : 'Pending')}
                   </div>
                 </div>
@@ -104,177 +208,17 @@ export default function AuditCard({ audits, app, status, onSelectDatesClick, onN
           </div>
         )}
 
-        {/* Date Section */}
-        {audit.finalized_date ? (
-          <div style={{ marginBottom: 16, padding: '12px 16px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Calendar size={15} style={{ color: '#15803d' }} />
-            <span style={{ fontSize: 14, color: '#15803d', fontWeight: 700 }}>Confirmed Audit Date: {new Date(audit.finalized_date).toDateString()}</span>
-          </div>
-        ) : audit.status === 'dates_proposed' ? (
-          <div style={{ marginBottom: 16, padding: '12px 16px', background: '#fefce8', borderRadius: 10, border: '1px solid #fde68a' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#a16207' }}>Proposed Audit Dates Available</div>
-            <div style={{ fontSize: 11, color: '#a16207', marginTop: 2 }}>Please choose exactly 2 options that suit you.</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-              {audit.proposed_dates?.map((d, idx) => (
-                <span key={idx} style={{ fontSize: 11, background: '#fff', border: '1px solid #fde68a', padding: '3px 8px', borderRadius: 6, color: '#854d0e', fontWeight: 600 }}>{new Date(d).toLocaleDateString()}</span>
-              ))}
+        {isDualStage ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px', background: '#fafbfc' }}>
+              {renderSingleStageBlock(stage1, 'Stage 1 (Initial Visit)')}
+            </div>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px', background: '#fafbfc' }}>
+              {renderSingleStageBlock(stage2, 'Stage 2 (Final Visit)')}
             </div>
           </div>
-        ) : audit.status === 'dates_accepted' ? (
-          <div style={{ marginBottom: 16, padding: '12px 16px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0', fontSize: 12, color: '#166534' }}>
-            <strong>Selected Dates:</strong> {audit.selected_dates?.map(d => new Date(d).toLocaleDateString()).join(' and ')}. Awaiting HFA admin to confirm the final date.
-          </div>
         ) : (
-          <div style={{ marginBottom: 16, padding: '12px 16px', background: '#f8fafc', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 12, color: '#64748b' }}>
-            Dates proposed will show here.
-          </div>
-        )}
-
-        {/* Auditors Section */}
-        {audit.auditors && audit.auditors.length > 0 ? (
-          <div style={{ display: 'grid', gap: 10, marginBottom: showNcSection ? 20 : 0 }}>
-            {audit.auditors.map((a, i) => {
-              const name = a.name || a.full_name || a.user_id?.full_name || 'Auditor';
-              const email = a.email || a.user_id?.email || '';
-              const phone = a.contact_number || a.phone || a.user_id?.phone || '';
-              const role = a.role || 'lead_auditor';
-              const rc = roleColors[role] || roleColors.audit_trainee;
-              return (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{name}</div>
-                    {(email || phone) && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{email} {phone ? `• ${phone}` : ''}</div>}
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    {role && (
-                      <span style={{ fontSize: 11, fontWeight: 700, background: rc.bg, color: rc.color, border: `1px solid ${rc.border}`, padding: '3px 10px', borderRadius: 12 }}>
-                        {roleLabels[role] || role}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0', marginBottom: showNcSection ? 20 : 0 }}>
-            No auditors assigned to this session yet.
-          </div>
-        )}
-
-        {/* ── NC Reports Section ── */}
-        {showNcSection && (
-          <div style={{ borderTop: '2px dashed #e2e8f0', paddingTop: 20 }}>
-            <div style={{
-              fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
-              color: hasNcReports ? '#b91c1c' : '#64748b',
-              marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6
-            }}>
-              <AlertCircle size={14} style={{ color: hasNcReports ? '#dc2626' : '#94a3b8' }} />
-              Non-Conformity (NC) Reports
-            </div>
-
-            {hasNcReports ? (
-              <div style={{ display: 'grid', gap: 12 }}>
-                {audit.nc_reports.map((nc, i) => {
-                  const isCorrected = nc.status === 'corrected';
-                  return (
-                    <div
-                      key={i}
-                      style={{
-                        background: isCorrected ? '#f0fdf4' : '#fef2f2',
-                        border: `1.5px solid ${isCorrected ? '#bbf7d0' : '#fecaca'}`,
-                        borderRadius: 14, padding: '14px 16px',
-                      }}
-                    >
-                      {/* NC Header */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {isCorrected
-                            ? <CheckCircle size={14} style={{ color: '#16a34a' }} />
-                            : <AlertCircle size={14} style={{ color: '#dc2626' }} />
-                          }
-                          <span style={{
-                            fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
-                            color: isCorrected ? '#166534' : '#b91c1c'
-                          }}>
-                            {isCorrected ? 'Corrected' : '⚠ Outstanding NC'}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
-                          {new Date(nc.flagged_at).toLocaleDateString('en-GB')}
-                        </span>
-                      </div>
-
-                      {/* NC Description */}
-                      <p style={{ fontSize: 13, margin: '0 0 12px 0', color: '#334155', lineHeight: 1.5 }}>
-                        {nc.text}
-                      </p>
-
-                      {/* Actions Row */}
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        {nc.document_url && nc.document_url !== '#' && nc.document_url !== 'undefined' ? (
-                          <a
-                            href={getPdfUrl(nc.document_url)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="btn btn-outline btn-sm"
-                            style={{ fontSize: 11, padding: '5px 12px', borderRadius: 20, background: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}
-                            onClick={e => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              const fullUrl = getPdfUrl(nc.document_url);
-                              if (fullUrl && fullUrl !== '#') {
-                                window.open(fullUrl, '_blank', 'noopener,noreferrer');
-                              }
-                            }}
-                          >
-                            <FileText size={11} /> View Document
-                          </a>
-                        ) : (
-                          <span
-                            style={{
-                              fontSize: 11, padding: '5px 12px', borderRadius: 20,
-                              background: '#f1f5f9', color: '#94a3b8', border: '1px solid #cbd5e1',
-                              display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'not-allowed', fontWeight: 600
-                            }}
-                            title="No document file was uploaded for this NC report"
-                          >
-                            <FileText size={11} /> Document Unavailable
-                          </span>
-                        )}
-                        {!isCorrected && onNcResolve && (
-                          <button
-                            className="btn btn-sm"
-                            style={{
-                              fontSize: 11, padding: '5px 14px', borderRadius: 20,
-                              background: '#dc2626', color: '#fff', border: 'none', fontWeight: 700,
-                              cursor: 'pointer'
-                            }}
-                            onClick={() => {
-                              onNcResolve(audit._id || audit.id, nc._id || nc.id);
-                            }}
-                          >
-                            Upload NC Correction
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={{
-                textAlign: 'center', padding: '16px 12px',
-                background: '#f0fdf4', border: '1px solid #bbf7d0',
-                borderRadius: 12, color: '#166534', fontSize: 13, fontWeight: 600,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
-              }}>
-                <CheckCircle size={14} style={{ color: '#16a34a' }} />
-                No NC reports — clean audit session
-              </div>
-            )}
-          </div>
+          renderSingleStageBlock(stage1)
         )}
       </div>
     </div>
