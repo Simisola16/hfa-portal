@@ -138,6 +138,17 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
                 )}
               </div>
 
+              {agreement.admin_comment && (
+                <div style={{ marginBottom: 20, background: '#f0f9ff', border: '1px solid #bae6fd', padding: 14, borderRadius: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Admin Note / Instructions
+                  </div>
+                  <div style={{ fontSize: 13, color: '#0c4a6e', lineHeight: 1.5 }}>
+                    {agreement.admin_comment}
+                  </div>
+                </div>
+              )}
+
               {agreement.details && (
                 <div style={{ marginBottom: 20, background: '#fff', border: '1px solid #e2e8f0', padding: 14, borderRadius: 10 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>
