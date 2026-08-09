@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
-import { Calendar, Users, AlertCircle, CheckCircle, FileText, ArrowRight, RefreshCw, Search, ShieldCheck, Clock } from 'lucide-react';
+import { Calendar, Users, AlertCircle, CheckCircle, FileText, ArrowRight, RefreshCw, Search, ShieldCheck, Clock, Download, Upload } from 'lucide-react';
 import ClientAuditModal from '../components/ClientAuditModal';
 import { STATUS_LABELS } from '../lib/applicationStatuses';
+
+const getPdfUrl = (url) => {
+  if (!url) return '#';
+  if (url.startsWith('/api/files/') || url.startsWith('/uploads/')) {
+    const API_URL = import.meta.env.VITE_API_URL || 'https://hfa-portal-backend.onrender.com';
+    return `${API_URL}${url}`;
+  }
+  return url;
+};
 
 const STATUS_BADGE = {
   dates_proposed: 'badge-yellow',
@@ -319,37 +328,80 @@ export default function AuditsPage() {
 
                       <div style={{ display: 'grid', gap: 10 }}>
                         {item.nc_reports.map((nc, idx) => {
-                          const isCorrected = nc.status === 'corrected';
+                          const isCorrected = nc.status === 'corrected' || nc.status === 'closed';
+                          const fileUrl = nc.document_url || nc.url;
+                          const replyFileUrl = nc.correction_document_url || nc.client_response_url;
+
                           return (
                             <div 
                               key={idx} 
                               style={{ 
-                                padding: '12px 16px', 
-                                background: isCorrected ? '#f0fdf4' : '#fef2f2', 
+                                padding: '14px 16px', 
+                                background: isCorrected ? '#f0fdf4' : '#fff5f5', 
                                 borderRadius: 12, 
                                 border: `1px solid ${isCorrected ? '#bbf7d0' : '#fecaca'}`,
-                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10
+                                display: 'flex', flexDirection: 'column', gap: 8
                               }}
                             >
-                              <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                                  {isCorrected ? <CheckCircle size={14} color="#16a34a" /> : <AlertCircle size={14} color="#dc2626" />}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  {isCorrected ? <CheckCircle size={15} color="#16a34a" /> : <AlertCircle size={15} color="#dc2626" />}
                                   <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: isCorrected ? '#166534' : '#b91c1c' }}>
-                                    {isCorrected ? 'Corrected' : '⚠ Action Required'}
+                                    {isCorrected ? 'Closed / Resolved' : 'Action Required'}
                                   </span>
-                                  <span style={{ fontSize: 11, color: '#64748b' }}>&middot; {new Date(nc.flagged_at).toLocaleDateString('en-GB')}</span>
+                                  {nc.flagged_at && (
+                                    <span style={{ fontSize: 11, color: '#64748b' }}>&middot; {new Date(nc.flagged_at).toLocaleDateString('en-GB')}</span>
+                                  )}
                                 </div>
-                                <div style={{ fontSize: 13, color: '#334155', fontWeight: 500 }}>{nc.text}</div>
+
+                                {!isCorrected && (
+                                  <button
+                                    className="btn btn-sm"
+                                    style={{ background: '#dc2626', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px' }}
+                                    onClick={() => setActiveModal({ type: 'nc', audit: item, reportId: nc._id || nc.id })}
+                                  >
+                                    <Upload size={13} /> Upload NC Correction
+                                  </button>
+                                )}
                               </div>
 
-                              {!isCorrected && (
-                                <button
-                                  className="btn btn-sm"
-                                  style={{ background: '#dc2626', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11 }}
-                                  onClick={() => setActiveModal({ type: 'nc', audit: item })}
-                                >
-                                  Upload NC Correction
-                                </button>
+                              <div style={{ fontSize: 13, color: '#1e293b', fontWeight: 500, lineHeight: 1.5 }}>
+                                {nc.text || 'Non-Conformity flagged during audit inspection.'}
+                              </div>
+
+                              {fileUrl && (
+                                <div>
+                                  <a
+                                    href={getPdfUrl(fileUrl)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="btn btn-outline btn-sm"
+                                    style={{ color: '#dc2626', borderColor: '#fecaca', gap: 6, display: 'inline-flex', alignItems: 'center', fontSize: 11.5 }}
+                                  >
+                                    <Download size={13} /> View NC Report Sheet
+                                  </a>
+                                </div>
+                              )}
+
+                              {nc.client_response && (
+                                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#334155' }}>
+                                  <div style={{ fontWeight: 700, color: '#475569', marginBottom: 2 }}>Your Response:</div>
+                                  <div>{nc.client_response}</div>
+                                  {replyFileUrl && (
+                                    <div style={{ marginTop: 4 }}>
+                                      <a href={getPdfUrl(replyFileUrl)} target="_blank" rel="noreferrer" style={{ color: '#16a34a', fontWeight: 600 }}>
+                                        📎 View Attached Evidence
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {nc.admin_reply && (
+                                <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#0369a1' }}>
+                                  <div style={{ fontWeight: 700, marginBottom: 2 }}>💬 HFA Response / Guidance:</div>
+                                  <div>{nc.admin_reply}</div>
+                                </div>
                               )}
                             </div>
                           );

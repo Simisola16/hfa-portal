@@ -177,9 +177,9 @@ export default function ClientAuditModal({
                   <div style={{ fontSize: 13, color: '#7f1d1d', lineHeight: 1.5, marginBottom: activeNcReport.document_url ? 10 : 0 }}>
                     {activeNcReport.text || 'Non-Conformity report flagged.'}
                   </div>
-                  {activeNcReport.document_url && activeNcReport.document_url !== '#' && (
+                  {(activeNcReport.document_url || activeNcReport.url) && (activeNcReport.document_url || activeNcReport.url) !== '#' && (
                     <a
-                      href={getPdfUrl(activeNcReport.document_url)}
+                      href={getPdfUrl(activeNcReport.document_url || activeNcReport.url)}
                       target="_blank"
                       rel="noreferrer"
                       style={{ fontSize: 12, color: '#dc2626', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}

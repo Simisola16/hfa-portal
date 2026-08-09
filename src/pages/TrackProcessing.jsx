@@ -23,6 +23,15 @@ import ClientAuditModal from '../components/ClientAuditModal';
 import ClientAgreementModal from '../components/ClientAgreementModal';
 import ClientProposalModal from '../components/ClientProposalModal';
 
+const getPdfUrl = (url) => {
+  if (!url) return '#';
+  if (url.startsWith('/api/files/') || url.startsWith('/uploads/')) {
+    const API_URL = import.meta.env.VITE_API_URL || 'https://hfa-portal-backend.onrender.com';
+    return `${API_URL}${url}`;
+  }
+  return url;
+};
+
 export default function TrackProcessing() {
   const { appId } = useParams();
   const navigate = useNavigate();
@@ -227,7 +236,11 @@ export default function TrackProcessing() {
   // NC state
   const isNcFlagged = status === 'nc_flagged';
   const isNcClosed = status === 'nc_closed' || status === 'audit_report_submitted';
-  const latestNcReport = app.nc_reports?.length > 0 ? app.nc_reports[app.nc_reports.length - 1] : null;
+  const allNcReports = [
+    ...(app.nc_reports || []),
+    ...auditsArr.flatMap(a => (a.nc_reports || []))
+  ];
+  const latestNcReport = allNcReports.length > 0 ? allNcReports[allNcReports.length - 1] : null;
 
   const isRenewal = app?.application_type === 'renewal';
 
@@ -596,8 +609,14 @@ export default function TrackProcessing() {
               <div style={{ fontSize: 13, color: '#1e293b', lineHeight: 1.6, marginBottom: latestNcReport.url ? 10 : 0 }}>
                 {latestNcReport.text || 'Non-conformity identified during audit — please contact HFA for details.'}
               </div>
-              {latestNcReport.url && (
-                <a href={latestNcReport.url} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ color: '#dc2626', borderColor: '#fecaca', gap: 6 }}>
+              {(latestNcReport.url || latestNcReport.document_url) && (
+                <a
+                  href={getPdfUrl(latestNcReport.url || latestNcReport.document_url)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-outline btn-sm"
+                  style={{ color: '#dc2626', borderColor: '#fecaca', gap: 6, display: 'inline-flex', alignItems: 'center' }}
+                >
                   <Download size={13} /> View NC Report Sheet
                 </a>
               )}
