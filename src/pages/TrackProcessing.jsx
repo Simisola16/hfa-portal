@@ -216,7 +216,6 @@ export default function TrackProcessing() {
   const isRejected = status === 'rejected';
   const isApproved = status === 'approved' || status === 'certificate_issued';
   const rejectionEntry = (app.status_history || app.statusHistory || []).find(e => e.status === 'rejected');
-  const isRenewal = app?.application_type === 'renewal';
 
   // Helper flags for action stepper
   const auditsArr = audit?.data || (Array.isArray(audit) ? audit : [audit]).filter(Boolean);
@@ -230,8 +229,8 @@ export default function TrackProcessing() {
   const isNcClosed = status === 'nc_closed' || status === 'audit_report_submitted';
   const latestNcReport = app.nc_reports?.length > 0 ? app.nc_reports[app.nc_reports.length - 1] : null;
 
-  // Agreement and action states
-  const showProposalAction = !isRenewal && status === 'proposal_sent';
+  // Agreement states
+  const showProposalAction = status === 'proposal_sent';
   const showPaymentAction = (status === 'invoice_sent' || status === 'final_invoice_sent') && invoice && invoice.status !== 'client_paid' && invoice.status !== 'paid';
   const showPaymentPending = ((status === 'invoice_sent' || status === 'final_invoice_sent') && invoice && invoice.status === 'client_paid') || ((status === 'payment_received' || status === 'final_invoice_paid') && invoice && invoice.status !== 'paid');
   const showPaymentConfirmed = (status === 'payment_received' || (invoice && invoice.status === 'paid' && status === 'invoice_sent')) && (!activeAudit || activeAudit.status === 'pending' || activeAudit.status === 'scheduled');
@@ -239,8 +238,8 @@ export default function TrackProcessing() {
   const showAuditDatesRejected = status === 'dates_rejected' || activeAudit?.status === 'dates_rejected';
   const showAuditDatesAccepted = status === 'dates_accepted' || activeAudit?.status === 'dates_accepted';
   const showAuditScheduled = status === 'date_finalized' || status === 'audit_assigned' || activeAudit?.status === 'date_finalized' || activeAudit?.status === 'auditors_assigned';
-  const showAuditComplete = !isRenewal && ['audit_successful', 'audit_completed', 'logsheet_created', 'logsheet_signed', 'application_successful'].includes(status) && status !== 'agreement_sent';
-  const showAgreementAction = !isRenewal && status === 'agreement_sent';
+  const showAuditComplete = ['audit_successful', 'audit_completed', 'logsheet_created', 'logsheet_signed', 'application_successful'].includes(status) && status !== 'agreement_sent';
+  const showAgreementAction = status === 'agreement_sent';
 
 
   return (
@@ -320,25 +319,6 @@ export default function TrackProcessing() {
       </div>
 
       {/* Action Banner Panel */}
-      {isRenewal && status === 'approved' && (
-        <div style={{
-          background: 'linear-gradient(135deg, #f0fdf4, #fffbeb)',
-          border: '1.5px solid #86efac', borderRadius: 16,
-          padding: '20px 24px', marginBottom: 24,
-          display: 'flex', alignItems: 'flex-start', gap: 16
-        }}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <CheckCircle size={22} style={{ color: '#16a34a' }} />
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>Renewal Application Accepted</div>
-            <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
-              Your renewal application has been accepted. Our certification team is preparing your renewal audit schedule. We will propose three available audit dates for your selection shortly.
-            </div>
-          </div>
-        </div>
-      )}
-
       {showProposalAction && proposal && (
         <div style={{
           background: 'linear-gradient(135deg, #fef9c3, #fffbeb)',
@@ -704,22 +684,8 @@ export default function TrackProcessing() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'start' }}>
         {/* Left Column: Progress Stack Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {/* Proposal Card (Standard applications only) */}
-          {!isRenewal && <ProposalCard app={app} proposal={proposal} />}
-
-          {/* For Renewal applications, AuditCard comes before Invoice */}
-          {isRenewal && (
-            <AuditCard
-              audits={auditsArr}
-              app={app}
-              status={status}
-              onSelectDatesClick={() => {
-                setAuditModalMode('select_dates');
-                setShowAuditModal(true);
-              }}
-              onNcResolve={handleNcResolve}
-            />
-          )}
+          {/* Proposal Card */}
+          <ProposalCard app={app} proposal={proposal} />
 
           {/* Invoice Card */}
           <InvoiceCard
@@ -728,28 +694,24 @@ export default function TrackProcessing() {
             onPayClick={() => setShowPaymentModal(true)}
           />
 
-          {/* Audit Card (Standard applications) */}
-          {!isRenewal && (
-            <AuditCard
-              audits={auditsArr}
-              app={app}
-              status={status}
-              onSelectDatesClick={() => {
-                setAuditModalMode('select_dates');
-                setShowAuditModal(true);
-              }}
-              onNcResolve={handleNcResolve}
-            />
-          )}
+          {/* Audit Card */}
+          <AuditCard
+            audits={auditsArr}
+            app={app}
+            status={status}
+            onSelectDatesClick={() => {
+              setAuditModalMode('select_dates');
+              setShowAuditModal(true);
+            }}
+            onNcResolve={handleNcResolve}
+          />
 
-          {/* Agreement Card (Standard applications only) */}
-          {!isRenewal && (
-            <AgreementCard
-              agreement={agreement}
-              status={status}
-              onSignClick={() => setShowAgreementModal(true)}
-            />
-          )}
+          {/* Agreement Card */}
+          <AgreementCard
+            agreement={agreement}
+            status={status}
+            onSignClick={() => setShowAgreementModal(true)}
+          />
         </div>
 
         {/* Right Column: Timeline and Details */}
