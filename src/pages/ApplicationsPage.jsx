@@ -147,8 +147,9 @@ export default function ApplicationsPage({ openNew }) {
   // Post-submit "Add Product?" prompt state
   const [showAddProductPrompt, setShowAddProductPrompt] = useState(false);
   const [addProductChoice, setAddProductChoice] = useState(null); // null | 'yes' | 'no'
-  const [addOnProductRows, setAddOnProductRows] = useState([{ name: '', code: '', type: 'Add product' }]);
+  const [addOnProductRows, setAddOnProductRows] = useState([{ name: '', code: '', type: 'Add product', original_name: '', new_name: '', new_code: '' }]);
   const [addOnContact, setAddOnContact] = useState({ name: '', email: '', phone: '' });
+  const [clientProducts, setClientProducts] = useState([]);
   const [submittedCertId, setSubmittedCertId] = useState(null); // cert to attach add-on to
   const [submittedAppId, setSubmittedAppId] = useState(null);
   const [submittedSiteId, setSubmittedSiteId] = useState(null);
@@ -160,15 +161,17 @@ export default function ApplicationsPage({ openNew }) {
     setLoading(true);
     setAddOnLoading(true);
     try {
-      const [appsRes, sitesRes, certsRes, addOnRes] = await Promise.all([
+      const [appsRes, sitesRes, certsRes, addOnRes, prodsRes] = await Promise.all([
         api.get('/api/applications'),
         api.get('/api/sites'),
         api.get('/api/certificates').catch(() => ({ data: [] })),
-        api.get('/api/add-on-applications').catch(() => ({ data: [] }))
+        api.get('/api/add-on-applications').catch(() => ({ data: [] })),
+        api.get('/api/products').catch(() => ({ data: [] }))
       ]);
       setApps(appsRes.data || []);
       setSites(sitesRes.data || []);
       setCerts(certsRes.data || []);
+      setClientProducts(prodsRes.data?.data || prodsRes.data || []);
       
       const active = (certsRes.data || []).some(c => 
         c.status === 'active' && new Date(c.expiry_date) >= new Date()
@@ -552,7 +555,14 @@ export default function ApplicationsPage({ openNew }) {
     if (!addOnContact.name.trim()) return toast.error('Contact name is required.');
     if (!addOnContact.email.trim()) return toast.error('Contact email is required.');
     for (const [i, p] of addOnProductRows.entries()) {
-      if (!p.name.trim()) return toast.error(`Row ${i + 1}: Product name is required.`);
+      if (p.type === 'Add product') {
+        if (!p.name?.trim()) return toast.error(`Row ${i + 1}: Product name is required.`);
+      } else if (p.type === 'Remove product') {
+        if (!p.name?.trim() && !p.original_name?.trim()) return toast.error(`Row ${i + 1}: Please select a product to remove.`);
+      } else if (p.type === 'Change name/code') {
+        if (!p.original_name?.trim() && !p.name?.trim()) return toast.error(`Row ${i + 1}: Please select the existing product to modify.`);
+        if (!p.new_name?.trim()) return toast.error(`Row ${i + 1}: Please enter the New Product Name.`);
+      }
     }
     setAddOnSubmitting(true);
     try {
@@ -1661,73 +1671,204 @@ export default function ApplicationsPage({ openNew }) {
                     </button>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {addOnProductRows.map((p, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 40px', gap: 10,
-                          alignItems: 'center', background: '#f8fafc', border: '1px solid #e2e8f0',
-                          borderRadius: 10, padding: '10px 14px'
-                        }}
-                      >
-                        <div>
-                          <input
-                            type="text"
-                            className="form-control"
-                            placeholder="Product Name *"
-                            value={p.name}
-                            onChange={e => {
-                              const val = e.target.value;
-                              setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, name: val } : r));
-                            }}
-                            required
-                          />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {addOnProductRows.map((p, idx) => {
+                      const allClientProductNames = Array.from(new Set([
+                        ...certs.flatMap(c => c.products_covered || []),
+                        ...clientProducts.map(cp => cp.name).filter(Boolean)
+                      ]));
+
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: 12,
+                            padding: '14px 16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 10
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: '#64748b' }}>Item #{idx + 1}</span>
+                            <button
+                              type="button"
+                              disabled={addOnProductRows.length === 1}
+                              onClick={() => setAddOnProductRows(rows => rows.filter((_, i) => i !== idx))}
+                              style={{
+                                background: addOnProductRows.length === 1 ? '#f1f5f9' : '#fee2e2',
+                                border: 'none', borderRadius: 6, width: 28, height: 28,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: addOnProductRows.length === 1 ? 'not-allowed' : 'pointer'
+                              }}
+                            >
+                              <Trash2 size={13} color={addOnProductRows.length === 1 ? '#cbd5e1' : '#dc2626'} />
+                            </button>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+                            <div>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Action Type *</label>
+                              <select
+                                className="form-control"
+                                style={{ margin: 0, fontSize: 13 }}
+                                value={p.type}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, type: val } : r));
+                                }}
+                              >
+                                <option value="Add product">Add product</option>
+                                <option value="Remove product">Remove product</option>
+                                <option value="Change name/code">Change name/code</option>
+                                <option value="Change ingredients">Change ingredients</option>
+                              </select>
+                            </div>
+
+                            {p.type === 'Add product' && (
+                              <>
+                                <div>
+                                  <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Product Name *</label>
+                                  <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="Product Name *"
+                                    value={p.name}
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, name: val } : r));
+                                    }}
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Code / SKU</label>
+                                  <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="Code / SKU"
+                                    value={p.code}
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, code: val } : r));
+                                    }}
+                                  />
+                                </div>
+                              </>
+                            )}
+
+                            {p.type === 'Remove product' && (
+                              <div style={{ gridColumn: 'span 2' }}>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', display: 'block', marginBottom: 4 }}>Pick Product to Remove *</label>
+                                <select
+                                  className="form-control"
+                                  style={{ margin: 0, fontSize: 13 }}
+                                  value={p.name || p.original_name || ''}
+                                  onChange={e => {
+                                    const val = e.target.value;
+                                    setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, name: val, original_name: val } : r));
+                                  }}
+                                  required
+                                >
+                                  <option value="">-- Select Product to Remove --</option>
+                                  {allClientProductNames.map(name => (
+                                    <option key={name} value={name}>{name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+
+                            {p.type === 'Change name/code' && (
+                              <>
+                                <div>
+                                  <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Pick Existing Product *</label>
+                                  <select
+                                    className="form-control"
+                                    style={{ margin: 0, fontSize: 13 }}
+                                    value={p.original_name || p.name || ''}
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, original_name: val, name: val } : r));
+                                    }}
+                                    required
+                                  >
+                                    <option value="">-- Select Existing Product --</option>
+                                    {allClientProductNames.map(name => (
+                                      <option key={name} value={name}>{name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', display: 'block', marginBottom: 4 }}>New Product Name *</label>
+                                  <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="New Product Name *"
+                                    value={p.new_name || ''}
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, new_name: val } : r));
+                                    }}
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', display: 'block', marginBottom: 4 }}>New Code / SKU</label>
+                                  <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="New Code / SKU"
+                                    value={p.new_code || ''}
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, new_code: val } : r));
+                                    }}
+                                  />
+                                </div>
+                              </>
+                            )}
+
+                            {p.type === 'Change ingredients' && (
+                              <>
+                                <div>
+                                  <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Pick Product *</label>
+                                  <select
+                                    className="form-control"
+                                    style={{ margin: 0, fontSize: 13 }}
+                                    value={p.original_name || p.name || ''}
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, original_name: val, name: val } : r));
+                                    }}
+                                    required
+                                  >
+                                    <option value="">-- Select Product --</option>
+                                    {allClientProductNames.map(name => (
+                                      <option key={name} value={name}>{name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Notes / Ingredient Changes</label>
+                                  <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="e.g. Revised oil formulation"
+                                    value={p.code || ''}
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, code: val } : r));
+                                    }}
+                                  />
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <input
-                            type="text"
-                            className="form-control"
-                            placeholder="Code / SKU"
-                            value={p.code}
-                            onChange={e => {
-                              const val = e.target.value;
-                              setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, code: val } : r));
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <select
-                            className="form-control"
-                            value={p.type}
-                            onChange={e => {
-                              const val = e.target.value;
-                              setAddOnProductRows(rows => rows.map((r, i) => i === idx ? { ...r, type: val } : r));
-                            }}
-                          >
-                            <option value="Add product">Add product</option>
-                            <option value="Remove product">Remove product</option>
-                            <option value="Change name/code">Change name/code</option>
-                            <option value="Change ingredients">Change ingredients</option>
-                          </select>
-                        </div>
-                        <div>
-                          <button
-                            type="button"
-                            disabled={addOnProductRows.length === 1}
-                            onClick={() => setAddOnProductRows(rows => rows.filter((_, i) => i !== idx))}
-                            style={{
-                              background: addOnProductRows.length === 1 ? '#f1f5f9' : '#fee2e2',
-                              border: 'none', borderRadius: 6, width: 32, height: 32,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              cursor: addOnProductRows.length === 1 ? 'not-allowed' : 'pointer'
-                            }}
-                          >
-                            <Trash2 size={14} color={addOnProductRows.length === 1 ? '#cbd5e1' : '#dc2626'} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 

@@ -163,8 +163,8 @@ export default function ClientAddOnApprovalForm() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
         {(app.products || []).map((product, idx) => {
           const saved = getSavedResponse(idx);
-          const isSaved = saved?.is_saved && saved?.response_text?.trim();
-          const hasDraft = saved?.response_text?.trim() && !saved?.is_saved;
+          const isSaved = saved?.is_saved && (saved?.response_text?.trim() || (saved?.form_data && Object.keys(saved.form_data).length > 0));
+          const hasDraft = (saved?.response_text?.trim() || (saved?.form_data && Object.keys(saved.form_data).length > 0)) && !saved?.is_saved;
           const isDisabled = !!allSubmitted;
 
           return (

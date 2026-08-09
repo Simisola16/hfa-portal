@@ -86,12 +86,13 @@ const getClientStepIdx = (status) => {
 };
 
 
-const emptyProduct = () => ({ name: '', code: '', type: 'Add product' });
+const emptyProduct = () => ({ name: '', code: '', type: 'Add product', original_name: '', new_name: '', new_code: '' });
 
 export default function AddOnApplicationPage() {
   const navigate = useNavigate();
   const [certs, setCerts] = useState([]);
   const [myApps, setMyApps] = useState([]);
+  const [clientProducts, setClientProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -109,15 +110,17 @@ export default function AddOnApplicationPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [certsRes, appsRes] = await Promise.all([
+      const [certsRes, appsRes, prodsRes] = await Promise.all([
         api.get('/api/certificates'),
-        api.get('/api/add-on-applications')
+        api.get('/api/add-on-applications'),
+        api.get('/api/products').catch(() => ({ data: [] }))
       ]);
       const active = (certsRes.data || []).filter(c =>
         c.status === 'active' && new Date(c.expiry_date) >= new Date()
       );
       setCerts(active);
       setMyApps(appsRes.data?.data || appsRes.data || []);
+      setClientProducts(prodsRes.data?.data || prodsRes.data || []);
       if (active.length === 1) {
         setForm(f => ({ ...f, certificate_id: active[0]._id || active[0].id }));
       }
@@ -129,6 +132,13 @@ export default function AddOnApplicationPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const selectedCert = certs.find(c => String(c._id || c.id) === String(form.certificate_id));
+  const certProducts = selectedCert?.products_covered || [];
+  const availableProductNames = Array.from(new Set([
+    ...certProducts,
+    ...clientProducts.map(p => p.name).filter(Boolean)
+  ]));
 
   const updateProduct = (idx, field, value) => {
     setForm(f => {
@@ -192,21 +202,25 @@ export default function AddOnApplicationPage() {
   }
 
   return (
-    <div className="animate-in" style={{ maxWidth: 960, margin: '0 auto' }}>
+    <div className="animate-in" style={{ maxWidth: 1060, margin: '0 auto', paddingBottom: 64 }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={() => navigate('/applications')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600 }}>
             <ArrowLeft size={15} /> Back
           </button>
           <div>
-            <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', margin: 0 }}>Add-on Product Applications</h2>
-            <p style={{ fontSize: 12, color: '#64748b', margin: '2px 0 0' }}>Track and manage product additions, removals, and changes for your site</p>
+            <h1 style={{ fontSize: 24, fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Add-on Product Applications</h1>
+            <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>Add, remove, or modify products covered under your existing Halal certificates.</p>
           </div>
         </div>
         {!hasNoCert && (
-          <button className="btn btn-primary" onClick={() => setShowForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
-            <PlusCircle size={15} /> New Add-on Application
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowForm(true)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', fontWeight: 700 }}
+          >
+            <PlusCircle size={16} /> New Add-on Application
           </button>
         )}
       </div>
@@ -226,14 +240,13 @@ export default function AddOnApplicationPage() {
         </div>
       )}
 
-      {/* Applications List */}
+      {/* Applications list */}
       {myApps.length > 0 && (
         <div style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
-            My Applications ({myApps.length})
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#334155', marginBottom: 14 }}>
+            Your Add-on Requests ({myApps.length})
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {myApps.map(app => {
               const certNo = app.certificate_id?.certificate_number || '—';
               const statusLabel = STATUS_LABELS[app.status] || app.status;
@@ -285,7 +298,7 @@ export default function AddOnApplicationPage() {
                             color: p.type === 'Add product' ? '#166534' : p.type === 'Remove product' ? '#991b1b' : '#0369a1',
                             border: `1px solid ${p.type === 'Add product' ? '#bbf7d0' : p.type === 'Remove product' ? '#fecaca' : '#bae6fd'}`
                           }}>
-                            {p.sn || i + 1}. {p.name} <span style={{ opacity: 0.6 }}>({p.type})</span>
+                            {p.sn || i + 1}. {p.new_name || p.name} <span style={{ opacity: 0.6 }}>({p.type})</span>
                           </span>
                         ))}
                       </div>
@@ -314,17 +327,12 @@ export default function AddOnApplicationPage() {
                           style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#7c3aed', borderColor: '#7c3aed', fontWeight: 700 }}
                           onClick={() => navigate(`/addon-applications/${app._id}/approval-form`)}
                         >
-                          <FileText size={13} /> Complete Form
+                          <FileText size={13} /> Complete Product Approval Form
                         </button>
                       )}
                       {app.status === 'completed' && (
                         <span className="badge badge-green" style={{ padding: '6px 12px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
                           <CheckCircle size={12} /> Certificate Updated
-                        </span>
-                      )}
-                      {app.status !== 'product_approval_form_enabled' && app.product_approval_form?.submitted_at && (
-                        <span style={{ fontSize: 11, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
-                          <CheckCircle size={11} /> Form Submitted
                         </span>
                       )}
                       <button
@@ -358,68 +366,75 @@ export default function AddOnApplicationPage() {
                           {app.product_approval_form.form_text && (
                             <div style={{ fontSize: 12, color: '#6b21a8', background: 'white', padding: 10, borderRadius: 8, border: '1px solid #e9d5ff', whiteSpace: 'pre-wrap', marginBottom: 8, maxHeight: 80, overflow: 'hidden' }}>
                               {app.product_approval_form.form_text.length > 200
-                                ? app.product_approval_form.form_text.slice(0, 200) + '…'
+                                ? `${app.product_approval_form.form_text.slice(0, 200)}...`
                                 : app.product_approval_form.form_text}
                             </div>
                           )}
                           <button
                             className="btn btn-primary btn-sm"
-                            style={{ background: '#7c3aed', borderColor: '#7c3aed', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                            style={{ background: '#7c3aed', borderColor: '#7c3aed', fontWeight: 700 }}
                             onClick={() => navigate(`/addon-applications/${app._id}/approval-form`)}
                           >
-                            <FileText size={13} /> Open Product Approval Form
+                            Open Product Approval Form &rarr;
                           </button>
                         </div>
                       )}
 
-                      {/* Workflow progress (Client: 8 visible steps) */}
-                      {app.status !== 'rejected' && (
-                        <div style={{ background: 'white', borderRadius: 10, border: '1px solid #e2e8f0', padding: '12px 16px' }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 12 }}>
-                            Workflow Progress
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto' }}>
-                            {[
-                              { id: 'submitted', label: 'Submitted' },
-                              { id: 'accepted', label: 'Accepted' },
-                              { id: 'ft_assigned', label: 'FT Assigned' },
-                              { id: 'product_approval_form_enabled', label: 'Form Enabled' },
-                              { id: 'all_forms_received', label: 'Forms Received' },
-                              { id: 'product_form_approved', label: 'Form Approved' },
-                              { id: 'ready_for_certificate', label: 'Ready Cert' },
-                              { id: 'completed', label: 'Certificate' }
-                            ].map((step, idx, arr) => {
-                              const sIdx = ORDER.indexOf(step.id);
-                              const currentIdx = getClientStepIdx(app.status);
-                              const isDone = currentIdx > sIdx || app.status === 'completed';
-                              const isCurrent = currentIdx === sIdx && app.status !== 'completed';
+                      {/* Detail fields */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, fontSize: 12, marginBottom: 14 }}>
+                        <div>
+                          <span style={{ color: '#94a3b8' }}>Contact Person:</span>{' '}
+                          <strong>{app.contact_name}</strong> {app.contact_phone && `(${app.contact_phone})`}
+                        </div>
+                        <div>
+                          <span style={{ color: '#94a3b8' }}>Contact Email:</span>{' '}
+                          <strong>{app.contact_email}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#94a3b8' }}>Site:</span>{' '}
+                          <strong>{getSiteName(app.certificate_id)}</strong>
+                        </div>
+                      </div>
 
-                              return (
-                                <React.Fragment key={step.id}>
-                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 52 }}>
-                                    <div style={{
-                                      width: 22, height: 22, borderRadius: '50%',
-                                      background: isDone ? '#16a34a' : isCurrent ? statusColor : '#e2e8f0',
-                                      color: isDone || isCurrent ? 'white' : '#94a3b8',
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      fontSize: 10, fontWeight: 700, marginBottom: 4,
-                                      boxShadow: isCurrent ? `0 0 0 3px ${statusColor}30` : 'none'
-                                    }}>
-                                      {isDone ? '✓' : idx + 1}
-                                    </div>
-                                    <span style={{ fontSize: 9, fontWeight: isCurrent ? 700 : 400, textAlign: 'center', lineHeight: 1.2, color: isDone ? '#16a34a' : isCurrent ? statusColor : '#94a3b8' }}>
-                                      {step.label}
-                                    </span>
-                                  </div>
-                                  {idx < arr.length - 1 && (
-                                    <div style={{ flex: '0 0 8px', height: 2, background: isDone ? '#16a34a' : '#e2e8f0', marginBottom: 12 }} />
-                                  )}
-                                </React.Fragment>
-                              );
-                            })}
-                          </div>
+                      {app.message && (
+                        <div style={{ fontSize: 12, background: 'white', padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 14 }}>
+                          <span style={{ color: '#94a3b8', fontWeight: 600 }}>Message: </span>
+                          <span style={{ color: '#334155' }}>{app.message}</span>
                         </div>
                       )}
+
+                      {/* Products table */}
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Products in this Request:</div>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                          <thead>
+                            <tr style={{ background: '#f1f5f9' }}>
+                              <th style={{ padding: '6px 10px', textAlign: 'left', width: 40 }}>S/N</th>
+                              <th style={{ padding: '6px 10px', textAlign: 'left' }}>Product Name</th>
+                              <th style={{ padding: '6px 10px', textAlign: 'left' }}>Code / SKU</th>
+                              <th style={{ padding: '6px 10px', textAlign: 'left' }}>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(app.products || []).map((p, i) => (
+                              <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                <td style={{ padding: '6px 10px', color: '#94a3b8' }}>{p.sn || i + 1}</td>
+                                <td style={{ padding: '6px 10px', fontWeight: 600, color: '#0f172a' }}>{p.new_name || p.name}</td>
+                                <td style={{ padding: '6px 10px', color: '#64748b' }}>{p.new_code || p.code || '—'}</td>
+                                <td style={{ padding: '6px 10px' }}>
+                                  <span style={{
+                                    fontSize: 11, padding: '2px 8px', borderRadius: 4, fontWeight: 600,
+                                    background: p.type === 'Add product' ? '#f0fdf4' : p.type === 'Remove product' ? '#fef2f2' : '#f0f9ff',
+                                    color: p.type === 'Add product' ? '#166534' : p.type === 'Remove product' ? '#991b1b' : '#0369a1'
+                                  }}>
+                                    {p.type}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -429,30 +444,16 @@ export default function AddOnApplicationPage() {
         </div>
       )}
 
-      {myApps.length === 0 && (
-        <div style={{ padding: '64px 24px', textAlign: 'center', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0' }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <Package size={24} style={{ color: '#94a3b8' }} />
-          </div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#334155', marginBottom: 6 }}>No Add-on Applications Yet</div>
-          <div style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>Click "New Add-on Application" to request changes to your site's product list.</div>
-          <button className="btn btn-primary" onClick={() => setShowForm(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <PlusCircle size={14} /> New Add-on Application
-          </button>
-        </div>
-      )}
-
       {/* ─── New Application Modal ─────────────────────────────────────────── */}
       {showForm && (
         <div className="modal-overlay" style={{ zIndex: 1000 }}>
-          <div className="modal" style={{ maxWidth: 780, maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="modal" style={{ maxWidth: 840, maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <span className="modal-title">New Add-on Product Application</span>
               <button className="modal-close" onClick={() => setShowForm(false)}><X size={18} /></button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body" style={{ padding: 28, display: 'grid', gap: 20 }}>
-
                 {/* 1. Site */}
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>1. Site</div>
@@ -476,9 +477,6 @@ export default function AddOnApplicationPage() {
                 {/* 2. Contact Person */}
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>2. Contact Person</div>
-                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10, background: '#f0f9ff', padding: '8px 12px', borderRadius: 8, border: '1px solid #bae6fd' }}>
-                    ℹ️ This contact email will receive updates at every stage — enter the person directly handling this request.
-                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div className="form-group" style={{ margin: 0 }}>
                       <label className="form-label">Contact Person Name <span>*</span></label>
@@ -506,47 +504,183 @@ export default function AddOnApplicationPage() {
                 {/* 4. Products Table */}
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>4. Products</div>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                      <thead>
-                        <tr style={{ background: '#f8fafc' }}>
-                          <th style={{ padding: '8px 10px', textAlign: 'center', width: 40, color: '#475569', fontWeight: 700, borderBottom: '2px solid #e2e8f0' }}>S/N</th>
-                          <th style={{ padding: '8px 10px', textAlign: 'left', color: '#475569', fontWeight: 700, borderBottom: '2px solid #e2e8f0' }}>Product Name <span style={{ color: '#ef4444' }}>*</span></th>
-                          <th style={{ padding: '8px 10px', textAlign: 'left', color: '#475569', fontWeight: 700, borderBottom: '2px solid #e2e8f0' }}>Code</th>
-                          <th style={{ padding: '8px 10px', textAlign: 'left', color: '#475569', fontWeight: 700, borderBottom: '2px solid #e2e8f0' }}>Type <span style={{ color: '#ef4444' }}>*</span></th>
-                          <th style={{ padding: '8px 10px', width: 40, borderBottom: '2px solid #e2e8f0' }}></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {form.products.map((p, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: '#94a3b8', fontSize: 12 }}>{idx + 1}</td>
-                            <td style={{ padding: '6px 10px' }}>
-                              <input className="form-control" style={{ margin: 0, fontSize: 13, padding: '7px 10px' }} value={p.name} onChange={e => updateProduct(idx, 'name', e.target.value)} placeholder="Product name" required />
-                            </td>
-                            <td style={{ padding: '6px 10px' }}>
-                              <input className="form-control" style={{ margin: 0, fontSize: 13, padding: '7px 10px' }} value={p.code} onChange={e => updateProduct(idx, 'code', e.target.value)} placeholder="Optional" />
-                            </td>
-                            <td style={{ padding: '6px 10px' }}>
-                              <select className="form-control" style={{ margin: 0, fontSize: 13, padding: '7px 10px' }} value={p.type} onChange={e => updateProduct(idx, 'type', e.target.value)} required>
-                                {PRODUCT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {form.products.map((p, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: 12,
+                          padding: '14px 16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 10
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: '#64748b' }}>Item #{idx + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeProduct(idx)}
+                            disabled={form.products.length === 1}
+                            style={{
+                              background: form.products.length === 1 ? '#f1f5f9' : '#fee2e2',
+                              border: 'none', borderRadius: 6, width: 28, height: 28,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: form.products.length === 1 ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            <Trash2 size={13} color={form.products.length === 1 ? '#cbd5e1' : '#dc2626'} />
+                          </button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+                          <div>
+                            <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Action Type *</label>
+                            <select
+                              className="form-control"
+                              style={{ margin: 0, fontSize: 13 }}
+                              value={p.type}
+                              onChange={e => updateProduct(idx, 'type', e.target.value)}
+                              required
+                            >
+                              {PRODUCT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                          </div>
+
+                          {p.type === 'Add product' && (
+                            <>
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Product Name *</label>
+                                <input
+                                  className="form-control"
+                                  style={{ margin: 0, fontSize: 13 }}
+                                  value={p.name}
+                                  onChange={e => updateProduct(idx, 'name', e.target.value)}
+                                  placeholder="e.g. Halal Beef Sausage"
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Code / SKU</label>
+                                <input
+                                  className="form-control"
+                                  style={{ margin: 0, fontSize: 13 }}
+                                  value={p.code}
+                                  onChange={e => updateProduct(idx, 'code', e.target.value)}
+                                  placeholder="e.g. SKU-101"
+                                />
+                              </div>
+                            </>
+                          )}
+
+                          {p.type === 'Remove product' && (
+                            <div style={{ gridColumn: 'span 2' }}>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', display: 'block', marginBottom: 4 }}>Pick Product to Remove *</label>
+                              <select
+                                className="form-control"
+                                style={{ margin: 0, fontSize: 13 }}
+                                value={p.name || p.original_name || ''}
+                                onChange={e => {
+                                  updateProduct(idx, 'name', e.target.value);
+                                  updateProduct(idx, 'original_name', e.target.value);
+                                }}
+                                required
+                              >
+                                <option value="">-- Select Product to Remove --</option>
+                                {availableProductNames.map(name => (
+                                  <option key={name} value={name}>{name}</option>
+                                ))}
                               </select>
-                            </td>
-                            <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                              <button type="button" onClick={() => removeProduct(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center' }}>
-                                <Trash2 size={15} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            </div>
+                          )}
+
+                          {p.type === 'Change name/code' && (
+                            <>
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Pick Existing Product *</label>
+                                <select
+                                  className="form-control"
+                                  style={{ margin: 0, fontSize: 13 }}
+                                  value={p.original_name || p.name || ''}
+                                  onChange={e => {
+                                    updateProduct(idx, 'original_name', e.target.value);
+                                    updateProduct(idx, 'name', e.target.value);
+                                  }}
+                                  required
+                                >
+                                  <option value="">-- Select Existing Product --</option>
+                                  {availableProductNames.map(name => (
+                                    <option key={name} value={name}>{name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', display: 'block', marginBottom: 4 }}>New Product Name *</label>
+                                <input
+                                  className="form-control"
+                                  style={{ margin: 0, fontSize: 13 }}
+                                  value={p.new_name || ''}
+                                  onChange={e => updateProduct(idx, 'new_name', e.target.value)}
+                                  placeholder="New Product Name"
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', display: 'block', marginBottom: 4 }}>New Code / SKU</label>
+                                <input
+                                  className="form-control"
+                                  style={{ margin: 0, fontSize: 13 }}
+                                  value={p.new_code || ''}
+                                  onChange={e => updateProduct(idx, 'new_code', e.target.value)}
+                                  placeholder="New Code"
+                                />
+                              </div>
+                            </>
+                          )}
+
+                          {p.type === 'Change ingredients' && (
+                            <>
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Pick Product *</label>
+                                <select
+                                  className="form-control"
+                                  style={{ margin: 0, fontSize: 13 }}
+                                  value={p.original_name || p.name || ''}
+                                  onChange={e => {
+                                    updateProduct(idx, 'original_name', e.target.value);
+                                    updateProduct(idx, 'name', e.target.value);
+                                  }}
+                                  required
+                                >
+                                  <option value="">-- Select Product --</option>
+                                  {availableProductNames.map(name => (
+                                    <option key={name} value={name}>{name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Notes / Ingredient Changes</label>
+                                <input
+                                  className="form-control"
+                                  style={{ margin: 0, fontSize: 13 }}
+                                  value={p.code || ''}
+                                  onChange={e => updateProduct(idx, 'code', e.target.value)}
+                                  placeholder="e.g. Revised oil formulation"
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={addProduct} style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--primary)', borderColor: 'var(--primary)' }}>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={addProduct} style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--primary)', borderColor: 'var(--primary)' }}>
                     <PlusCircle size={13} /> Add Another Product
                   </button>
                 </div>
-
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)} disabled={submitting}>Cancel</button>
