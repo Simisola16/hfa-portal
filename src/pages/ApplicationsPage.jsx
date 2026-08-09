@@ -153,6 +153,7 @@ export default function ApplicationsPage({ openNew }) {
   const [submittedAppId, setSubmittedAppId] = useState(null);
   const [submittedSiteId, setSubmittedSiteId] = useState(null);
   const [submittedAppNumber, setSubmittedAppNumber] = useState('');
+  const [submittedSiteName, setSubmittedSiteName] = useState('');
   const [addOnSubmitting, setAddOnSubmitting] = useState(false);
 
   const fetchData = async () => {
@@ -426,6 +427,9 @@ export default function ApplicationsPage({ openNew }) {
         const sId = typeof c.site_id === 'object' ? c.site_id?._id || c.site_id?.id : c.site_id;
         return String(sId) === String(form.site_id) && c.status === 'active';
       });
+      // Resolve the site name from the sites list
+      const selectedSite = sites.find(s => String(s._id || s.id) === String(form.site_id));
+      setSubmittedSiteName(selectedSite?.name || form.site_name || form.establishment_name || 'Your Site');
       setSubmittedCertId(activeCert?._id || activeCert?.id || null);
       setSubmittedAppId(createdApp._id || createdApp.id || null);
       setSubmittedSiteId(form.site_id || null);
@@ -1489,24 +1493,17 @@ export default function ApplicationsPage({ openNew }) {
               </div>
             ) : (
               <div style={{ padding: '24px 28px', maxHeight: '72vh', overflowY: 'auto' }}>
-                {/* Site / Certificate selection or display */}
-                {certs.length > 0 && (
-                  <div className="form-group" style={{ marginBottom: 16 }}>
-                    <label className="form-label">Select Active Site / Certificate</label>
-                    <select
-                      className="form-control"
-                      value={submittedCertId || ''}
-                      onChange={e => setSubmittedCertId(e.target.value)}
-                    >
-                      <option value="">-- Select Certificate / Site --</option>
-                      {certs.filter(c => c.status === 'active').map(c => (
-                        <option key={c._id || c.id} value={c._id || c.id}>
-                          {c.certificate_number} ({c.site_name || c.scope || 'Site'})
-                        </option>
-                      ))}
-                    </select>
+                {/* Site context — shows the site they just applied for */}
+                <div style={{ background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Package size={16} style={{ color: '#059669', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#065f46' }}>Applying For Site</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>{submittedSiteName || 'Your Site'}</div>
+                    {submittedAppNumber && (
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>Application Ref: {submittedAppNumber}</div>
+                    )}
                   </div>
-                )}
+                </div>
 
                 {/* Contact details */}
                 <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px 20px', marginBottom: 18 }}>
