@@ -229,8 +229,10 @@ export default function TrackProcessing() {
   const isNcClosed = status === 'nc_closed' || status === 'audit_report_submitted';
   const latestNcReport = app.nc_reports?.length > 0 ? app.nc_reports[app.nc_reports.length - 1] : null;
 
+  const isRenewal = app?.application_type === 'renewal';
+
   // Agreement states
-  const showProposalAction = status === 'proposal_sent';
+  const showProposalAction = !isRenewal && status === 'proposal_sent';
   const showPaymentAction = (status === 'invoice_sent' || status === 'final_invoice_sent') && invoice && invoice.status !== 'client_paid' && invoice.status !== 'paid';
   const showPaymentPending = ((status === 'invoice_sent' || status === 'final_invoice_sent') && invoice && invoice.status === 'client_paid') || ((status === 'payment_received' || status === 'final_invoice_paid') && invoice && invoice.status !== 'paid');
   const showPaymentConfirmed = (status === 'payment_received' || (invoice && invoice.status === 'paid' && status === 'invoice_sent')) && (!activeAudit || activeAudit.status === 'pending' || activeAudit.status === 'scheduled');
@@ -239,7 +241,7 @@ export default function TrackProcessing() {
   const showAuditDatesAccepted = status === 'dates_accepted' || activeAudit?.status === 'dates_accepted';
   const showAuditScheduled = status === 'date_finalized' || status === 'audit_assigned' || activeAudit?.status === 'date_finalized' || activeAudit?.status === 'auditors_assigned';
   const showAuditComplete = ['audit_successful', 'audit_completed', 'logsheet_created', 'logsheet_signed', 'application_successful'].includes(status) && status !== 'agreement_sent';
-  const showAgreementAction = status === 'agreement_sent';
+  const showAgreementAction = !isRenewal && status === 'agreement_sent';
 
 
   return (
@@ -684,15 +686,17 @@ export default function TrackProcessing() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'start' }}>
         {/* Left Column: Progress Stack Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {/* Proposal Card */}
-          <ProposalCard app={app} proposal={proposal} />
+          {/* Proposal Card (Initial only) */}
+          {!isRenewal && <ProposalCard app={app} proposal={proposal} />}
 
-          {/* Invoice Card */}
-          <InvoiceCard
-            invoice={invoice}
-            status={status}
-            onPayClick={() => setShowPaymentModal(true)}
-          />
+          {/* Initial Invoice Card (Initial only) */}
+          {!isRenewal && (
+            <InvoiceCard
+              invoice={invoice}
+              status={status}
+              onPayClick={() => setShowPaymentModal(true)}
+            />
+          )}
 
           {/* Audit Card */}
           <AuditCard
@@ -706,12 +710,23 @@ export default function TrackProcessing() {
             onNcResolve={handleNcResolve}
           />
 
-          {/* Agreement Card */}
-          <AgreementCard
-            agreement={agreement}
-            status={status}
-            onSignClick={() => setShowAgreementModal(true)}
-          />
+          {/* Renewal Invoice Card (Post-Audit for Renewal) */}
+          {isRenewal && (
+            <InvoiceCard
+              invoice={invoice}
+              status={status}
+              onPayClick={() => setShowPaymentModal(true)}
+            />
+          )}
+
+          {/* Agreement Card (Initial only) */}
+          {!isRenewal && (
+            <AgreementCard
+              agreement={agreement}
+              status={status}
+              onSignClick={() => setShowAgreementModal(true)}
+            />
+          )}
         </div>
 
         {/* Right Column: Timeline and Details */}
