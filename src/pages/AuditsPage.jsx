@@ -320,95 +320,107 @@ export default function AuditsPage() {
                   </div>
 
                   {/* NC Reports Section if present */}
-                  {item.nc_reports && item.nc_reports.length > 0 && (
-                    <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
-                      <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#b91c1c', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <AlertCircle size={14} color="#dc2626" /> Non-Conformity (NC) Reports ({item.nc_reports.length})
-                      </div>
+                  {(() => {
+                    const uniqueNcReports = (item.nc_reports || []).filter((nc, idx, self) => {
+                      return self.findIndex(o => {
+                        if (o._id && nc._id && String(o._id) === String(nc._id)) return true;
+                        if (o.text && nc.text && o.text.trim().toLowerCase() === nc.text.trim().toLowerCase()) return true;
+                        return false;
+                      }) === idx;
+                    });
 
-                      <div style={{ display: 'grid', gap: 10 }}>
-                        {item.nc_reports.map((nc, idx) => {
-                          const isCorrected = nc.status === 'corrected' || nc.status === 'closed';
-                          const fileUrl = nc.document_url || nc.url;
-                          const replyFileUrl = nc.correction_document_url || nc.client_response_url;
+                    if (uniqueNcReports.length === 0) return null;
 
-                          return (
-                            <div 
-                              key={idx} 
-                              style={{ 
-                                padding: '14px 16px', 
-                                background: isCorrected ? '#f0fdf4' : '#fff5f5', 
-                                borderRadius: 12, 
-                                border: `1px solid ${isCorrected ? '#bbf7d0' : '#fecaca'}`,
-                                display: 'flex', flexDirection: 'column', gap: 8
-                              }}
-                            >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  {isCorrected ? <CheckCircle size={15} color="#16a34a" /> : <AlertCircle size={15} color="#dc2626" />}
-                                  <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: isCorrected ? '#166534' : '#b91c1c' }}>
-                                    {isCorrected ? 'Closed / Resolved' : 'Action Required'}
-                                  </span>
-                                  {nc.flagged_at && (
-                                    <span style={{ fontSize: 11, color: '#64748b' }}>&middot; {new Date(nc.flagged_at).toLocaleDateString('en-GB')}</span>
+                    return (
+                      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#b91c1c', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <AlertCircle size={14} color="#dc2626" /> Non-Conformity (NC) Reports ({uniqueNcReports.length})
+                        </div>
+
+                        <div style={{ display: 'grid', gap: 10 }}>
+                          {uniqueNcReports.map((nc, idx) => {
+                            const isCorrected = nc.status === 'corrected' || nc.status === 'closed';
+                            const fileUrl = nc.document_url || nc.url;
+                            const replyFileUrl = nc.correction_document_url || nc.client_response_url;
+
+                            return (
+                              <div 
+                                key={idx} 
+                                style={{ 
+                                  padding: '14px 16px', 
+                                  background: isCorrected ? '#f0fdf4' : '#fff5f5', 
+                                  borderRadius: 12, 
+                                  border: `1px solid ${isCorrected ? '#bbf7d0' : '#fecaca'}`,
+                                  display: 'flex', flexDirection: 'column', gap: 8
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    {isCorrected ? <CheckCircle size={15} color="#16a34a" /> : <AlertCircle size={15} color="#dc2626" />}
+                                    <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: isCorrected ? '#166534' : '#b91c1c' }}>
+                                      {isCorrected ? 'Closed / Resolved' : 'Action Required'}
+                                    </span>
+                                    {nc.flagged_at && (
+                                      <span style={{ fontSize: 11, color: '#64748b' }}>&middot; {new Date(nc.flagged_at).toLocaleDateString('en-GB')}</span>
+                                    )}
+                                  </div>
+
+                                  {!isCorrected && (
+                                    <button
+                                      className="btn btn-sm"
+                                      style={{ background: '#dc2626', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px' }}
+                                      onClick={() => setActiveModal({ type: 'nc', audit: item, reportId: nc._id || nc.id })}
+                                    >
+                                      <Upload size={13} /> Upload NC Correction
+                                    </button>
                                   )}
                                 </div>
 
-                                {!isCorrected && (
-                                  <button
-                                    className="btn btn-sm"
-                                    style={{ background: '#dc2626', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px' }}
-                                    onClick={() => setActiveModal({ type: 'nc', audit: item, reportId: nc._id || nc.id })}
-                                  >
-                                    <Upload size={13} /> Upload NC Correction
-                                  </button>
+                                <div style={{ fontSize: 13, color: '#1e293b', fontWeight: 500, lineHeight: 1.5 }}>
+                                  {nc.text || 'Non-Conformity flagged during audit inspection.'}
+                                </div>
+
+                                {fileUrl && (
+                                  <div>
+                                    <a
+                                      href={getPdfUrl(fileUrl)}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="btn btn-outline btn-sm"
+                                      style={{ color: '#dc2626', borderColor: '#fecaca', gap: 6, display: 'inline-flex', alignItems: 'center', fontSize: 11.5 }}
+                                    >
+                                      <Download size={13} /> View NC Report Sheet
+                                    </a>
+                                  </div>
+                                )}
+
+                                {nc.client_response && (
+                                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#334155' }}>
+                                    <div style={{ fontWeight: 700, color: '#475569', marginBottom: 2 }}>Your Response:</div>
+                                    <div>{nc.client_response}</div>
+                                    {replyFileUrl && (
+                                      <div style={{ marginTop: 4 }}>
+                                        <a href={getPdfUrl(replyFileUrl)} target="_blank" rel="noreferrer" style={{ color: '#16a34a', fontWeight: 600 }}>
+                                          📎 View Attached Evidence
+                                        </a>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {nc.admin_reply && (
+                                  <div style={{ background: '#f0fdf4', border: '1px solid #bae6fd', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#0369a1' }}>
+                                    <div style={{ fontWeight: 700, marginBottom: 2 }}>💬 HFA Response / Guidance:</div>
+                                    <div>{nc.admin_reply}</div>
+                                  </div>
                                 )}
                               </div>
-
-                              <div style={{ fontSize: 13, color: '#1e293b', fontWeight: 500, lineHeight: 1.5 }}>
-                                {nc.text || 'Non-Conformity flagged during audit inspection.'}
-                              </div>
-
-                              {fileUrl && (
-                                <div>
-                                  <a
-                                    href={getPdfUrl(fileUrl)}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="btn btn-outline btn-sm"
-                                    style={{ color: '#dc2626', borderColor: '#fecaca', gap: 6, display: 'inline-flex', alignItems: 'center', fontSize: 11.5 }}
-                                  >
-                                    <Download size={13} /> View NC Report Sheet
-                                  </a>
-                                </div>
-                              )}
-
-                              {nc.client_response && (
-                                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#334155' }}>
-                                  <div style={{ fontWeight: 700, color: '#475569', marginBottom: 2 }}>Your Response:</div>
-                                  <div>{nc.client_response}</div>
-                                  {replyFileUrl && (
-                                    <div style={{ marginTop: 4 }}>
-                                      <a href={getPdfUrl(replyFileUrl)} target="_blank" rel="noreferrer" style={{ color: '#16a34a', fontWeight: 600 }}>
-                                        📎 View Attached Evidence
-                                      </a>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              {nc.admin_reply && (
-                                <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#0369a1' }}>
-                                  <div style={{ fontWeight: 700, marginBottom: 2 }}>💬 HFA Response / Guidance:</div>
-                                  <div>{nc.admin_reply}</div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                 </div>
               </div>

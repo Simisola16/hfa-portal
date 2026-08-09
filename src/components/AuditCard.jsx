@@ -252,10 +252,17 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
 
         {/* NC Reports Section if present */}
         {(() => {
-          const allNcReports = [
+          const rawNcReports = [
             ...(app?.nc_reports || []),
             ...audits.flatMap(a => (a.nc_reports || []))
-          ].filter((nc, idx, self) => self.findIndex(o => o.text === nc.text && String(o.flagged_at || '') === String(nc.flagged_at || '')) === idx);
+          ];
+          const allNcReports = rawNcReports.filter((nc, idx, self) => {
+            return self.findIndex(o => {
+              if (o._id && nc._id && String(o._id) === String(nc._id)) return true;
+              if (o.text && nc.text && o.text.trim().toLowerCase() === nc.text.trim().toLowerCase()) return true;
+              return false;
+            }) === idx;
+          });
 
           if (allNcReports.length === 0) return null;
 

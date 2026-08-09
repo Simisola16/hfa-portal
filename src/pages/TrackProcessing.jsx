@@ -240,11 +240,17 @@ export default function TrackProcessing() {
 
   // NC state
   const isNcFlagged = status === 'nc_flagged';
-  const isNcClosed = status === 'nc_closed' || status === 'audit_report_submitted';
-  const allNcReports = [
+  const rawNcReports = [
     ...(app.nc_reports || []),
     ...auditsArr.flatMap(a => (a.nc_reports || []))
   ];
+  const allNcReports = rawNcReports.filter((nc, idx, self) => {
+    return self.findIndex(o => {
+      if (o._id && nc._id && String(o._id) === String(nc._id)) return true;
+      if (o.text && nc.text && o.text.trim().toLowerCase() === nc.text.trim().toLowerCase()) return true;
+      return false;
+    }) === idx;
+  });
   const latestNcReport = allNcReports.length > 0 ? allNcReports[allNcReports.length - 1] : null;
 
   const isRenewal = app?.application_type === 'renewal';
