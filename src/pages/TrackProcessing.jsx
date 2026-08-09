@@ -229,9 +229,6 @@ export default function TrackProcessing() {
   const isNcClosed = status === 'nc_closed' || status === 'audit_report_submitted';
   const latestNcReport = app.nc_reports?.length > 0 ? app.nc_reports[app.nc_reports.length - 1] : null;
 
-  // Logsheet / post-audit states (no action needed from client — just informational)
-  const isLogsheetStage = ['nc_closed', 'audit_report_submitted', 'logsheet_created', 'logsheet_signed', 'logsheet_sign_requested', 'application_successful'].includes(status);
-
   // Agreement states
   const showProposalAction = status === 'proposal_sent';
   const showPaymentAction = (status === 'invoice_sent' || status === 'final_invoice_sent') && invoice && invoice.status !== 'client_paid' && invoice.status !== 'paid';
@@ -241,7 +238,7 @@ export default function TrackProcessing() {
   const showAuditDatesRejected = status === 'dates_rejected' || activeAudit?.status === 'dates_rejected';
   const showAuditDatesAccepted = status === 'dates_accepted' || activeAudit?.status === 'dates_accepted';
   const showAuditScheduled = status === 'date_finalized' || status === 'audit_assigned' || activeAudit?.status === 'date_finalized' || activeAudit?.status === 'auditors_assigned';
-  const showAuditComplete = status === 'audit_successful' || status === 'audit_completed';
+  const showAuditComplete = ['audit_successful', 'audit_completed', 'logsheet_created', 'logsheet_signed', 'application_successful'].includes(status) && status !== 'agreement_sent';
   const showAgreementAction = status === 'agreement_sent';
 
 
@@ -630,32 +627,7 @@ export default function TrackProcessing() {
           <div>
             <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>✅ Non-Conformity Closed</div>
             <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
-              Your corrective actions have been reviewed and accepted by HFA. The non-conformity has been officially closed. We are now preparing your LogSheet for final sign-off.
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Logsheet Stage — admin processing, client just waits */}
-      {isLogsheetStage && !isNcClosed && (
-        <div style={{
-          background: 'linear-gradient(135deg, #f0f9ff, #e0f2fe)',
-          border: '1.5px solid #bae6fd', borderRadius: 16,
-          padding: '20px 24px', marginBottom: 24,
-          display: 'flex', alignItems: 'flex-start', gap: 16
-        }}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#bae6fd', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <FileText size={22} style={{ color: '#0284c7' }} />
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: '#0369a1', marginBottom: 4 }}>
-              {status === 'logsheet_signed' ? 'LogSheet Signed — Preparing Certificate' : 'LogSheet Being Prepared'}
-            </div>
-            <div style={{ fontSize: 13, color: '#075985', lineHeight: 1.6 }}>
-              {status === 'logsheet_signed'
-                ? 'Your LogSheet has been signed and verified. HFA is now finalising and issuing your Halal certificate. You will be notified once it is ready.'
-                : 'HFA is currently preparing your Inspection LogSheet for final review and sign-off. No action is required from you at this stage. You will be notified once complete.'
-              }
+              Your corrective actions have been reviewed and accepted by HFA. The non-conformity has been officially closed. Our certification team is now completing the final review.
             </div>
           </div>
         </div>
