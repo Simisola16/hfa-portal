@@ -23,12 +23,41 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
   const roleLabels = { 
     lead_auditor: 'Lead Auditor', 
     sharia_board: 'Sharia Board', 
-    audit_trainee: 'Audit Trainee' 
+    audit_trainee: 'Audit Trainee',
+    auditor: 'Auditor'
   };
   const roleColors = {
-    lead_auditor: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+    lead_auditor: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
     sharia_board: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
-    audit_trainee: { bg: '#fefce8', color: '#a16207', border: '#fde68a' },
+    audit_trainee: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+    auditor: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+  };
+
+  const formatProcessStatus = (s) => {
+    if (!s) return 'Pending';
+    const statusMap = {
+      dates_proposed: 'Dates Proposed',
+      dates_accepted: 'Dates Accepted',
+      dates_rejected: 'Dates Rejected',
+      date_finalized: 'Date Finalized',
+      auditors_assigned: 'Auditors Assigned',
+      audit_assigned: 'Auditors Assigned',
+      audit_completed: 'Audit Completed',
+      audit_successful: 'Audit Successful',
+      on_hold: 'On Hold',
+      pending: 'Pending',
+      scheduled: 'Scheduled',
+      in_progress: 'In Progress',
+      nc_flagged: 'NC Flagged',
+      nc_closed: 'NC Closed',
+      audit_report_submitted: 'Audit Report Submitted',
+    };
+    if (statusMap[s]) return statusMap[s];
+    return s
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
   };
 
   if (!isAvailable) {
@@ -105,8 +134,8 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
         {stageLabel && (
           <div style={{ fontWeight: 800, fontSize: 12.5, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>{stageLabel}</span>
-            <span style={{ fontSize: 11.5, textTransform: 'capitalize', color: '#64748b', fontWeight: 600 }}>
-              {(auditObj.status || 'pending').replace(/_/g, ' ')}
+            <span style={{ fontSize: 11.5, color: '#64748b', fontWeight: 700 }}>
+              {formatProcessStatus(auditObj.status)}
             </span>
           </div>
         )}
@@ -199,8 +228,8 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
                   <div style={{ fontSize: 11, fontWeight: 800, color: sc.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Stage {stageNum} {isLocked ? '🔒' : stageAudit?.status === 'audit_completed' ? '✓' : ''}
                   </div>
-                  <div style={{ fontSize: 11, color: sc.color, marginTop: 2, textTransform: 'capitalize' }}>
-                    {stageAudit ? stageAudit.status.replace(/_/g, ' ') : (isLocked ? 'Locked' : 'Pending')}
+                  <div style={{ fontSize: 11.5, color: sc.color, marginTop: 2, fontWeight: 700 }}>
+                    {formatProcessStatus(stageAudit ? stageAudit.status : (isLocked ? 'Locked' : 'Pending'))}
                   </div>
                 </div>
               );

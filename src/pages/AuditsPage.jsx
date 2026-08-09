@@ -17,11 +17,39 @@ const STATUS_BADGE = {
   completed: 'badge-green',
 };
 
-const roleLabels = { lead_auditor: 'Lead Auditor', sharia_board: 'Sharia Board', audit_trainee: 'Audit Trainee' };
+const roleLabels = { lead_auditor: 'Lead Auditor', sharia_board: 'Sharia Board', audit_trainee: 'Audit Trainee', auditor: 'Auditor' };
 const roleColors = {
-  lead_auditor: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+  lead_auditor: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
   sharia_board: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
-  audit_trainee: { bg: '#fefce8', color: '#a16207', border: '#fde68a' },
+  audit_trainee: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+  auditor: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+};
+
+const formatProcessStatus = (s) => {
+  if (!s) return 'Pending';
+  const statusMap = {
+    dates_proposed: 'Dates Proposed',
+    dates_accepted: 'Dates Accepted',
+    dates_rejected: 'Dates Rejected',
+    date_finalized: 'Date Finalized',
+    auditors_assigned: 'Auditors Assigned',
+    audit_assigned: 'Auditors Assigned',
+    audit_completed: 'Audit Completed',
+    audit_successful: 'Audit Successful',
+    on_hold: 'On Hold',
+    pending: 'Pending',
+    scheduled: 'Scheduled',
+    in_progress: 'In Progress',
+    nc_flagged: 'NC Flagged',
+    nc_closed: 'NC Closed',
+    audit_report_submitted: 'Audit Report Submitted',
+  };
+  if (statusMap[s]) return statusMap[s];
+  return s
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
 };
 
 export default function AuditsPage() {
@@ -173,8 +201,8 @@ export default function AuditsPage() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--primary)' }}>{siteName || companyName}</span>
-                      <span className={`badge ${STATUS_BADGE[item.status] || 'badge-blue'}`}>
-                        {STATUS_LABELS[item.status] || (item.status || 'Scheduled').replace(/_/g, ' ')}
+                      <span className={`badge ${STATUS_BADGE[item.status] || 'badge-blue'}`} style={{ fontWeight: 700 }}>
+                        {formatProcessStatus(item.status)}
                       </span>
                       {hasNcFlagged && (
                         <span className="badge badge-red" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
