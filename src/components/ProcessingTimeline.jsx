@@ -62,13 +62,11 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
         stepsToShow.push('nc_closed');
       }
 
-      // Downstream renewal steps (Invoice -> Payment -> Logsheet -> Certificate)
+      // Downstream renewal steps (Invoice -> Payment -> Ready for Certificate -> Certificate Issued)
       if (status !== 'on_hold') {
         stepsToShow.push(
           'invoice_sent',
           'payment_received',
-          'logsheet_created',
-          'logsheet_signed',
           'ready_for_certificate',
           'certificate_issued'
         );
@@ -141,8 +139,20 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
 
   const normStatus = (status || 'submitted').toLowerCase().replace(/ /g, '_');
   const effectiveStatus = (normStatus === 'audit_completed') ? 'audit_successful' : normStatus;
+  
+  let mappedStatus = effectiveStatus;
+  if (isRenewal) {
+    if (effectiveStatus === 'logsheet_created' || effectiveStatus === 'logsheet_signed' || effectiveStatus === 'application_successful') {
+      mappedStatus = 'ready_for_certificate';
+    }
+  } else {
+    if (effectiveStatus === 'logsheet_created' || effectiveStatus === 'logsheet_signed') {
+      mappedStatus = 'application_successful';
+    }
+  }
+
   const currentOrderIdx = STATUS_ORDER.indexOf(effectiveStatus);
-  const currentIndex = stepsToShow.indexOf(effectiveStatus);
+  const currentIndex = stepsToShow.indexOf(mappedStatus);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return null;
