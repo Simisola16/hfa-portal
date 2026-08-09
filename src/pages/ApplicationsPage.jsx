@@ -462,10 +462,10 @@ export default function ApplicationsPage({ openNew }) {
         message: submittedAppNumber ? `Products added for application #${submittedAppNumber}` : '',
         products: addOnProductRows
       });
-      toast.success('Products submitted as an Add-on Application!');
+      toast.success('Products submitted as an Add-on Request! Tracking your request in Add-on Applications.');
       setShowAddProductPrompt(false);
       fetchData();
-      navigate('/applications', { replace: true });
+      navigate('/addon-applications', { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.error || err.message || 'Failed to submit add-on application.');
     } finally {

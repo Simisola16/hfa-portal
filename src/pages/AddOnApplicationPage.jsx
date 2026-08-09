@@ -172,13 +172,17 @@ export default function AddOnApplicationPage() {
     return <div style={{ padding: 80, textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>;
   }
 
-  if (certs.length === 0) {
+  // If no active cert but there are existing add-on apps (e.g., submitted alongside a new application), still show the page.
+  // Only hide the "New Add-on Application" button — clients can still track in-progress requests.
+  const hasNoCert = certs.length === 0;
+
+  if (hasNoCert && myApps.length === 0) {
     return (
       <div style={{ maxWidth: 650, margin: '40px auto', padding: '32px', background: 'white', borderRadius: 24, border: '1px solid #e2e8f0', textAlign: 'center' }}>
         <Award size={48} style={{ color: '#94a3b8', margin: '0 auto 16px' }} />
         <h3 style={{ fontSize: 18, fontWeight: 800, color: '#334155', marginBottom: 12 }}>Add-on Application Unavailable</h3>
         <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
-          Add-on applications are available once you have an active site.
+          Add-on applications are available once you have an active site certificate. If you submitted products during your application, they will appear here once your application is processed.
         </p>
         <button className="btn btn-outline" onClick={() => navigate('/applications')}>
           <ArrowLeft size={14} style={{ marginRight: 6 }} /> Back to Applications
@@ -200,10 +204,27 @@ export default function AddOnApplicationPage() {
             <p style={{ fontSize: 12, color: '#64748b', margin: '2px 0 0' }}>Track and manage product additions, removals, and changes for your site</p>
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
-          <PlusCircle size={15} /> New Add-on Application
-        </button>
+        {!hasNoCert && (
+          <button className="btn btn-primary" onClick={() => setShowForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
+            <PlusCircle size={15} /> New Add-on Application
+          </button>
+        )}
       </div>
+
+      {/* Info banner when no active cert but has submitted add-on apps (from new application) */}
+      {hasNoCert && myApps.length > 0 && (
+        <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 14, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+            <Package size={18} color="white" />
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#0c4a6e', marginBottom: 4 }}>Products Submitted Successfully</div>
+            <div style={{ fontSize: 13, color: '#0369a1', lineHeight: 1.6 }}>
+              Your product request has been submitted and is now in the <strong>Add-on Review Queue</strong>. HFA will review and accept or reject the request, assign a Food Tech specialist, issue you a product approval form to complete, create a Halal Logsheet, and then update your certificate when approved.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Applications List */}
       {myApps.length > 0 && (
@@ -239,10 +260,18 @@ export default function AddOnApplicationPage() {
                   {/* Card header */}
                   <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      {/* Status + cert */}
+                      {/* Status + cert/app reference */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
                         <span className={`badge ${badgeClass}`} style={{ fontSize: 10, textTransform: 'uppercase', fontWeight: 700 }}>{statusLabel}</span>
-                        <span style={{ fontSize: 11, color: '#94a3b8' }}>Cert: {certNo}</span>
+                        {certNo !== '—' ? (
+                          <span style={{ fontSize: 11, color: '#94a3b8' }}>Cert: {certNo}</span>
+                        ) : app.application_id?.application_number ? (
+                          <span style={{ fontSize: 11, color: '#0369a1', fontWeight: 600 }}>
+                            For App: {app.application_id.application_number}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 11, color: '#94a3b8' }}>Pending Certificate</span>
+                        )}
                         <span style={{ fontSize: 11, color: '#94a3b8' }}>•</span>
                         <span style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(app.createdAt).toLocaleDateString('en-GB')}</span>
                       </div>
