@@ -96,7 +96,7 @@ export default function CertificatesPage() {
     return diffYears > 1.5; // > 1.5 years means it's a 3-year certificate
   };
 
-  const getSurveillanceDates = (cert) => {
+  const calculateSurveillanceDates = (cert) => {
     if (!cert.issue_date) return { y1: null, y2: null };
     const d1 = new Date(cert.issue_date);
     d1.setFullYear(d1.getFullYear() + 1);
@@ -107,13 +107,17 @@ export default function CertificatesPage() {
 
   const openRenewModal = (cert) => {
     setRenewModal(cert);
-    setRenewForm({ contact_person: '', files: [] });
+    setRenewForm({
+      contact_person: cert.primary_contact_name || cert.contact_person || '',
+      contact_email: cert.primary_email || cert.contact_email || '',
+      contact_phone: cert.primary_work_tel || cert.primary_mobile || cert.contact_phone || ''
+    });
     setRenewSuccess(false);
   };
 
   const closeRenewModal = () => {
     setRenewModal(null);
-    setRenewForm({ contact_person: '', files: [] });
+    setRenewForm({ contact_person: '', contact_email: '', contact_phone: '' });
     setRenewSuccess(false);
   };
 
@@ -123,13 +127,22 @@ export default function CertificatesPage() {
       toast.error('Please enter the contact person name.');
       return;
     }
+    if (!renewForm.contact_email.trim()) {
+      toast.error('Please enter the contact person email.');
+      return;
+    }
+    if (!renewForm.contact_phone.trim()) {
+      toast.error('Please enter the contact person phone number.');
+      return;
+    }
     setRenewSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append('certificate_id', renewModal._id || renewModal.id);
-      fd.append('contact_person', renewForm.contact_person.trim());
-      renewForm.files.forEach(f => fd.append('supporting_docs', f));
-      await api.post('/api/applications/renew', fd, true);
+      await api.post('/api/applications/renew', {
+        certificate_id: renewModal._id || renewModal.id,
+        contact_person: renewForm.contact_person.trim(),
+        contact_email: renewForm.contact_email.trim(),
+        contact_phone: renewForm.contact_phone.trim()
+      });
       setRenewSuccess(true);
     } catch (err) {
       toast.error(err.response?.data?.error || err.message || 'Failed to submit renewal.');
@@ -529,11 +542,11 @@ export default function CertificatesPage() {
                   }}>
                     <AlertCircle size={16} style={{ color: '#a16207', flexShrink: 0, marginTop: 1 }} />
                     <p style={{ margin: 0, fontSize: 13, color: '#713f12', lineHeight: 1.6 }}>
-                      We'll pre-fill your renewal using your existing application records. Just confirm the contact person and attach any updated supporting documents.
+                      We'll pre-fill your renewal using your existing application records. Just confirm the contact person details below.
                     </p>
                   </div>
 
-                  {/* Contact Person */}
+                  {/* Contact Person Name */}
                   <div>
                     <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 6 }}>
                       Contact Person Name <span style={{ color: '#ef4444' }}>*</span>
@@ -549,54 +562,36 @@ export default function CertificatesPage() {
                     />
                   </div>
 
-                  {/* Supporting Documents */}
+                  {/* Contact Person Email */}
                   <div>
                     <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 6 }}>
-                      Supporting Documents <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500 }}>(optional — PDFs, images)</span>
+                      Contact Person Email <span style={{ color: '#ef4444' }}>*</span>
                     </label>
-                    <div
-                      style={{
-                        border: '2px dashed #e2e8f0', borderRadius: 12, padding: '24px 20px',
-                        textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s',
-                        background: renewForm.files.length > 0 ? '#f0fdf4' : '#fafafa',
-                        borderColor: renewForm.files.length > 0 ? '#86efac' : '#e2e8f0',
-                      }}
-                      onClick={() => fileInputRef.current?.click()}
-                      onMouseOver={e => e.currentTarget.style.borderColor = '#1B7A7A'}
-                      onMouseOut={e => e.currentTarget.style.borderColor = renewForm.files.length > 0 ? '#86efac' : '#e2e8f0'}
-                    >
-                      <Upload size={28} style={{ color: renewForm.files.length > 0 ? '#16a34a' : '#94a3b8', margin: '0 auto 10px', display: 'block' }} />
-                      {renewForm.files.length > 0 ? (
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#15803d', marginBottom: 6 }}>
-                            {renewForm.files.length} file{renewForm.files.length > 1 ? 's' : ''} selected
-                          </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
-                            {renewForm.files.map((f, i) => (
-                              <span key={i} style={{
-                                fontSize: 11, background: '#dcfce7', color: '#166534',
-                                padding: '3px 8px', borderRadius: 20, fontWeight: 600,
-                              }}>
-                                <FileText size={10} style={{ marginRight: 3 }} />{f.name}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>Click to upload documents</div>
-                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>PDF, JPG, PNG — up to 10 files</div>
-                        </div>
-                      )}
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        hidden
-                        multiple
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                        onChange={e => setRenewForm(f => ({ ...f, files: Array.from(e.target.files) }))}
-                      />
-                    </div>
+                    <input
+                      type="email"
+                      className="form-control"
+                      placeholder="contact@example.com"
+                      value={renewForm.contact_email}
+                      onChange={e => setRenewForm(f => ({ ...f, contact_email: e.target.value }))}
+                      required
+                      style={{ fontSize: 14 }}
+                    />
+                  </div>
+
+                  {/* Contact Person Phone Number */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 6 }}>
+                      Contact Person Phone Number <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      className="form-control"
+                      placeholder="+44 7700 000000"
+                      value={renewForm.contact_phone}
+                      onChange={e => setRenewForm(f => ({ ...f, contact_phone: e.target.value }))}
+                      required
+                      style={{ fontSize: 14 }}
+                    />
                   </div>
                 </div>
 
@@ -612,7 +607,7 @@ export default function CertificatesPage() {
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    disabled={renewSubmitting || !renewForm.contact_person.trim()}
+                    disabled={renewSubmitting || !renewForm.contact_person?.trim() || !renewForm.contact_email?.trim() || !renewForm.contact_phone?.trim()}
                     style={{
                       background: 'linear-gradient(135deg, #15803d, #166534)',
                       minWidth: 160,

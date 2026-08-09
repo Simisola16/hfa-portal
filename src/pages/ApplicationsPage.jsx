@@ -495,7 +495,9 @@ export default function ApplicationsPage({ openNew }) {
 
     if (form.application_type === 'renewal') {
       if (!form.site_id) return toast.error('Please select a business site.');
-      if (!form.managing_director?.trim()) return toast.error('Please enter contact person details.');
+      if (!form.managing_director?.trim()) return toast.error('Please enter the contact person name.');
+      if (!form.primary_email?.trim()) return toast.error('Please enter the contact person email.');
+      if (!form.primary_work_tel?.trim()) return toast.error('Please enter the contact person phone number.');
       if (!form.declared_true) return toast.error('You must declare that the information is true and correct.');
     } else {
       for (let s = 1; s <= 5; s++) {
@@ -959,16 +961,16 @@ export default function ApplicationsPage({ openNew }) {
                     </div>
                   ) : null; })()}
                   <div className="form-group">
-                    <label className="form-label">Contact Person Details <span>*</span></label>
-                    <input type="text" className="form-control" placeholder="Full Name and Role" value={form.managing_director} onChange={e => setForm(f => ({ ...f, managing_director: e.target.value }))} required />
+                    <label className="form-label">Contact Person Name <span>*</span></label>
+                    <input type="text" className="form-control" placeholder="Full Name and Role" value={form.managing_director} onChange={e => setForm(f => ({ ...f, managing_director: e.target.value, primary_contact_name: e.target.value }))} required />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Updated Supporting Documents <span style={{ fontSize: 11, color: '#94a3b8' }}>(optional)</span></label>
-                    <div style={{ border: '2px dashed #cbd5e1', borderRadius: 12, padding: 20, textAlign: 'center', cursor: 'pointer', background: renewalFiles.length > 0 ? '#f0fdf4' : '#fafafa' }} onClick={() => document.getElementById('modal-renewal-docs-input').click()}>
-                      <Upload size={24} style={{ color: renewalFiles.length > 0 ? '#16a34a' : '#94a3b8', margin: '0 auto 8px', display: 'block' }} />
-                      {renewalFiles.length > 0 ? <div style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>{renewalFiles.length} file(s) attached</div> : <div style={{ fontSize: 13, color: '#475569' }}>Click to attach supporting files</div>}
-                      <input id="modal-renewal-docs-input" type="file" hidden multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={e => setRenewalFiles(Array.from(e.target.files))} />
-                    </div>
+                    <label className="form-label">Contact Person Email <span>*</span></label>
+                    <input type="email" className="form-control" placeholder="contact@example.com" value={form.primary_email || ''} onChange={e => setForm(f => ({ ...f, primary_email: e.target.value, company_email: e.target.value }))} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Contact Person Phone Number <span>*</span></label>
+                    <input type="tel" className="form-control" placeholder="+44 7700 000000" value={form.primary_work_tel || ''} onChange={e => setForm(f => ({ ...f, primary_work_tel: e.target.value, primary_mobile: e.target.value }))} required />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Renewal Notes</label>
@@ -981,7 +983,7 @@ export default function ApplicationsPage({ openNew }) {
                 </div>
                 <div style={{ padding: '16px 32px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: 12, flexShrink: 0 }}>
                   <button type="button" className="btn btn-ghost" onClick={handleCloseModal}>Cancel</button>
-                  <button type="button" className="btn btn-primary" disabled={submitting || !form.declared_true || !form.managing_director?.trim() || !form.site_id || getGatingStatus()?.blocked} onClick={handleSubmit} style={{ background: 'linear-gradient(135deg, #d97706, #b45309)', borderColor: '#d97706' }}>
+                  <button type="button" className="btn btn-primary" disabled={submitting || !form.declared_true || !form.managing_director?.trim() || !form.primary_email?.trim() || !form.primary_work_tel?.trim() || !form.site_id || getGatingStatus()?.blocked} onClick={handleSubmit} style={{ background: 'linear-gradient(135deg, #d97706, #b45309)', borderColor: '#d97706' }}>
                     {submitting ? <span className="spinner-white" /> : <><ShieldCheck size={18} /> Submit Renewal Application</>}
                   </button>
                 </div>
