@@ -323,7 +323,7 @@ export default function ApplicationsPage({ openNew }) {
   const validateStep = (step) => {
     if (step === 1) {
       if (!form.site_id) {
-        toast.error('Please select a business site.');
+        toast.error('Section A: Please select a business site.');
         return false;
       }
       const gating = getGatingStatus();
@@ -331,58 +331,163 @@ export default function ApplicationsPage({ openNew }) {
         toast.error(gating.message);
         return false;
       }
+      if (!form.category) {
+        toast.error('Section A: Please select a certification category.');
+        return false;
+      }
       if (!form.establishment_name?.trim()) {
-        toast.error('Please enter the name of the establishment.');
+        toast.error('Section A: Please enter the name of the establishment.');
+        return false;
+      }
+      if (!form.company_reg_number?.trim()) {
+        toast.error('Section A: Please enter the Company Registration Number.');
+        return false;
+      }
+      if (!form.vat_number?.trim()) {
+        toast.error('Section A: Please enter the VAT Number.');
+        return false;
+      }
+      if (!form.is_manufacturer) {
+        toast.error('Section A: Please indicate if you are a manufacturer of halal products.');
         return false;
       }
     }
     if (step === 2) {
       if (!form.site_address?.trim()) {
-        toast.error('Please enter the site / factory address.');
+        toast.error('Section B: Please enter the site / factory address.');
         return false;
       }
       if (!form.company_email?.trim()) {
-        toast.error('Please enter the company email address.');
+        toast.error('Section B: Please enter the company email address.');
         return false;
       }
       if (!form.employee_count || Number(form.employee_count) <= 0) {
-        toast.error('Please enter a valid number of employees.');
+        toast.error('Section B: Please enter a valid number of employees (at least 1).');
         return false;
+      }
+    }
+    if (step === 3) {
+      if (form.is_manufacturer === 'no') {
+        if (!form.mfr_name?.trim()) {
+          toast.error('Section C: Please enter the Manufacturer Establishment Name.');
+          return false;
+        }
+        if (!form.mfr_address?.trim()) {
+          toast.error('Section C: Please enter the Manufacturer Address.');
+          return false;
+        }
       }
     }
     if (step === 4) {
       if (!form.primary_contact_name?.trim()) {
-        toast.error('Please enter the Primary Contact Name.');
+        toast.error('Section D: Please enter the Primary Contact Name.');
+        return false;
+      }
+      if (!form.primary_work_tel?.trim() && !form.primary_mobile?.trim()) {
+        toast.error('Section D: Please enter a Primary Contact phone or mobile number.');
         return false;
       }
       if (!form.primary_email?.trim()) {
-        toast.error('Please enter the Primary Contact Email.');
+        toast.error('Section D: Please enter the Primary Contact Email.');
         return false;
       }
       if (!form.halal_coordinator?.trim()) {
-        toast.error('Please enter the Technical Contact Name.');
+        toast.error('Section D: Please enter the Technical Contact Name.');
+        return false;
+      }
+      if (!form.tech_work_tel?.trim() && !form.tech_mobile?.trim()) {
+        toast.error('Section D: Please enter a Technical Contact phone or mobile number.');
         return false;
       }
       if (!form.qa_contact?.trim()) {
-        toast.error('Please enter the Technical Contact Email.');
+        toast.error('Section D: Please enter the Technical Contact Email.');
         return false;
       }
     }
     if (step === 5) {
+      if (!form.food_nature && !form.nonfood_nature) {
+        toast.error('Section E: Please select the Nature of Business (Food or Non-Food).');
+        return false;
+      }
+      if (!form.business_type) {
+        toast.error('Section E: Please select the Type of Business.');
+        return false;
+      }
+      if (!form.export_only) {
+        toast.error('Section E: Please indicate if certification is for export purposes only.');
+        return false;
+      }
+      if (!form.prev_gso_app) {
+        toast.error('Section E: Please indicate if you previously applied for GSO/UAE certificate.');
+        return false;
+      }
+      if (!form.prev_refused) {
+        toast.error('Section E: Please indicate if certification was previously refused.');
+        return false;
+      }
       if (!form.scope?.trim()) {
-        toast.error('Please provide the product description / scope in Section E.');
+        toast.error('Section E: Please enter the product description / scope.');
+        return false;
+      }
+      if (!form.products_on_site_count || Number(form.products_on_site_count) <= 0) {
+        toast.error('Section E: Please enter the number of products processed on site.');
+        return false;
+      }
+      if (!form.products_halal_count || Number(form.products_halal_count) <= 0) {
+        toast.error('Section E: Please enter the number of products for Halal approval.');
+        return false;
+      }
+      if (form.has_porcine === undefined || form.has_porcine === null || form.has_porcine === '') {
+        toast.error('Section E: Please answer question 11 regarding Pork / Porcine material.');
         return false;
       }
       if (form.has_porcine && !form.porcine_details?.trim()) {
-        toast.error('Please provide details on porcine segregation/control.');
+        toast.error('Section E: Please provide details on porcine segregation / control.');
+        return false;
+      }
+      if (form.has_intoxicants === undefined || form.has_intoxicants === null || form.has_intoxicants === '') {
+        toast.error('Section E: Please answer question 12 regarding Intoxicants.');
         return false;
       }
       if (form.has_intoxicants && !form.intoxicants_details?.trim()) {
-        toast.error('Please provide details on intoxicants usage.');
+        toast.error('Section E: Please provide details on intoxicants usage.');
+        return false;
+      }
+      if (!form.use_hfa_logo) {
+        toast.error('Section E: Please answer question 13 regarding HFA logo usage.');
+        return false;
+      }
+      if (!form.referral_source) {
+        toast.error('Section E: Please select how you heard about HFA.');
+        return false;
+      }
+      if (!form.managing_director?.trim()) {
+        toast.error('Section E: Please enter the Signatory Name (question 15).');
+        return false;
+      }
+      if (!form.signatory_position?.trim()) {
+        toast.error('Section E: Please enter the Signatory Position / Title (question 16).');
+        return false;
+      }
+      if (!form.declared_true) {
+        toast.error('Section E: You must declare and check the box to confirm that the information is true and correct.');
         return false;
       }
     }
     return true;
+  };
+
+  const handleNavigateToStep = (targetStep) => {
+    if (targetStep <= modalStep) {
+      setModalStep(targetStep);
+      return;
+    }
+    for (let s = modalStep; s < targetStep; s++) {
+      if (!validateStep(s)) {
+        return;
+      }
+    }
+    setModalStep(targetStep);
   };
 
   const handleSubmit = async (e) => {
@@ -393,19 +498,12 @@ export default function ApplicationsPage({ openNew }) {
       if (!form.managing_director?.trim()) return toast.error('Please enter contact person details.');
       if (!form.declared_true) return toast.error('You must declare that the information is true and correct.');
     } else {
-      if (!form.site_id) return toast.error('Please select a business site (Section A).');
-      if (!form.scope?.trim()) return toast.error('Please enter the scope of certification (Section E).');
-      if (!form.halal_coordinator?.trim()) return toast.error('Please enter the Technical Contact name (Section D).');
-      if (!form.qa_contact?.trim()) return toast.error('Please enter the Technical Contact email (Section D).');
-      if (!form.employee_count || Number(form.employee_count) <= 0) return toast.error('Please enter a valid employee count (Section B).');
-      if (!form.production_schedule?.trim()) return toast.error('Please enter the production schedule (Section B).');
-      if (form.has_porcine && !form.porcine_details?.trim()) {
-        return toast.error('Please provide porcine segregation/control details (Section E).');
+      for (let s = 1; s <= 5; s++) {
+        if (!validateStep(s)) {
+          setModalStep(s);
+          return;
+        }
       }
-      if (form.has_intoxicants && !form.intoxicants_details?.trim()) {
-        return toast.error('Please provide intoxicants usage details (Section E).');
-      }
-      if (!form.declared_true) return toast.error('You must declare that the information is true and correct (Section E).');
     }
 
     setSubmitting(true);
@@ -903,7 +1001,7 @@ export default function ApplicationsPage({ openNew }) {
                     <button
                       key={s.key}
                       type="button"
-                      onClick={() => { if (validateStep(modalStep)) setModalStep(s.key); }}
+                      onClick={() => handleNavigateToStep(s.key)}
                       style={{
                         width: '100%', textAlign: 'left', padding: '12px 20px',
                         background: modalStep === s.key ? 'linear-gradient(135deg, #065f46, #1B7A7A)' : 'transparent',
@@ -1367,7 +1465,7 @@ export default function ApplicationsPage({ openNew }) {
                       )}
                       <button type="button" className="btn btn-ghost" onClick={handleCloseModal}>Cancel</button>
                       {modalStep < 5 ? (
-                        <button type="button" className="btn btn-primary" disabled={getGatingStatus()?.blocked} onClick={() => { if (validateStep(modalStep)) setModalStep(s => s + 1); }} style={{ gap: 6, background: 'linear-gradient(135deg, #065f46, #1B7A7A)', borderColor: '#065f46' }}>
+                        <button type="button" className="btn btn-primary" disabled={getGatingStatus()?.blocked} onClick={() => handleNavigateToStep(modalStep + 1)} style={{ gap: 6, background: 'linear-gradient(135deg, #065f46, #1B7A7A)', borderColor: '#065f46' }}>
                           Next <ChevronRight size={16} />
                         </button>
                       ) : (
