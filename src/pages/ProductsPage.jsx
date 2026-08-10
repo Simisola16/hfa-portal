@@ -3,6 +3,8 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { Plus, Search, Package, Edit, Trash2, X, PlusCircle } from 'lucide-react';
 
+const PRODUCT_TYPES = ['Add product', 'Remove product', 'Change name/code', 'Change ingredient'];
+
 export default function ProductsPage({ openNew: openNewProp }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +21,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
     contact_name: '', contact_number: '', contact_email: '',
     subject: '', message: ''
   });
-  const [productList, setProductList] = useState([{ id: 1, name: '', code: '', type: '' }]);
+  const [productList, setProductList] = useState([{ id: 1, name: '', code: '', type: 'Add product' }]);
 
   const fetch = () => { setLoading(true); api.get('/api/products').then(d => setProducts(d.data || [])).catch(() => toast.error('Failed to load')).finally(() => setLoading(false)); };
   useEffect(() => { fetch(); }, []);
@@ -35,12 +37,12 @@ export default function ProductsPage({ openNew: openNewProp }) {
   const openNew = () => { 
     setEditing(null); 
     setBulkForm({ contact_name: '', contact_number: '', contact_email: '', subject: '', message: '' });
-    setProductList([{ id: 1, name: '', code: '', type: '' }]);
+    setProductList([{ id: 1, name: '', code: '', type: 'Add product' }]);
     setShowModal(true); 
   };
 
   const addProductRow = () => {
-    setProductList([...productList, { id: productList.length + 1, name: '', code: '', type: '' }]);
+    setProductList([...productList, { id: productList.length + 1, name: '', code: '', type: 'Add product' }]);
   };
 
   const updateProductRow = (index, field, value) => {
@@ -158,7 +160,15 @@ export default function ProductsPage({ openNew: openNewProp }) {
                   <div className="form-group"><label className="form-label">Product Name <span>*</span></label><input className="form-control" value={form.name} onChange={setF('name')} required /></div>
                   <div className="form-grid">
                     <div className="form-group"><label className="form-label">Category</label><input className="form-control" value={form.category} onChange={setF('category')} placeholder="e.g. Meat, Snacks, Dairy" /></div>
-                    <div className="form-group"><label className="form-label">Product Type</label><input className="form-control" value={form.product_type} onChange={setF('product_type')} placeholder="e.g. Food, Cosmetics" /></div>
+                    <div className="form-group">
+                      <label className="form-label">Product Type</label>
+                      <select className="form-control" value={form.product_type || ''} onChange={setF('product_type')}>
+                        <option value="">Select Type</option>
+                        {PRODUCT_TYPES.map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                   <div className="form-group"><label className="form-label">Barcode / SKU</label><input className="form-control" value={form.barcode} onChange={setF('barcode')} /></div>
                   <div className="form-group"><label className="form-label">Ingredients</label><textarea className="form-control" value={form.ingredients} onChange={setF('ingredients')} placeholder="List main ingredients..." /></div>
@@ -210,7 +220,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
                           <th style={{ padding: '10px 16px', width: '50px', textAlign: 'center' }}>ID</th>
                           <th style={{ padding: '10px 16px' }}>Product Name</th>
                           <th style={{ padding: '10px 16px' }}>Code / SKU</th>
-                          <th style={{ padding: '10px 16px' }}>Type</th>
+                          <th style={{ padding: '10px 16px', width: '220px' }}>Type</th>
                           <th style={{ padding: '10px 16px', width: '50px' }}></th>
                         </tr>
                       </thead>
@@ -225,7 +235,11 @@ export default function ProductsPage({ openNew: openNewProp }) {
                               <input className="form-control" value={prod.code} onChange={e => updateProductRow(index, 'code', e.target.value)} placeholder="Code" />
                             </td>
                             <td style={{ padding: '10px 16px' }}>
-                              <input className="form-control" value={prod.type} onChange={e => updateProductRow(index, 'type', e.target.value)} placeholder="Type" />
+                              <select className="form-control" value={prod.type || 'Add product'} onChange={e => updateProductRow(index, 'type', e.target.value)}>
+                                {PRODUCT_TYPES.map(t => (
+                                  <option key={t} value={t}>{t}</option>
+                                ))}
+                              </select>
                             </td>
                             <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                               <button type="button" className="btn btn-ghost btn-icon" onClick={() => removeProductRow(index)} style={{ color: 'var(--text-muted)' }}>
