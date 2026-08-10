@@ -1,12 +1,39 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
-import { Plus, Search, Package, Edit, Trash2, X, PlusCircle } from 'lucide-react';
+import { Plus, Search, Package, Edit, Trash2, X, PlusCircle, ExternalLink, ArrowRight } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const PRODUCT_TYPES = ['Add product', 'Remove product', 'Change name/code', 'Change ingredient'];
 
+const formatSiteName = (str) => {
+  if (!str) return 'Site';
+  return str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1));
+};
+
+const getSiteName = (c) => {
+  if (!c) return 'Main Facility';
+  let raw = '';
+  const siteObj = c.site_id;
+  if (siteObj && typeof siteObj === 'object') {
+    raw = siteObj.name || siteObj.est_name || siteObj.trading_name;
+  }
+  if (!raw) {
+    const appObj = c.application_id;
+    if (appObj && typeof appObj === 'object') {
+      raw = appObj.establishment_name || appObj.site_name;
+    }
+  }
+  if (!raw) raw = c.site_name || 'Main Facility';
+  return formatSiteName(raw);
+};
+
 export default function ProductsPage({ openNew: openNewProp }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
+  const [certs, setCerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
@@ -18,12 +45,26 @@ export default function ProductsPage({ openNew: openNewProp }) {
 
   // Bulk add form for New Product
   const [bulkForm, setBulkForm] = useState({
-    contact_name: '', contact_number: '', contact_email: '',
-    subject: '', message: ''
+    certificate_id: '',
+    contact_name: '',
+    contact_number: '',
+    contact_email: '',
+    subject: '',
+    message: ''
   });
   const [productList, setProductList] = useState([{ id: 1, name: '', code: '', type: 'Add product' }]);
 
-  const fetch = () => { setLoading(true); api.get('/api/products').then(d => setProducts(d.data || [])).catch(() => toast.error('Failed to load')).finally(() => setLoading(false)); };
+  const fetch = () => {
+    setLoading(true);
+    Promise.all([
+      api.get('/api/products').then(d => setProducts(d.data || [])).catch(() => toast.error('Failed to load products')),
+      api.get('/api/certificates').then(d => {
+        const active = (d.data || []).filter(c => c.status === 'active' && new Date(c.expiry_date) >= new Date());
+        setCerts(active);
+      }).catch(() => {})
+    ]).finally(() => setLoading(false));
+  };
+
   useEffect(() => { fetch(); }, []);
 
   useEffect(() => {
@@ -36,7 +77,15 @@ export default function ProductsPage({ openNew: openNewProp }) {
   const openEdit = (p) => { setEditing(p); setForm(p); setShowModal(true); };
   const openNew = () => { 
     setEditing(null); 
-    setBulkForm({ contact_name: '', contact_number: '', contact_email: '', subject: '', message: '' });
+    const defaultCertId = certs.length === 1 ? (certs[0]._id || certs[0].id) : '';
+    setBulkForm({
+      certificate_id: defaultCertId,
+      contact_name: user?.full_name || user?.company_name || '',
+      contact_number: user?.phone || '',
+      contact_email: user?.email || '',
+      subject: '',
+      message: ''
+    });
     setProductList([{ id: 1, name: '', code: '', type: 'Add product' }]);
     setShowModal(true); 
   };
@@ -58,36 +107,39 @@ export default function ProductsPage({ openNew: openNewProp }) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); setSubmitting(true);
+    e.preventDefault();
+    setSubmitting(true);
     try {
       if (editing) { 
         await api.put(`/api/products/${editing.id || editing._id}`, form); 
         toast.success('Product updated'); 
       } else { 
-        // Bulk add products
+        // Bulk add products through Add-on Application flow
         const validProducts = productList.filter(p => p.name.trim() !== '');
         if (validProducts.length === 0) throw new Error('Please add at least one product name');
+        if (!bulkForm.contact_name?.trim()) throw new Error('Contact Person Name is required');
+        if (!bulkForm.contact_email?.trim()) throw new Error('Contact Person Email is required');
 
-        // Since the backend might only accept one product at a time, we'll iterate
-        // Alternatively, if there's a bulk endpoint, we'd use that. We'll use a loop for safety.
-        for (const prod of validProducts) {
-          const payload = {
-            name: prod.name,
-            barcode: prod.code,
-            product_type: prod.type,
-            contact_name: bulkForm.contact_name,
-            contact_number: bulkForm.contact_number,
-            contact_email: bulkForm.contact_email,
-            subject: bulkForm.subject,
-            message: bulkForm.message
-          };
-          await api.post('/api/products', payload);
-        }
-        toast.success(`${validProducts.length} product(s) added successfully`); 
+        const payload = {
+          certificate_id: bulkForm.certificate_id || (certs.length === 1 ? (certs[0]._id || certs[0].id) : undefined),
+          contact_name: bulkForm.contact_name.trim(),
+          contact_email: bulkForm.contact_email.trim(),
+          contact_phone: bulkForm.contact_number.trim(),
+          message: bulkForm.subject ? `Subject: ${bulkForm.subject}\n\n${bulkForm.message}` : bulkForm.message,
+          products: validProducts.map(prod => ({
+            name: prod.name.trim(),
+            code: prod.code?.trim() || '',
+            type: prod.type === 'Change ingredient' ? 'Change ingredients' : prod.type
+          }))
+        };
+
+        await api.post('/api/add-on-applications', payload);
+        toast.success(`${validProducts.length} product(s) submitted! Following the Add-on approval workflow.`); 
       }
-      setShowModal(false); fetch();
+      setShowModal(false);
+      fetch();
     } catch (err) { 
-      toast.error(err.message || 'Failed to save'); 
+      toast.error(err.response?.data?.error || err.message || 'Failed to save'); 
     } finally { 
       setSubmitting(false); 
     }
@@ -108,7 +160,16 @@ export default function ProductsPage({ openNew: openNewProp }) {
           <Search size={15} className="search-icon" />
           <input placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <button className="btn btn-primary" onClick={openNew} style={{ marginLeft: 'auto' }}><Plus size={15} /> Add Product</button>
+        <button 
+          className="btn btn-outline" 
+          onClick={() => navigate('/addon-applications')} 
+          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          <Package size={15} /> Add-on Requests <ArrowRight size={14} />
+        </button>
+        <button className="btn btn-primary" onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Plus size={15} /> Add Product
+        </button>
       </div>
 
       <div className="card">
@@ -131,7 +192,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
                       <td>{p.category || '—'}</td>
                       <td>{p.product_type || '—'}</td>
                       <td>{p.barcode || '—'}</td>
-                      <td><span className={`badge ${p.status === 'approved' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-yellow'}`}>{p.status || 'Pending'}</span></td>
+                      <td><span className={`badge ${p.status === 'approved' || p.status === 'active' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-yellow'}`}>{p.status === 'active' ? 'Approved' : (p.status || 'Pending')}</span></td>
                       <td style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}><Edit size={13} /></button>
                         <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(p.id || p._id)}><Trash2 size={13} /></button>
@@ -149,7 +210,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)} style={{ padding: '20px' }}>
           <div className="modal" style={{ maxWidth: editing ? '500px' : '1000px', width: '100%', maxHeight: '95vh', overflowY: 'auto' }}>
             <div className="modal-header" style={{ background: '#fff', borderBottom: '1px solid #e2e8f0' }}>
-              <span className="modal-title" style={{ fontSize: '16px', fontWeight: 700 }}>{editing ? 'Edit Product' : 'Add New Product'}</span>
+              <span className="modal-title" style={{ fontSize: '16px', fontWeight: 700 }}>{editing ? 'Edit Product' : 'Add New Product (Add-on Request)'}</span>
               <button className="modal-close" onClick={() => setShowModal(false)}><X size={16} /></button>
             </div>
             
@@ -178,6 +239,28 @@ export default function ProductsPage({ openNew: openNewProp }) {
                 // NATIVE UI FOR NEW PRODUCTS
                 <div className="modal-body" style={{ background: '#f9fafb' }}>
                   
+                  {/* Section 0: Certified Site (if available) */}
+                  {certs.length > 0 && (
+                    <div style={{ marginBottom: 20 }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>Certified Facility / Site</h4>
+                      {certs.length === 1 ? (
+                        <div style={{ padding: '10px 14px', background: '#fff', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', fontWeight: 600, fontSize: 13, color: '#334155' }}>
+                          {getSiteName(certs[0])} ({certs[0].certificate_number})
+                        </div>
+                      ) : (
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <select className="form-control" value={bulkForm.certificate_id} onChange={setB('certificate_id')}>
+                            <option value="">-- Select Facility / Certificate --</option>
+                            {certs.map(c => (
+                              <option key={c._id || c.id} value={c._id || c.id}>{getSiteName(c)} ({c.certificate_number})</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      <div style={{ height: 1, background: 'var(--border)', margin: '16px 0 20px' }}></div>
+                    </div>
+                  )}
+
                   {/* Section 1: Contact Person */}
                   <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Contact Person</h4>
                   <div className="form-grid-3">

@@ -240,6 +240,7 @@ export default function TrackProcessing() {
 
   // NC state
   const isNcFlagged = status === 'nc_flagged';
+  const isNcClosed = status === 'nc_closed' || status === 'audit_report_submitted';
   const rawNcReports = [
     ...(app.nc_reports || []),
     ...auditsArr.flatMap(a => (a.nc_reports || []))
