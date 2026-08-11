@@ -141,14 +141,6 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
   const effectiveStatus = (normStatus === 'audit_completed') ? 'audit_successful' : normStatus;
   
   let mappedStatus = effectiveStatus;
-  if (effectiveStatus === 'nc_closed' || effectiveStatus === 'audit_report_submitted') {
-    if (statusHistory.some(h => h.status === 'payment_received') || status === 'payment_received') {
-      mappedStatus = 'payment_received';
-    } else if (statusHistory.some(h => h.status === 'invoice_sent') || status === 'invoice_sent') {
-      mappedStatus = 'invoice_sent';
-    }
-  }
-
   if (isRenewal) {
     if (mappedStatus === 'logsheet_created' || mappedStatus === 'logsheet_signed' || mappedStatus === 'application_successful') {
       mappedStatus = 'ready_for_certificate';

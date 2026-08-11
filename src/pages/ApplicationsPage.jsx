@@ -5,6 +5,7 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { Plus, HelpCircle, PlusCircle, Search, RefreshCw, X, Upload, Check, ChevronRight, ChevronLeft, Trash2, ShieldCheck, FileText, AlertTriangle, RotateCcw, CheckCircle, Package } from 'lucide-react';
 import { STATUS_LABELS, STATUS_BADGE } from '../lib/applicationStatuses';
+import { getSocket } from '../lib/socket';
 
 const CATEGORIES = [
   'Annual Certification – Food and General processing',
@@ -185,6 +186,26 @@ export default function ApplicationsPage({ openNew }) {
       setAddOnLoading(false);
     }
   };
+
+  // Real-time add-on status updates via socket
+  useEffect(() => {
+    const token = localStorage.getItem('hfa_token');
+    if (!token) return;
+    const socket = getSocket(token);
+    if (!socket) return;
+    const handleAddOnUpdate = (data) => {
+      setAddOnApps(prev => prev.map(app => {
+        const appId = app._id || app.id;
+        const incomingId = data.addOnId || data.addon_id;
+        if (String(appId) === String(incomingId)) {
+          return { ...app, status: data.status };
+        }
+        return app;
+      }));
+    };
+    socket.on('addon_updated', handleAddOnUpdate);
+    return () => { socket.off('addon_updated', handleAddOnUpdate); };
+  }, []);
 
   const checkRenewalEligibility = (siteId) => {
     if (!siteId) return false;
@@ -797,17 +818,15 @@ export default function ApplicationsPage({ openNew }) {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               {addOnApps.map(app => {
-                // Determine step index for tracker: 
-                // Submitted -> Under Review -> Approved/Rejected -> Inspection Assigned -> Inspection Completed -> Completed
-                const steps = ['submitted', 'under_review', 'approved_or_rejected', 'inspection_assigned', 'inspection_completed', 'completed'];
+                // Determine step index for tracker based on AddOnApplication 10-state flow
                 let currentStepIndex = 0;
                 
                 if (app.status === 'submitted') currentStepIndex = 0;
-                else if (app.status === 'under_review') currentStepIndex = 1;
-                else if (app.status === 'approved' || app.status === 'rejected') currentStepIndex = 2;
-                else if (app.status === 'inspection_assigned') currentStepIndex = 3;
-                else if (app.status === 'inspection_completed') currentStepIndex = 4;
-                else if (app.status === 'completed') currentStepIndex = 5;
+                else if (app.status === 'accepted') currentStepIndex = 1;
+                else if (app.status === 'rejected') currentStepIndex = 1;
+                else if (['ft_assigned', 'product_approval_form_enabled', 'all_forms_received'].includes(app.status)) currentStepIndex = 2;
+                else if (['logsheet_created', 'waiting_sharia_signature', 'product_form_approved', 'ready_for_certificate'].includes(app.status)) currentStepIndex = 3;
+                else if (app.status === 'completed') currentStepIndex = 4;
 
                 const isRejected = app.status === 'rejected';
 
@@ -817,17 +836,19 @@ export default function ApplicationsPage({ openNew }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', background: app.action_type === 'add' ? '#f0fdf4' : app.action_type === 'remove' ? '#fef2f2' : '#f0f9ff', color: app.action_type === 'add' ? '#15803d' : app.action_type === 'remove' ? '#b91c1c' : '#0369a1', borderRadius: 6, textTransform: 'uppercase' }}>
-                            {app.action_type === 'change_name' ? 'rename' : app.action_type}
+                          <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', background: '#f0f9ff', color: '#0369a1', borderRadius: 6, textTransform: 'uppercase' }}>
+                            ADD-ON REQUEST
                           </span>
                           <span style={{ fontWeight: 800, fontSize: 15, color: '#1e293b' }}>
                             Cert: {app.certificate_id?.certificate_number || '—'}
                           </span>
                         </div>
                         <div style={{ fontSize: 13, color: '#475569', marginTop: 8, fontWeight: 500 }}>
-                          {app.action_type === 'add' && <>Adding product: <strong>{app.new_product_name}</strong></>}
-                          {app.action_type === 'remove' && <>Removing product: <strong>{app.product_name}</strong></>}
-                          {app.action_type === 'change_name' && <>Renaming: <strong>{app.product_name}</strong> → <strong>{app.new_product_name}</strong></>}
+                          {app.products && app.products.length > 0 ? (
+                            <span>{app.products.length} product(s) modification requested</span>
+                          ) : (
+                            <span>Modification requested</span>
+                          )}
                         </div>
                       </div>
                       
@@ -835,9 +856,9 @@ export default function ApplicationsPage({ openNew }) {
                         <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>
                           Submitted: {new Date(app.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </div>
-                        {app.assigned_food_tech && (
+                        {app.assigned_food_techs && app.assigned_food_techs.length > 0 && (
                           <div style={{ fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
-                            🔍 Inspector: {app.assigned_food_tech.full_name}
+                            🔍 Inspector(s): {app.assigned_food_techs.map(ft => ft.full_name).join(', ')}
                           </div>
                         )}
                       </div>
@@ -848,14 +869,13 @@ export default function ApplicationsPage({ openNew }) {
                       <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', width: '100%' }}>
                         {/* Connecting Line */}
                         <div style={{ position: 'absolute', top: 12, left: '4%', right: '4%', height: 3, background: '#e2e8f0', zIndex: 1 }} />
-                        <div style={{ position: 'absolute', top: 12, left: '4%', width: `${(currentStepIndex / 5) * 92}%`, height: 3, background: isRejected ? '#ef4444' : 'var(--primary)', zIndex: 2, transition: 'all 0.4s ease' }} />
+                        <div style={{ position: 'absolute', top: 12, left: '4%', width: `${(currentStepIndex / 4) * 92}%`, height: 3, background: isRejected ? '#ef4444' : 'var(--primary)', zIndex: 2, transition: 'all 0.4s ease' }} />
                         
                         {[
                           { label: 'Submitted', key: 'submitted' },
-                          { label: 'Under Review', key: 'under_review' },
-                          { label: isRejected ? 'Rejected' : 'Accepted', key: 'approved_or_rejected' },
-                          { label: 'Inspection', key: 'inspection_assigned' },
-                          { label: 'Inspected', key: 'inspection_completed' },
+                          { label: isRejected ? 'Rejected' : 'Accepted', key: 'accepted' },
+                          { label: 'Assigned & Reviewing', key: 'ft_assigned' },
+                          { label: 'Approval & Logsheet', key: 'logsheet_created' },
                           { label: 'Completed', key: 'completed' }
                         ].map((s, idx) => {
                           const isDone = idx <= currentStepIndex;
@@ -864,8 +884,8 @@ export default function ApplicationsPage({ openNew }) {
                           let textColor = '#94a3b8';
                           
                           if (isDone) {
-                            dotColor = isRejected && idx === 2 ? '#ef4444' : 'var(--primary)';
-                            textColor = isRejected && idx === 2 ? '#ef4444' : 'var(--text-dark)';
+                            dotColor = isRejected && idx === 1 ? '#ef4444' : 'var(--primary)';
+                            textColor = isRejected && idx === 1 ? '#ef4444' : 'var(--text-dark)';
                           }
                           if (isCurrent) {
                             dotColor = isRejected ? '#ef4444' : 'var(--primary)';
@@ -873,7 +893,7 @@ export default function ApplicationsPage({ openNew }) {
                           }
 
                           return (
-                            <div key={s.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 3, width: '16%', textAlign: 'center' }}>
+                            <div key={s.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 3, width: '20%', textAlign: 'center' }}>
                               <div style={{
                                 width: 24, height: 24, borderRadius: '50%', background: dotColor, border: '4px solid #white',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',

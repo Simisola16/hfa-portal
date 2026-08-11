@@ -10,6 +10,11 @@ const getPdfUrl = (url) => {
   return url;
 };
 
+const formatStatus = (status) => {
+  if (!status) return '';
+  return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
 export default function ProposalCard({ proposal, status }) {
   const isAvailable = ['approved', 'proposal_sent', 'proposal_rejected', 'proposal_approved', 'invoice_sent', 'audit_assigned', 'audit_report_submitted', 'logsheet_created', 'logsheet_signed', 'agreement_sent', 'agreement_signed', 'certificate_issued'].includes(status) || proposal;
 
@@ -42,7 +47,7 @@ export default function ProposalCard({ proposal, status }) {
           </div>
           <div>
             <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Certification Proposal</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Version {proposal.version || 1} &middot; Status: <span style={{ fontWeight: 700, textTransform: 'capitalize' }}>{proposal.status}</span></div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Version {proposal.version || 1} &middot; Status: <span style={{ fontWeight: 700 }}>{formatStatus(proposal.status)}</span></div>
           </div>
         </div>
         {proposal.proposal_url && (

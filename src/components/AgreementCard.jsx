@@ -43,7 +43,7 @@ export default function AgreementCard({ agreement, status, onSignClick }) {
           <div>
             <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Certification Agreement</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              Status: <span style={{ fontWeight: 700, textTransform: 'capitalize' }}>
+              Status: <span style={{ fontWeight: 700 }}>
                 {agreement.final_agreement_url ? 'Finalized (Countersigned)' : (agreement.client_signed ? 'Signed' : 'Awaiting Signature')}
               </span>
             </div>

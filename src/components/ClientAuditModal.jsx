@@ -251,7 +251,15 @@ export default function ClientAuditModal({
 
               <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
                 {audit.proposed_dates?.map((d, i) => (
-                  <label key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #cbd5e1', cursor: unavailable ? 'not-allowed' : 'pointer', opacity: unavailable ? 0.6 : 1 }}>
+                  <label key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    background: selectedDates.includes(d) ? '#f0fdf4' : '#f8fafc',
+                    padding: '16px', borderRadius: '8px',
+                    border: `1.5px solid ${selectedDates.includes(d) ? '#16a34a' : '#cbd5e1'}`,
+                    cursor: unavailable ? 'not-allowed' : 'pointer',
+                    opacity: unavailable ? 0.5 : 1,
+                    transition: 'all 0.2s'
+                  }}>
                     <input
                       type="checkbox"
                       disabled={unavailable}
@@ -271,20 +279,30 @@ export default function ClientAuditModal({
                     <span style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>{new Date(d).toDateString()}</span>
                   </label>
                 ))}
-              </div>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16, cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={unavailable}
-                  onChange={e => {
-                    setUnavailable(e.target.checked);
-                    if (e.target.checked) setSelectedDates([]);
-                  }}
-                  style={{ width: 16, height: 16 }}
-                />
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#b91c1c' }}>I am not available on any of these days</span>
-              </label>
+                {/* Unavailable Option Card */}
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  background: unavailable ? '#fef2f2' : '#f8fafc',
+                  padding: '16px', borderRadius: '8px',
+                  border: `1.5px solid ${unavailable ? '#ef4444' : '#cbd5e1'}`,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={unavailable}
+                    onChange={e => {
+                      setUnavailable(e.target.checked);
+                      if (e.target.checked) setSelectedDates([]);
+                    }}
+                    style={{ width: 18, height: 18 }}
+                  />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: unavailable ? '#dc2626' : '#334155' }}>
+                    I am not available on any of these days
+                  </span>
+                </label>
+              </div>
             </>
           )}
         </div>
