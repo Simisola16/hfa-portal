@@ -105,26 +105,43 @@ function isParentActive(item, location) {
   return location.pathname === item.path;
 }
 
-function getUnreadNavCount(notifications, pathStr, children = []) {
+function matchSinglePath(link, targetPath, isChild = false) {
+  if (!link || !targetPath) return false;
+  const [linkPath, linkSearch = ''] = link.split('?');
+  const [targetPathname, targetSearch = ''] = targetPath.split('?');
+
+  if (linkPath !== targetPathname) return false;
+
+  if (targetSearch) {
+    if (!linkSearch) return false;
+    const targetParams = new URLSearchParams(targetSearch);
+    const linkParams = new URLSearchParams(linkSearch);
+    for (const [key, val] of targetParams.entries()) {
+      if (linkParams.get(key) !== val) return false;
+    }
+    return true;
+  }
+
+  if (isChild) {
+    return !linkSearch;
+  }
+
+  return true;
+}
+
+function getUnreadNavCount(notifications, pathStr, children = [], isChild = false) {
   if (!notifications || notifications.length === 0) return 0;
   const unreadList = notifications.filter(n => !n.is_read && n.link);
   if (unreadList.length === 0) return 0;
 
-  const matchSinglePath = (link, targetPath) => {
-    if (!link || !targetPath) return false;
-    const linkPath = link.split('?')[0].split('#')[0];
-    const targetPathname = targetPath.split('?')[0].split('#')[0];
-    return linkPath === targetPathname;
-  };
-
   let count = 0;
   unreadList.forEach(n => {
     let matched = false;
-    if (pathStr && matchSinglePath(n.link, pathStr)) {
+    if (pathStr && matchSinglePath(n.link, pathStr, isChild)) {
       matched = true;
     }
-    if (!matched && children && children.length > 0) {
-      if (children.some(c => matchSinglePath(n.link, c.path))) {
+    if (!matched && !isChild && children && children.length > 0) {
+      if (children.some(c => matchSinglePath(n.link, c.path, true))) {
         matched = true;
       }
     }
@@ -202,7 +219,7 @@ export default function Sidebar({ isOpen, onClose, notifications = [] }) {
               const Icon = item.icon;
               const isExpanded = expanded[item.label];
               const parentActive = isParentActive(item, location);
-              const parentUnread = getUnreadNavCount(notifications, item.path, item.children);
+              const parentUnread = getUnreadNavCount(notifications, item.path, item.children, false);
 
               if (item.children) {
                 return (
@@ -238,7 +255,7 @@ export default function Sidebar({ isOpen, onClose, notifications = [] }) {
                     >
                       {item.children.map(child => {
                         const childActive = isChildActive(child.path, location);
-                        const childUnread = getUnreadNavCount(notifications, child.path);
+                        const childUnread = getUnreadNavCount(notifications, child.path, [], true);
                         return (
                           <NavLink
                             key={child.label}
