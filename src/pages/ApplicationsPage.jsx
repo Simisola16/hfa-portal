@@ -163,22 +163,29 @@ export default function ApplicationsPage({ openNew }) {
     setAddOnLoading(true);
     try {
       const [appsRes, sitesRes, certsRes, addOnRes, prodsRes] = await Promise.all([
-        api.get('/api/applications'),
-        api.get('/api/sites'),
+        api.get('/api/applications').catch(() => ({ data: [] })),
+        api.get('/api/sites').catch(() => ({ data: [] })),
         api.get('/api/certificates').catch(() => ({ data: [] })),
         api.get('/api/add-on-applications').catch(() => ({ data: [] })),
         api.get('/api/products').catch(() => ({ data: [] }))
       ]);
-      setApps(appsRes.data || []);
-      setSites(sitesRes.data || []);
-      setCerts(certsRes.data || []);
-      setClientProducts(prodsRes.data?.data || prodsRes.data || []);
+
+      const loadedApps = Array.isArray(appsRes) ? appsRes : (Array.isArray(appsRes?.data) ? appsRes.data : []);
+      const loadedSites = Array.isArray(sitesRes) ? sitesRes : (Array.isArray(sitesRes?.data) ? sitesRes.data : []);
+      const loadedCerts = Array.isArray(certsRes) ? certsRes : (Array.isArray(certsRes?.data) ? certsRes.data : []);
+      const loadedAddOns = Array.isArray(addOnRes) ? addOnRes : (Array.isArray(addOnRes?.data) ? addOnRes.data : []);
+      const loadedProds = Array.isArray(prodsRes) ? prodsRes : (Array.isArray(prodsRes?.data?.data) ? prodsRes.data.data : (Array.isArray(prodsRes?.data) ? prodsRes.data : []));
+
+      setApps(loadedApps);
+      setSites(loadedSites);
+      setCerts(loadedCerts);
+      setAddOnApps(loadedAddOns);
+      setClientProducts(loadedProds);
       
-      const active = (certsRes.data || []).some(c => 
-        c.status === 'active' && new Date(c.expiry_date) >= new Date()
+      const active = loadedCerts.some(c => 
+        c && c.status === 'active' && (!c.expiry_date || new Date(c.expiry_date) >= new Date())
       );
       setHasActiveCert(active);
-      setAddOnApps(addOnRes.data || []);
     } catch (err) {
       toast.error('Failed to load data');
     } finally {
@@ -194,7 +201,7 @@ export default function ApplicationsPage({ openNew }) {
     const socket = getSocket(token);
     if (!socket) return;
     const handleAddOnUpdate = (data) => {
-      setAddOnApps(prev => prev.map(app => {
+      setAddOnApps(prev => (Array.isArray(prev) ? prev : []).map(app => {
         const appId = app._id || app.id;
         const incomingId = data.addOnId || data.addon_id;
         if (String(appId) === String(incomingId)) {
@@ -212,12 +219,15 @@ export default function ApplicationsPage({ openNew }) {
     const now = Date.now();
     const threeMonthsInMs = 90 * 24 * 60 * 60 * 1000;
 
-    const siteCerts = certs.filter(c => {
+    const safeCerts = Array.isArray(certs) ? certs : [];
+    const siteCerts = safeCerts.filter(c => {
+      if (!c) return false;
       const sId = typeof c.site_id === 'object' ? c.site_id?._id || c.site_id?.id : c.site_id;
       return String(sId) === String(siteId);
     });
 
     const certEligible = siteCerts.some(c => {
+      if (!c) return false;
       if (c.status === 'expired') return true;
       if (!c.expiry_date) return false;
       const expiryTime = new Date(c.expiry_date).getTime();
@@ -226,12 +236,15 @@ export default function ApplicationsPage({ openNew }) {
 
     if (certEligible) return true;
 
-    const siteApps = apps.filter(a => {
+    const safeApps = Array.isArray(apps) ? apps : [];
+    const siteApps = safeApps.filter(a => {
+      if (!a) return false;
       const sId = typeof a.site_id === 'object' ? a.site_id?._id || a.site_id?.id : a.site_id;
       return String(sId) === String(siteId);
     });
 
     return siteApps.some(a => {
+      if (!a) return false;
       if (a.status === 'expired') return true;
       if (a.certificate_expiry) {
         const expiryTime = new Date(a.certificate_expiry).getTime();
@@ -246,9 +259,11 @@ export default function ApplicationsPage({ openNew }) {
     
     // Active Certificate blocks a new application if certificate has > 3 months left
     if (form.application_type === 'new') {
-      const activeCert = certs.find(c => {
+      const safeCerts = Array.isArray(certs) ? certs : [];
+      const activeCert = safeCerts.find(c => {
+        if (!c) return false;
         const sId = typeof c.site_id === 'object' ? c.site_id?._id || c.site_id?.id : c.site_id;
-        return String(sId) === String(form.site_id) && c.status === 'active' && new Date(c.expiry_date) > new Date();
+        return String(sId) === String(form.site_id) && c.status === 'active' && (!c.expiry_date || new Date(c.expiry_date) > new Date());
       });
       if (activeCert) {
         const expiry = new Date(activeCert.expiry_date).getTime();
@@ -622,7 +637,9 @@ export default function ApplicationsPage({ openNew }) {
     }
   };
 
-  const filtered = apps.filter(a => {
+  const safeApps = Array.isArray(apps) ? apps : [];
+  const filtered = safeApps.filter(a => {
+    if (!a) return false;
     const matchSearch = !search || a.application_number?.toLowerCase().includes(search.toLowerCase()) || a.category?.toLowerCase().includes(search.toLowerCase());
     
     let matchStatus = true;
@@ -645,8 +662,8 @@ export default function ApplicationsPage({ openNew }) {
   // If a ?appId= query param is present (e.g. from an email link), navigate directly to TrackProcessing
   useEffect(() => {
     const appId = searchParams.get('appId');
-    if (appId && apps.length > 0) {
-      const targetApp = apps.find(a => a._id === appId || a.id === appId);
+    if (appId && safeApps.length > 0) {
+      const targetApp = safeApps.find(a => a && (a._id === appId || a.id === appId));
       if (targetApp) {
         navigate(`/applications/${appId}/track`);
       }

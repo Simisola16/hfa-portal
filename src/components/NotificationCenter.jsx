@@ -185,7 +185,10 @@ export default function NotificationCenter({
     }
   };
 
-  const filteredNotifications = notifications.filter(n => {
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+
+  const filteredNotifications = safeNotifications.filter(n => {
+    if (!n) return false;
     if (filterTab === 'unread') return !n.is_read;
     if (filterTab === 'action') {
       const t = (n.title || '').toLowerCase();
@@ -288,7 +291,7 @@ export default function NotificationCenter({
         flexShrink: 0
       }}>
         {[
-          { id: 'all', label: `All (${notifications.length})` },
+          { id: 'all', label: `All (${safeNotifications.length})` },
           { id: 'unread', label: `Unread (${unreadCount})` },
           { id: 'action', label: 'Actions' }
         ].map(tab => (
@@ -316,7 +319,7 @@ export default function NotificationCenter({
 
       {/* Notifications List */}
       <div style={{ flex: 1, overflowY: 'auto', maxHeight: 380, padding: 0 }}>
-        {loading && notifications.length === 0 ? (
+        {loading && safeNotifications.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center' }}>
             <div className="spinner" style={{ margin: '0 auto 10px' }} />
             <div style={{ fontSize: 12, color: '#94a3b8' }}>Loading notifications...</div>
