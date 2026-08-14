@@ -138,7 +138,9 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
   };
 
   const normStatus = (status || 'submitted').toLowerCase().replace(/ /g, '_');
-  const effectiveStatus = (normStatus === 'audit_completed') ? 'audit_successful' : normStatus;
+  let effectiveStatus = (normStatus === 'audit_completed') ? 'audit_successful' : normStatus;
+  if (normStatus === 'dates_rejected') effectiveStatus = 'dates_proposed';
+  if (normStatus === 'audit_report_submitted') effectiveStatus = 'nc_closed';
   
   let mappedStatus = effectiveStatus;
   if (isRenewal) {
@@ -151,7 +153,7 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
     }
   }
 
-  const currentOrderIdx = STATUS_ORDER.indexOf(effectiveStatus);
+  const currentOrderIdx = STATUS_ORDER.indexOf(normStatus);
   const currentIndex = stepsToShow.indexOf(mappedStatus);
 
   const formatDate = (dateStr) => {
@@ -167,7 +169,9 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
   return (
     <div style={{ padding: '8px 0' }}>
       {stepsToShow.map((s, idx) => {
-        const histEntry = historyMap[s] || (s === 'audit_successful' ? (historyMap['audit_completed'] || historyMap['audit_successful'] || historyMap['logsheet_created']) : null);
+        const histEntry = historyMap[s] || 
+          (s === 'dates_proposed' ? (historyMap['dates_rejected'] || historyMap['dates_proposed']) : null) ||
+          (s === 'audit_successful' ? (historyMap['audit_completed'] || historyMap['audit_successful'] || historyMap['logsheet_created']) : null);
         
         let isComplete = false;
         let isCurrent = false;
@@ -181,23 +185,29 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
           // Fallback using canonical STATUS_ORDER when current status is an internal / off-timeline status (e.g. logsheet_created)
           const stepOrderIdx = STATUS_ORDER.indexOf(s);
           if (currentOrderIdx !== -1 && stepOrderIdx !== -1) {
-            if (stepOrderIdx <= currentOrderIdx) {
+            if (stepOrderIdx < currentOrderIdx) {
               isComplete = true;
+            } else if (stepOrderIdx === currentOrderIdx) {
+              isCurrent = true;
             } else {
               isPending = true;
             }
           } else {
-            isPending = idx > 0;
-            isCurrent = idx === 0;
+            isComplete = Boolean(historyMap[s]);
+            isPending = !isComplete;
           }
         }
 
         const isRejectedStep = s === 'rejected' || s === 'proposal_rejected';
+        const isDatesRejectedStep = normStatus === 'dates_rejected' && s === 'dates_proposed';
         const isHoldStep = s === 'on_hold';
 
         let circleColor, lineColor, labelColor, bgColor, borderColor;
 
         if (isRejectedStep && (status === s || (s === 'proposal_rejected' && status === 'proposal_rejected'))) {
+          circleColor = '#dc2626'; lineColor = '#fecaca';
+          labelColor = '#991b1b'; bgColor = '#fef2f2'; borderColor = '#fecaca';
+        } else if (isDatesRejectedStep) {
           circleColor = '#dc2626'; lineColor = '#fecaca';
           labelColor = '#991b1b'; bgColor = '#fef2f2'; borderColor = '#fecaca';
         } else if (isHoldStep && status === 'on_hold') {
@@ -216,7 +226,6 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
 
         const isLast = idx === stepsToShow.length - 1;
 
-
         return (
           <div key={s} style={{ display: 'flex', alignItems: 'flex-start', gap: 0 }}>
             {/* Left: circle + vertical line */}
@@ -228,11 +237,13 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
                 border: isCurrent ? `3px solid ${circleColor}` : `2px solid ${isComplete ? circleColor : '#e2e8f0'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
-                boxShadow: isCurrent ? `0 0 0 4px rgba(37, 99, 235, 0.18)` : 'none',
+                boxShadow: isCurrent ? `0 0 0 4px ${isDatesRejectedStep ? 'rgba(220, 38, 38, 0.18)' : 'rgba(37, 99, 235, 0.18)'}` : 'none',
                 position: 'relative',
                 zIndex: 1,
               }}>
                 {isRejectedStep && isRejected ? (
+                  <XCircle size={18} color="white" />
+                ) : isDatesRejectedStep ? (
                   <XCircle size={18} color="white" />
                 ) : isHoldStep && status === 'on_hold' ? (
                   <Clock size={16} color="white" />
@@ -272,15 +283,18 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
                   fontWeight: isCurrent ? 800 : isComplete ? 700 : 500,
                   color: labelColor,
                 }}>
-                  {getStepLabel(s)}
+                  {isDatesRejectedStep ? 'Audit Dates Rejected' : getStepLabel(s)}
                 </span>
                 {isCurrent && (
                   <span style={{
                     fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                    letterSpacing: '0.06em', color: '#1d4ed8',
-                    background: '#eff6ff', border: '1px solid #bfdbfe', padding: '2px 8px', borderRadius: 20,
+                    letterSpacing: '0.06em', 
+                    color: isDatesRejectedStep ? '#dc2626' : '#1d4ed8',
+                    background: isDatesRejectedStep ? '#fef2f2' : '#eff6ff', 
+                    border: `1px solid ${isDatesRejectedStep ? '#fca5a5' : '#bfdbfe'}`, 
+                    padding: '2px 8px', borderRadius: 20,
                   }}>
-                    Current
+                    {isDatesRejectedStep ? 'Dates Rejected' : 'Current'}
                   </span>
                 )}
               </div>
