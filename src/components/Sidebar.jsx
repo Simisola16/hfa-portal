@@ -8,62 +8,75 @@ import {
   Settings, HelpCircle, RefreshCw, Menu, X, Ticket, Calendar
 } from 'lucide-react';
 
-const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+const NAV_SECTIONS = [
   {
-    icon: FileText, label: 'Applications', path: '/applications',
-    children: [
-      { label: 'All Applications', path: '/applications' },
-      { label: 'New Application', path: '/applications/new' },
-      { label: 'Renewal Application', path: '/applications?type=renewal' },
-      { label: 'Surveillance Application', path: '/applications?type=surveillance' },
-      { label: 'In Progress', path: '/applications?status=in_progress' },
-      { label: 'Rejected / On-Hold', path: '/applications?status=rejected' },
+    key: 'main',
+    label: 'Main Menu',
+    items: [
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+      {
+        icon: FileText, label: 'Applications', path: '/applications',
+        children: [
+          { label: 'All Applications', path: '/applications' },
+          { label: 'New Application', path: '/applications/new' },
+          { label: 'Renewal Application', path: '/applications?type=renewal' },
+          { label: 'Surveillance Application', path: '/applications?type=surveillance' },
+          { label: 'In Progress', path: '/applications?status=in_progress' },
+          { label: 'Rejected / On-Hold', path: '/applications?status=rejected' },
+        ]
+      },
+      {
+        icon: Package, label: 'Manage Products', path: '/products',
+        children: [
+          { label: 'Product List', path: '/products' },
+          { label: 'Add Product', path: '/products/new' },
+          { label: 'Add-on Products Application', path: '/addon-applications/new' },
+        ]
+      },
+      {
+        icon: Award, label: 'Certificates', path: '/certificates',
+        children: [
+          { label: 'All Certificates', path: '/certificates' },
+          { label: 'Active Certificates', path: '/certificates?status=active' },
+          { label: 'Expired Certificates', path: '/certificates?status=expired' },
+        ]
+      },
+      {
+        icon: Ship, label: 'Export', path: '/export',
+        children: [
+          { label: 'Manage Export Cert', path: '/export' },
+          { label: 'Request Export Cert', path: '/export/new' },
+        ]
+      },
+      {
+        icon: Ticket, label: 'Tickets', path: '/tickets',
+        children: [
+          { label: 'All Tickets', path: '/tickets' },
+          { label: 'New Ticket', path: '/tickets' },
+        ]
+      },
+      {
+        icon: MessageSquare, label: 'Messages', path: '/messages',
+        children: [
+          { label: 'Inbox', path: '/messages/inbox' },
+          { label: 'Outbox', path: '/messages/outbox' },
+        ]
+      },
+      { icon: FileText, label: 'Proposals', path: '/proposals' },
+      { icon: Calendar, label: 'Audits', path: '/audits' },
+      { icon: Users, label: 'Manage Users', path: '/manage-users' },
+      { icon: MapPin, label: 'Manage Sites', path: '/sites' },
+      { icon: FileBarChart, label: 'Invoices', path: '/invoices' },
+      { icon: FileCheck, label: 'Agreements', path: '/agreements' },
     ]
   },
   {
-    icon: Package, label: 'Manage Products', path: '/products',
-    children: [
-      { label: 'Product List', path: '/products' },
-      { label: 'Add Product', path: '/products/new' },
-      { label: 'Add-on Products Application', path: '/addon-applications/new' },
+    key: 'account',
+    label: 'Account',
+    items: [
+      { icon: Settings, label: 'Profile & Settings', path: '/profile' }
     ]
-  },
-  {
-    icon: Award, label: 'Certificates', path: '/certificates',
-    children: [
-      { label: 'All Certificates', path: '/certificates' },
-      { label: 'Active Certificates', path: '/certificates?status=active' },
-      { label: 'Expired Certificates', path: '/certificates?status=expired' },
-    ]
-  },
-  {
-    icon: Ship, label: 'Export', path: '/export',
-    children: [
-      { label: 'Manage Export Cert', path: '/export' },
-      { label: 'Request Export Cert', path: '/export/new' },
-    ]
-  },
-  {
-    icon: MessageSquare, label: 'Tickets', path: '/tickets',
-    children: [
-      { label: 'All Tickets', path: '/tickets' },
-      { label: 'New Ticket', path: '/tickets' },
-    ]
-  },
-  {
-    icon: MessageSquare, label: 'Messages', path: '/messages',
-    children: [
-      { label: 'Inbox', path: '/messages/inbox' },
-      { label: 'Outbox', path: '/messages/outbox' },
-    ]
-  },
-  { icon: FileText, label: 'Proposals', path: '/proposals' },
-  { icon: Calendar, label: 'Audits', path: '/audits' },
-  { icon: Users, label: "Manage Users", path: '/manage-users' },
-  { icon: MapPin, label: 'Manage Sites', path: '/sites' },
-  { icon: FileBarChart, label: 'Invoices', path: '/invoices' },
-  { icon: FileCheck, label: 'Agreements', path: '/agreements' },
+  }
 ];
 
 function isChildActive(childPath, location) {
@@ -73,7 +86,6 @@ function isChildActive(childPath, location) {
   if (childPathname !== location.pathname) return false;
   
   if (!childSearch) {
-    // If child is the root of the section e.g. /applications, match if no specific type/status search param
     return !location.search || location.search === '';
   }
   
@@ -129,10 +141,12 @@ export default function Sidebar({ isOpen, onClose, notifications = [] }) {
   const [expanded, setExpanded] = useState({});
 
   useEffect(() => {
-    navItems.forEach(item => {
-      if (item.children && item.children.some(c => isChildActive(c.path, location))) {
-        setExpanded(prev => ({ ...prev, [item.label]: true }));
-      }
+    NAV_SECTIONS.forEach(section => {
+      section.items.forEach(item => {
+        if (item.children && item.children.some(c => isChildActive(c.path, location))) {
+          setExpanded(prev => ({ ...prev, [item.label]: true }));
+        }
+      });
     });
   }, [location.pathname, location.search]);
 
@@ -144,170 +158,125 @@ export default function Sidebar({ isOpen, onClose, notifications = [] }) {
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-      {/* Logo */}
+      {/* Logo Header */}
       <div className="sidebar-logo">
-        <img src="/hfa-logo.png" alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain', background: 'white', borderRadius: 6, padding: 2 }} />
+        <div className="sidebar-logo-icon">
+          <img src="/hfa-logo.png" alt="HFA Logo" onError={(e) => { e.target.style.display = 'none'; }} />
+        </div>
         <div className="sidebar-logo-text">
           <span className="sidebar-logo-title">HFA Portal</span>
           <span className="sidebar-logo-sub">Halal Food Authority</span>
         </div>
         {isOpen && (
-          <button className="sidebar-close" onClick={onClose} style={{
-            marginLeft: 'auto', background: 'none', border: 'none',
-            color: '#86efac', cursor: 'pointer'
-          }}><X size={18} /></button>
+          <button
+            className="sidebar-close"
+            onClick={onClose}
+            aria-label="Close sidebar"
+            style={{
+              marginLeft: 'auto',
+              background: 'rgba(255, 255, 255, 0.12)',
+              border: 'none',
+              color: '#ffffff',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              borderRadius: 6
+            }}
+          >
+            <X size={16} />
+          </button>
         )}
       </div>
 
       {/* Nav */}
       <nav className="sidebar-nav">
-        <div className="nav-section-label">Main Menu</div>
-        {navItems.map(item => {
-          const Icon = item.icon;
-          const isExpanded = expanded[item.label];
-          const parentActive = isParentActive(item, location);
-          const parentUnread = getUnreadNavCount(notifications, item.path, item.children);
+        {NAV_SECTIONS.map((section, sIdx) => (
+          <div key={section.key} className="nav-section">
+            {sIdx > 0 && <div className="nav-section-divider" />}
+            <div className="nav-section-label">{section.label}</div>
 
-          return (
-            <div key={item.label} className="nav-group">
-              {item.children ? (
-                <>
-                  <button
-                    type="button"
-                    className={`nav-item${parentActive && !isExpanded ? ' active' : ''}`}
-                    onClick={() => toggle(item.label)}
-                    style={{ transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                  >
-                    <Icon size={17} />
-                    <span>{item.label}</span>
-                    {parentUnread > 0 && !isExpanded && (
+            {section.items.map(item => {
+              const Icon = item.icon;
+              const isExpanded = expanded[item.label];
+              const parentActive = isParentActive(item, location);
+              const parentUnread = getUnreadNavCount(notifications, item.path, item.children);
+
+              if (item.children) {
+                return (
+                  <div key={item.label} className="nav-group">
+                    <button
+                      type="button"
+                      className={`nav-item${parentActive && !isExpanded ? ' active' : ''}`}
+                      onClick={() => toggle(item.label)}
+                    >
+                      <Icon size={17} className="nav-item-icon" />
+                      <span>{item.label}</span>
+                      {parentUnread > 0 && !isExpanded && (
+                        <span className="nav-attention-badge">
+                          {parentUnread > 9 ? '9+' : parentUnread}
+                        </span>
+                      )}
                       <span
-                        className="nav-attention-badge"
+                        className="nav-chevron"
                         style={{
-                          marginLeft: 'auto',
-                          marginRight: 6,
-                          background: '#2563eb',
-                          color: '#ffffff',
-                          fontSize: 10,
-                          fontWeight: 500,
-                          minWidth: 18,
-                          height: 18,
-                          borderRadius: 9,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '0 5px',
-                          boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.2)',
-                          animation: 'navBadgePulse 2s ease-in-out infinite',
-                          fontFamily: "'Inter', sans-serif"
+                          transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                         }}
                       >
-                        {parentUnread > 9 ? '9+' : parentUnread}
+                        <ChevronDown size={14} />
                       </span>
-                    )}
-                    <span style={{
-                      marginLeft: parentUnread > 0 && !isExpanded ? 0 : 'auto',
-                      display: 'flex',
-                      alignItems: 'center',
-                      transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}>
-                      <ChevronDown size={14} />
-                    </span>
-                  </button>
-                  <div
-                    className={`nav-sub ${isExpanded ? 'expanded' : 'collapsed'}`}
-                    style={{
-                      maxHeight: isExpanded ? `${item.children.length * 44 + 10}px` : '0px',
-                      opacity: isExpanded ? 1 : 0,
-                      overflow: 'hidden',
-                      transition: 'max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, transform 0.2s ease',
-                      transform: isExpanded ? 'translateY(0)' : 'translateY(-4px)'
-                    }}
-                  >
-                    {item.children.map(child => {
-                      const childActive = isChildActive(child.path, location);
-                      const childUnread = getUnreadNavCount(notifications, child.path);
-                      return (
-                        <NavLink
-                          key={child.label}
-                          to={child.path}
-                          className={`nav-item${childActive ? ' active' : ''}`}
-                          style={{ transition: 'all 0.15s ease' }}
-                        >
-                          <span style={{ width: 14 }} />
-                          {child.label}
-                          {childUnread > 0 && (
-                            <span
-                              className="nav-attention-badge"
-                              style={{
-                                marginLeft: 'auto',
-                                background: '#2563eb',
-                                color: '#ffffff',
-                                fontSize: 10,
-                                fontWeight: 500,
-                                minWidth: 18,
-                                height: 18,
-                                borderRadius: 9,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '0 5px',
-                                boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.2)',
-                                animation: 'navBadgePulse 2s ease-in-out infinite',
-                                fontFamily: "'Inter', sans-serif"
-                              }}
-                            >
-                              {childUnread > 9 ? '9+' : childUnread}
-                            </span>
-                          )}
-                        </NavLink>
-                      );
-                    })}
+                    </button>
+
+                    <div
+                      className={`nav-sub ${isExpanded ? 'expanded' : 'collapsed'}`}
+                      style={{
+                        maxHeight: isExpanded ? `${item.children.length * 40 + 10}px` : '0px',
+                        opacity: isExpanded ? 1 : 0,
+                      }}
+                    >
+                      {item.children.map(child => {
+                        const childActive = isChildActive(child.path, location);
+                        const childUnread = getUnreadNavCount(notifications, child.path);
+                        return (
+                          <NavLink
+                            key={child.label}
+                            to={child.path}
+                            className={`nav-sub-item${childActive ? ' active' : ''}`}
+                          >
+                            <span>{child.label}</span>
+                            {childUnread > 0 && (
+                              <span className="nav-attention-badge">
+                                {childUnread > 9 ? '9+' : childUnread}
+                              </span>
+                            )}
+                          </NavLink>
+                        );
+                      })}
+                    </div>
                   </div>
-                </>
-              ) : (
+                );
+              }
+
+              return (
                 <NavLink
+                  key={item.path}
                   to={item.path}
                   className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
                 >
-                  <Icon size={17} />
-                  {item.label}
+                  <Icon size={17} className="nav-item-icon" />
+                  <span>{item.label}</span>
                   {parentUnread > 0 && (
-                    <span
-                      className="nav-attention-badge"
-                      style={{
-                        marginLeft: 'auto',
-                        background: '#2563eb',
-                        color: '#ffffff',
-                        fontSize: 10,
-                        fontWeight: 500,
-                        minWidth: 18,
-                        height: 18,
-                        borderRadius: 9,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '0 5px',
-                        boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.2)',
-                        animation: 'navBadgePulse 2s ease-in-out infinite',
-                        fontFamily: "'Inter', sans-serif"
-                      }}
-                    >
+                    <span className="nav-attention-badge">
                       {parentUnread > 9 ? '9+' : parentUnread}
                     </span>
                   )}
                 </NavLink>
-              )}
-            </div>
-          );
-        })}
-
-        <div className="nav-section-label" style={{ marginTop: 12 }}>Account</div>
-        <NavLink to="/profile" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-          <Settings size={17} />
-          Profile &amp; Settings
-        </NavLink>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Footer */}
@@ -315,7 +284,7 @@ export default function Sidebar({ isOpen, onClose, notifications = [] }) {
         <div className="sidebar-user">
           <div className="sidebar-avatar">{initials}</div>
           <div className="sidebar-user-info">
-            <div className="sidebar-user-name truncate">{profile?.full_name || 'User'}</div>
+            <div className="sidebar-user-name">{profile?.full_name || 'User'}</div>
             <div className="sidebar-user-role">{profile?.company_name || 'Client'}</div>
           </div>
         </div>
