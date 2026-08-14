@@ -13,7 +13,7 @@ const getCleanId = (val) => {
 const getPdfUrl = (url) => {
   if (!url) return '#';
   if (url.startsWith('/api/files/') || url.startsWith('/uploads/')) {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const API_URL = import.meta.env.VITE_API_URL || 'https://hfa-portal-backend.onrender.com';
     return `${API_URL}${url}`;
   }
   return url;
@@ -32,10 +32,15 @@ export default function PaymentModal({ isOpen, onClose, invoice: propInvoice, ap
       setFile(null);
       if (!propInvoice && targetAppId) {
         setLoading(true);
-        api.get(`/api/invoices/application/${targetAppId}`)
-          .then(res => {
-            const raw = res.data?.data || res.data || res || null;
-            setInvoice(raw);
+        Promise.all([
+          api.get(`/api/invoices/application/${targetAppId}/all`).catch(() => ({ data: [] })),
+          api.get(`/api/invoices/application/${targetAppId}`).catch(() => ({ data: null }))
+        ])
+          .then(([allRes, singleRes]) => {
+            const all = allRes.data?.data || allRes.data || [];
+            const single = singleRes.data?.data || singleRes.data || null;
+            const unpaid = all.find(i => i.status !== 'paid' && i.status !== 'client_paid') || all.find(i => i.status !== 'paid') || single || all[0] || null;
+            setInvoice(unpaid);
           })
           .catch(() => setInvoice(null))
           .finally(() => setLoading(false));

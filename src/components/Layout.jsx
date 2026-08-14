@@ -210,10 +210,13 @@ export default function Layout() {
     setNotifLoading(true);
     try {
       const res = await api.get('/api/notifications');
-      setNotifications(res.data || []);
-      setUnread(res.unreadCount || 0);
+      const list = Array.isArray(res) ? res : (res.data || []);
+      const count = typeof res.unreadCount === 'number' ? res.unreadCount : list.filter(n => !n.is_read).length;
+      setNotifications(list);
+      setUnread(count);
     } catch {
       setNotifications([]);
+      setUnread(0);
     } finally {
       setNotifLoading(false);
     }

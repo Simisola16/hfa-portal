@@ -13,7 +13,7 @@ const getCleanId = (val) => {
 const getPdfUrl = (url) => {
   if (!url) return '#';
   if (url.startsWith('/api/files/') || url.startsWith('/uploads/')) {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const API_URL = import.meta.env.VITE_API_URL || 'https://hfa-portal-backend.onrender.com';
     return `${API_URL}${url}`;
   }
   return url;

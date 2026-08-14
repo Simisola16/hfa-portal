@@ -256,10 +256,15 @@ export default function TrackProcessing() {
 
   const isRenewal = app?.application_type === 'renewal';
 
-  // Invoice resolution (differentiate initial vs final invoice)
-  const initialInvoice = allInvoices.find(i => i.invoice_type === 'initial') || (allInvoices.length > 0 && allInvoices[0].invoice_type !== 'final' ? allInvoices[0] : (invoice?.invoice_type !== 'final' ? invoice : null));
-  const finalInvoice = allInvoices.find(i => i.invoice_type === 'final') || (invoice?.invoice_type === 'final' ? invoice : null);
-  const activeInvoiceForBanner = (status === 'final_invoice_sent' || status === 'final_invoice_paid') ? finalInvoice : (initialInvoice || invoice);
+  // Invoice resolution (differentiate initial vs final invoice with robust fallbacks)
+  const finalInvoice = allInvoices.find(i => i.invoice_type === 'final' || (i.title && i.title.toLowerCase().includes('final')))
+    || (allInvoices.length > 1 ? allInvoices[allInvoices.length - 1] : null)
+    || (invoice?.invoice_type === 'final' || (invoice?.title && invoice.title.toLowerCase().includes('final')) ? invoice : null);
+
+  const initialInvoice = allInvoices.find(i => i.invoice_type === 'initial' || (i.title && !i.title.toLowerCase().includes('final')))
+    || (allInvoices.length > 0 && allInvoices[0] !== finalInvoice ? allInvoices[0] : (invoice !== finalInvoice ? invoice : null));
+
+  const activeInvoiceForBanner = (status === 'final_invoice_sent' || status === 'final_invoice_paid' || (finalInvoice && !initialInvoice)) ? (finalInvoice || invoice) : (initialInvoice || invoice);
 
   // Agreement states
   const showProposalAction = !isRenewal && status === 'proposal_sent';

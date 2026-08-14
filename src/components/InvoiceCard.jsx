@@ -4,7 +4,7 @@ import { Receipt, Download, Lock, CheckCircle, Clock } from 'lucide-react';
 const getPdfUrl = (url) => {
   if (!url) return '#';
   if (url.startsWith('/api/files/')) {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const API_URL = import.meta.env.VITE_API_URL || 'https://hfa-portal-backend.onrender.com';
     return `${API_URL}${url}`;
   }
   return url;
@@ -13,8 +13,8 @@ const getPdfUrl = (url) => {
 export default function InvoiceCard({ invoice, status, isInitial, isFinal, onPayClick }) {
   const normStatus = (status || '').toLowerCase().replace(/ /g, '_');
   const isAvailable = isFinal
-    ? ['agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(normStatus) || invoice
-    : ['proposal_approved', 'invoice_sent', 'payment_received', 'dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'nc_flagged', 'nc_closed', 'audit_report_submitted', 'on_hold', 'audit_successful', 'logsheet_created', 'logsheet_signed', 'application_successful', 'agreement_sent', 'agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(normStatus) || invoice;
+    ? Boolean(invoice) || ['agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(normStatus)
+    : Boolean(invoice) || ['proposal_approved', 'invoice_sent', 'payment_received', 'dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'nc_flagged', 'nc_closed', 'audit_report_submitted', 'on_hold', 'audit_successful', 'logsheet_created', 'logsheet_signed', 'application_successful', 'agreement_sent', 'agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(normStatus);
 
   const cardTitle = isFinal ? 'Final Halal Certificate Fee Invoice' : 'Initial Certification Invoice';
 
