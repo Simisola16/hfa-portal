@@ -36,11 +36,11 @@ const STATUS_LABELS = {
   accepted: 'Accepted',
   rejected: 'Rejected',
   ft_assigned: 'FT Assigned',
-  product_approval_form_enabled: 'Form Enabled',
-  all_forms_received: 'Forms Received',
+  product_approval_form_enabled: 'Product Form Enabled',
+  all_forms_received: 'Product Form Received',
   logsheet_created: 'Under Review',
   waiting_sharia_signature: 'Under Review',
-  product_form_approved: 'Form Approved',
+  product_form_approved: 'Product Form Approved',
   ready_for_certificate: 'Ready For Certificate',
   completed: 'Certificate'
 };
