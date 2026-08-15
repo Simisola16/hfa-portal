@@ -2,10 +2,24 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, FileText, CheckCircle, Clock, AlertCircle,
-  ChevronRight, Package, Users, Send
+  ChevronRight, Package, Users, Send, UploadCloud, Download
 } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
+
+const getPdfUrl = (url) => {
+  if (!url) return '#';
+  if (url.startsWith('/api/files/') || url.startsWith('/uploads/')) {
+    const API_URL = import.meta.env.VITE_API_URL || 'https://hfa-portal-backend.vercel.app';
+    return `${API_URL}${url}`;
+  }
+  if (url.includes('res.cloudinary.com')) {
+    if (url.includes('/upload/') && !url.includes('fl_attachment')) {
+      return url.replace('/upload/', '/upload/fl_attachment/');
+    }
+  }
+  return url;
+};
 
 export default function ClientAddOnApprovalForm() {
   const { addonId } = useParams();
@@ -14,6 +28,11 @@ export default function ClientAddOnApprovalForm() {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submittingAll, setSubmittingAll] = useState(false);
+
+  // Reply more info state
+  const [replyText, setReplyText] = useState('');
+  const [replyFile, setReplyFile] = useState(null);
+  const [submittingReply, setSubmittingReply] = useState(false);
 
   const fetchApp = useCallback(async () => {
     setLoading(true);
@@ -39,6 +58,33 @@ export default function ClientAddOnApprovalForm() {
       toast.error(err.response?.data?.error || err.message || 'Failed to submit responses.');
     } finally {
       setSubmittingAll(false);
+    }
+  };
+
+  const handleReplySubmit = async (e) => {
+    e?.preventDefault();
+    if (!replyText.trim() && !replyFile) {
+      toast.error('Please write a message or attach a supporting document.');
+      return;
+    }
+
+    setSubmittingReply(true);
+    try {
+      const formData = new FormData();
+      if (replyText.trim()) formData.append('reply_text', replyText.trim());
+      if (replyFile) formData.append('reply_file', replyFile);
+
+      const res = await api.put(`/api/add-on-applications/${addonId}/reply-more-info`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success(res.data?.message || 'Reply and documents submitted to HFA successfully!');
+      setReplyText('');
+      setReplyFile(null);
+      fetchApp();
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Failed to submit reply.');
+    } finally {
+      setSubmittingReply(false);
     }
   };
 
@@ -72,6 +118,8 @@ export default function ClientAddOnApprovalForm() {
   }).length;
 
   const allSaved = savedCount === (app.products || []).length;
+
+  const isMoreInfoRequested = app.product_approval_form?.more_info_requested || app.product_approval_form?.more_info_message;
 
   return (
     <div className="animate-in" style={{ maxWidth: 860, margin: '0 auto', paddingBottom: 48 }}>
@@ -108,21 +156,170 @@ export default function ClientAddOnApprovalForm() {
           </div>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Status</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: allSubmitted ? '#16a34a' : '#7c3aed', display: 'flex', alignItems: 'center', gap: 4 }}>
-              {allSubmitted ? <><CheckCircle size={13} /> Submitted</> : <><Clock size={13} /> Awaiting Response</>}
+            <div style={{ fontSize: 13, fontWeight: 600, color: allSubmitted ? '#16a34a' : isMoreInfoRequested ? '#ea580c' : '#7c3aed', display: 'flex', alignItems: 'center', gap: 4 }}>
+              {allSubmitted ? <><CheckCircle size={13} /> Submitted</> : isMoreInfoRequested ? <><AlertCircle size={13} /> More Info Requested</> : <><Clock size={13} /> Awaiting Response</>}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Admin Form Instructions */}
-      {formText && (
-        <div style={{ background: '#fdf4ff', border: '1px solid #e9d5ff', borderRadius: 14, padding: '20px 24px', marginBottom: 20 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <FileText size={13} /> Form Instructions from HFA
+      {/* Admin Form Instructions & More Info Request Block */}
+      {(isMoreInfoRequested || formText) && (
+        <div style={{
+          background: isMoreInfoRequested ? '#fff7ed' : '#fdf4ff',
+          border: `1.5px solid ${isMoreInfoRequested ? '#fed7aa' : '#e9d5ff'}`,
+          borderRadius: 14,
+          padding: '20px 24px',
+          marginBottom: 20
+        }}>
+          <div style={{
+            fontSize: 12,
+            fontWeight: 800,
+            color: isMoreInfoRequested ? '#ea580c' : '#7c3aed',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6
+          }}>
+            {isMoreInfoRequested ? (
+              <><AlertCircle size={15} /> Action Required: Additional Information Requested by HFA</>
+            ) : (
+              <><FileText size={15} /> Form Instructions from HFA</>
+            )}
           </div>
-          <div style={{ fontSize: 13, color: '#4c1d95', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-            {formText}
+
+          <div style={{
+            fontSize: 13.5,
+            color: isMoreInfoRequested ? '#9a3412' : '#4c1d95',
+            lineHeight: 1.7,
+            whiteSpace: 'pre-wrap',
+            marginBottom: 14
+          }}>
+            {app.product_approval_form?.more_info_message || formText}
+          </div>
+
+          {/* Admin attached file (if any) */}
+          {(app.product_approval_form?.more_info_file_url || app.product_approval_form?.form_file_url) && (
+            <div style={{ marginBottom: 14 }}>
+              <a
+                href={getPdfUrl(app.product_approval_form?.more_info_file_url || app.product_approval_form?.form_file_url)}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-outline btn-sm"
+                style={{ background: 'white', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
+              >
+                <Download size={14} /> Download Document from HFA
+              </a>
+            </div>
+          )}
+
+          {/* Client Reply & Document Upload Section */}
+          <div style={{
+            marginTop: 16,
+            paddingTop: 16,
+            borderTop: `1px solid ${isMoreInfoRequested ? '#fed7aa' : '#e9d5ff'}`,
+            background: 'white',
+            borderRadius: 10,
+            padding: 16
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <UploadCloud size={16} color="#ea580c" /> Submit Your Reply &amp; Upload Supporting Documents
+            </div>
+
+            <form onSubmit={handleReplySubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4, display: 'block' }}>
+                  Response Note / Explanation
+                </label>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  value={replyText}
+                  onChange={e => setReplyText(e.target.value)}
+                  placeholder="Provide any explanations, remarks, or clarifications regarding the requested documents..."
+                  style={{ width: '100%', fontSize: 13, borderRadius: 8, padding: 10, border: '1px solid #cbd5e1' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4, display: 'block' }}>
+                  Upload Supporting Document(s) (PDF, DOCX, Images, etc.)
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <input
+                    type="file"
+                    id="reply-file-upload"
+                    style={{ display: 'none' }}
+                    onChange={e => setReplyFile(e.target.files?.[0] || null)}
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip"
+                  />
+                  <label
+                    htmlFor="reply-file-upload"
+                    className="btn btn-outline btn-sm"
+                    style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0, fontWeight: 600 }}
+                  >
+                    <UploadCloud size={14} /> {replyFile ? 'Change Document' : 'Choose Document'}
+                  </label>
+                  {replyFile && (
+                    <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <CheckCircle size={14} /> {replyFile.name} ({(replyFile.size / 1024).toFixed(0)} KB)
+                      <button
+                        type="button"
+                        onClick={() => setReplyFile(null)}
+                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 11, textDecoration: 'underline' }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={submittingReply || (!replyText.trim() && !replyFile)}
+                  style={{
+                    background: '#ea580c',
+                    borderColor: '#ea580c',
+                    fontWeight: 700,
+                    fontSize: 13,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  <Send size={14} /> {submittingReply ? 'Submitting Reply...' : 'Submit Reply & Documents to HFA'}
+                </button>
+              </div>
+            </form>
+
+            {/* Previously Submitted Reply (if any) */}
+            {(app.product_approval_form?.client_reply_text || app.product_approval_form?.client_reply_file_url) && (
+              <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #f1f5f9', background: '#f8fafc', padding: 12, borderRadius: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>
+                  Your Latest Submitted Reply {app.product_approval_form?.client_replied_at ? `(${new Date(app.product_approval_form.client_replied_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })})` : ''}
+                </div>
+                {app.product_approval_form?.client_reply_text && (
+                  <div style={{ fontSize: 12.5, color: '#334155', whiteSpace: 'pre-wrap', marginBottom: 6 }}>
+                    {app.product_approval_form.client_reply_text}
+                  </div>
+                )}
+                {app.product_approval_form?.client_reply_file_url && (
+                  <a
+                    href={getPdfUrl(app.product_approval_form.client_reply_file_url)}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: 12, color: '#2563eb', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
+                  >
+                    <Download size={12} /> View Uploaded Reply Document
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

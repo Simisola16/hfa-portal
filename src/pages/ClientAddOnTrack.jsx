@@ -214,7 +214,11 @@ export default function ClientAddOnTrack() {
             {app.status === 'submitted' && 'Your add-on request has been submitted. HFA Food Technology specialists will review the requested products.'}
             {app.status === 'accepted' && 'Application accepted. HFA is assigning Food Technologies staff to verify your product formulations.'}
             {app.status === 'ft_assigned' && `Food Technology staff assigned (${ftNames || 'Inspector'}). Awaiting Product Approval Form setup.`}
-            {app.status === 'product_approval_form_enabled' && 'The Product Approval Form has been enabled! Please complete and submit the specifications for each requested product.'}
+            {app.status === 'product_approval_form_enabled' && (
+              (app.product_approval_form?.more_info_requested || app.product_approval_form?.more_info_message)
+                ? 'Action Required: HFA has requested additional information or supporting documents. Please upload your reply and documents.'
+                : 'The Product Approval Form has been enabled! Please complete and submit the specifications for each requested product.'
+            )}
             {app.status === 'all_forms_received' && 'All product forms have been received. The Halal Committee is preparing the evaluation logsheet.'}
             {['logsheet_created', 'waiting_sharia_signature'].includes(app.status) && 'Technical & Shariah Committee evaluation is currently underway.'}
             {['product_form_approved', 'ready_for_certificate'].includes(app.status) && 'Product specifications approved by the Shariah Committee! Your updated certificate is being prepared.'}
@@ -227,10 +231,17 @@ export default function ClientAddOnTrack() {
           {app.status === 'product_approval_form_enabled' && (
             <button
               className="btn btn-primary"
-              style={{ background: '#7c3aed', borderColor: '#7c3aed', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              style={{
+                background: (app.product_approval_form?.more_info_requested || app.product_approval_form?.more_info_message) ? '#ea580c' : '#7c3aed',
+                borderColor: (app.product_approval_form?.more_info_requested || app.product_approval_form?.more_info_message) ? '#ea580c' : '#7c3aed',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6
+              }}
               onClick={() => navigate(`/addon-applications/${app._id}/approval-form`)}
             >
-              <FileText size={15} /> Complete Product Approval Form
+              <FileText size={15} /> {(app.product_approval_form?.more_info_requested || app.product_approval_form?.more_info_message) ? 'Upload Requested Documents & Reply' : 'Complete Product Approval Form'}
             </button>
           )}
 
