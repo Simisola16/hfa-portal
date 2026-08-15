@@ -58,12 +58,22 @@ const FLOW_STEPS = [
   { id: 'ft_assigned', label: 'Assign FT' },
   { id: 'product_approval_form_enabled', label: 'Product Form Enabled' },
   { id: 'all_forms_received', label: 'Product Form Received' },
-  { id: 'logsheet_created', label: 'Create Logsheet' },
-  { id: 'waiting_sharia_signature', label: 'Committee Signature' },
   { id: 'product_form_approved', label: 'Product Form Approved' },
   { id: 'ready_for_certificate', label: 'Ready for Cert' },
   { id: 'completed', label: 'Certificate' }
 ];
+
+const ORDER = [
+  'submitted', 'accepted', 'ft_assigned', 'product_approval_form_enabled',
+  'all_forms_received', 'product_form_approved', 'ready_for_certificate', 'completed'
+];
+
+const getClientStepIdx = (status) => {
+  if (['logsheet_created', 'waiting_sharia_signature'].includes(status)) {
+    return ORDER.indexOf('all_forms_received');
+  }
+  return ORDER.indexOf(status);
+};
 
 export default function ClientAddOnTrack() {
   const { addonId } = useParams();
@@ -131,8 +141,7 @@ export default function ClientAddOnTrack() {
     );
   }
 
-  const order = FLOW_STEPS.map(s => s.id);
-  const currentIdx = order.indexOf(app.status);
+  const currentIdx = getClientStepIdx(app.status);
 
   // Map status history for step timestamps and notes
   const historyMap = {};
@@ -530,7 +539,7 @@ export default function ClientAddOnTrack() {
             <div className="card-body" style={{ padding: '20px 24px' }}>
               <div style={{ padding: '8px 0' }}>
                 {FLOW_STEPS.map((step, idx) => {
-                  const stepIdx = order.indexOf(step.id);
+                  const stepIdx = ORDER.indexOf(step.id);
                   const isDone = currentIdx > stepIdx || app.status === 'completed';
                   const isCurrent = currentIdx === stepIdx && app.status !== 'completed';
                   const isLast = idx === FLOW_STEPS.length - 1;
