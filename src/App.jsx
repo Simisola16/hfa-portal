@@ -12,6 +12,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import AddOnApplicationPage from './pages/AddOnApplicationPage';
+import ClientAddOnTrack from './pages/ClientAddOnTrack';
 import ClientAddOnApprovalForm from './pages/ClientAddOnApprovalForm';
 import ClientProductApprovalResponse from './pages/ClientProductApprovalResponse';
 import ApplicationsPage from './pages/ApplicationsPage';
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/new" element={<ApplicationsPage openNew />} />
             <Route path="/addon-applications" element={<AddOnApplicationPage />} />
+            <Route path="/addon-applications/:addonId/track" element={<ClientAddOnTrack />} />
             <Route path="/addon-applications/:addonId/approval-form" element={<ClientAddOnApprovalForm />} />
             <Route path="/addon-applications/:addonId/approval-form/:productIndex" element={<ClientProductApprovalResponse />} />
             <Route path="/addon-applications/new" element={<AddOnApplicationPage />} />

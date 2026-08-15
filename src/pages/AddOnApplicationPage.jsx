@@ -4,7 +4,7 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, Award, PlusCircle, Trash2, FileText,
-  CheckCircle, AlertCircle, Package, X, Users, ChevronDown, ChevronUp
+  CheckCircle, AlertCircle, Package, X, Users, ChevronDown, ChevronUp, ArrowUpRight, Activity
 } from 'lucide-react';
 
 const formatSiteName = (str) => {
@@ -320,7 +320,7 @@ export default function AddOnApplicationPage() {
                     </div>
 
                     {/* Right actions */}
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
                       {needsFormSubmit && (
                         <button
                           className="btn btn-primary btn-sm"
@@ -335,8 +335,22 @@ export default function AddOnApplicationPage() {
                           <CheckCircle size={12} /> Certificate Updated
                         </span>
                       )}
+                      
+                      {/* Track Button matching Admin */}
                       <button
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4 }}
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => navigate(`/addon-applications/${app._id}/track`)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 700, fontSize: 12,
+                          background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 8, padding: '7px 12px',
+                          color: '#1e293b', whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Track <ArrowUpRight size={13} />
+                      </button>
+
+                      <button
+                        style={{ background: isExpanded ? '#f1f5f9' : 'transparent', border: '1px solid #e2e8f0', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}
                         onClick={() => setExpandedId(isExpanded ? null : app._id)}
                       >
                         {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -434,6 +448,17 @@ export default function AddOnApplicationPage() {
                             ))}
                           </tbody>
                         </table>
+                      </div>
+
+                      {/* Link to full tracking */}
+                      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                          className="btn btn-outline btn-sm"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 12, borderRadius: 8 }}
+                          onClick={() => navigate(`/addon-applications/${app._id}/track`)}
+                        >
+                          View Full Processing Timeline & Details <ArrowUpRight size={13} />
+                        </button>
                       </div>
                     </div>
                   )}
