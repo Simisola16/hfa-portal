@@ -214,52 +214,7 @@ export default function AddSitePage() {
             </div>
           </div>
 
-          {/* Section 2: Manufacturer Details */}
-          <div style={{ marginBottom: 32, padding: 24, background: '#f8fafc', borderRadius: 16, border: '1px solid #f1f5f9' }}>
-            <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--primary)', marginBottom: 16 }}>
-              Manufacturer / Production Details <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 12 }}>(Optional - fill if different from above)</span>
-            </h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label className="form-label">Establishment Name</label>
-                <input className="form-control" value={form.est_name} onChange={set('est_name')} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Company Registration No.</label>
-                <input className="form-control" value={form.reg_number} onChange={set('reg_number')} />
-              </div>
-            </div>
-            <div className="form-grid">
-              <div className="form-group">
-                <label className="form-label">VAT Number</label>
-                <input className="form-control" value={form.vat_number} onChange={set('vat_number')} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Website</label>
-                <input className="form-control" placeholder="https://" value={form.website} onChange={set('website')} />
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Head Office Address</label>
-              <textarea className="form-control" rows={2} value={form.head_office_address} onChange={set('head_office_address')} />
-            </div>
-            <div className="form-grid-3">
-              <div className="form-group">
-                <label className="form-label">Trading Name</label>
-                <input className="form-control" value={form.trading_name} onChange={set('trading_name')} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Operating Hours</label>
-                <input className="form-control" placeholder="e.g. 9AM - 5PM" value={form.operating_hours} onChange={set('operating_hours')} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">No. of Employees</label>
-                <input className="form-control" type="number" value={form.num_employees} onChange={set('num_employees')} />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid #f1f5f9', paddingTop: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid #f1f5f9', paddingTop: 24 }}>
             <button 
               type="submit" 
               className="btn btn-primary" 

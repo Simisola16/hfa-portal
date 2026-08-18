@@ -184,18 +184,26 @@ export default function ProductsPage({ openNew: openNewProp }) {
               </div>
             ) : (
               <table>
-                <thead><tr><th>Name</th><th>Category</th><th>Type</th><th>Barcode</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Product Name</th>
+                    <th>Category</th>
+                    <th>Product Type</th>
+                    <th>Barcode / SKU</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {filtered.map(p => (
                     <tr key={p.id || p._id}>
-                      <td style={{ fontWeight: 600 }}>{p.name}</td>
+                      <td style={{ fontWeight: 700, color: '#0f172a' }}>{p.name}</td>
                       <td>{p.category || '—'}</td>
                       <td>{p.product_type || '—'}</td>
-                      <td>{p.barcode || '—'}</td>
-                      <td><span className={`badge ${p.status === 'approved' || p.status === 'active' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-yellow'}`}>{p.status === 'active' ? 'Approved' : (p.status || 'Pending')}</span></td>
-                      <td style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}><Edit size={13} /></button>
-                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(p.id || p._id)}><Trash2 size={13} /></button>
+                      <td><code style={{ fontSize: 12 }}>{p.barcode || '—'}</code></td>
+                      <td>
+                        <span className={`badge ${p.status === 'approved' || p.status === 'active' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-yellow'}`}>
+                          {p.status === 'active' ? 'Certified' : (p.status || 'Active')}
+                        </span>
                       </td>
                     </tr>
                   ))}

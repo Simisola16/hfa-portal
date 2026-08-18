@@ -63,7 +63,6 @@ const NAV_SECTIONS = [
         ]
       },
       { icon: FileText, label: 'Proposals', path: '/proposals' },
-      { icon: Calendar, label: 'Audits', path: '/audits' },
       { icon: Users, label: 'Manage Users', path: '/manage-users' },
       { icon: MapPin, label: 'Manage Sites', path: '/sites' },
       { icon: FileBarChart, label: 'Invoices', path: '/invoices' },

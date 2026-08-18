@@ -98,10 +98,14 @@ export default function SitesPage() {
                       <td>{s.contact_phone_code} {s.contact_phone_number}</td>
                       <td><span className={`badge ${s.status === 'active' ? 'badge-green' : 'badge-gray'}`}>{s.status}</span></td>
                       <td>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button className="btn btn-ghost btn-sm" onClick={() => openEdit(s)} title="Edit Site"><Edit size={14} /></button>
-                          <button className="btn btn-ghost btn-sm" style={{ color: '#ef4444' }} onClick={() => handleDelete(s.id)} title="Delete Site"><Trash2 size={14} /></button>
-                        </div>
+                        <button 
+                          className="btn btn-outline btn-sm" 
+                          onClick={() => openEdit(s)} 
+                          title="Edit Site Details"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '4px 10px' }}
+                        >
+                          <Edit size={13} /> Edit
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -122,14 +126,32 @@ export default function SitesPage() {
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
                 {/* Section 1: Site Details */}
-                <div style={{ marginBottom: 32 }}>
+                <div style={{ marginBottom: 16 }}>
                   <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1B7A7A', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <MapPin size={18} /> Site Details
                   </h3>
                   <div className="form-grid">
                     <div className="form-group">
-                      <label className="form-label">Site Name <span>*</span></label>
-                      <input className="form-control" placeholder="Manufacturer Name" value={form.name} onChange={set('name')} required />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <label className="form-label" style={{ margin: 0 }}>Site Name <span>*</span></label>
+                        {editing && (
+                          <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Locked (cannot be changed)</span>
+                        )}
+                      </div>
+                      <input 
+                        className="form-control" 
+                        placeholder="Site / Facility Name" 
+                        value={form.name} 
+                        onChange={set('name')} 
+                        required 
+                        disabled={!!editing}
+                        style={editing ? { backgroundColor: '#f1f5f9', cursor: 'not-allowed', color: '#334155' } : {}}
+                      />
+                      {editing && (
+                        <span style={{ fontSize: 11, color: '#64748b', marginTop: 4, display: 'block' }}>
+                          Site name is permanent. You can edit all other address and contact details below.
+                        </span>
+                      )}
                     </div>
                     <div className="form-group">
                       <label className="form-label">Email <span>*</span></label>
@@ -166,7 +188,8 @@ export default function SitesPage() {
                       <select className="form-control" value={form.country} onChange={set('country')} required>
                         <option value="United Kingdom">United Kingdom</option>
                         <option value="Nigeria">Nigeria</option>
-                        {/* Add more countries as needed */}
+                        <option value="United Arab Emirates">United Arab Emirates</option>
+                        <option value="Saudi Arabia">Saudi Arabia</option>
                       </select>
                     </div>
                     <div className="form-group">
@@ -180,81 +203,10 @@ export default function SitesPage() {
                       <select className="form-control" style={{ width: 100 }} value={form.contact_phone_code} onChange={set('contact_phone_code')}>
                         <option value="+44">+44</option>
                         <option value="+234">+234</option>
+                        <option value="+971">+971</option>
+                        <option value="+966">+966</option>
                       </select>
                       <input className="form-control" style={{ flex: 1 }} placeholder="7123 456789" value={form.contact_phone_number} onChange={set('contact_phone_number')} required />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 2: Manufacturer Details */}
-                <div style={{ marginBottom: 32, padding: 24, background: '#f8fafc', borderRadius: 12 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1B7A7A', marginBottom: 16 }}>Manufacturer Details (if different)</h3>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label className="form-label">Name of establishment</label>
-                      <input className="form-control" value={form.est_name} onChange={set('est_name')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Company Registration No.</label>
-                      <input className="form-control" value={form.reg_number} onChange={set('reg_number')} />
-                    </div>
-                  </div>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label className="form-label">VAT Number</label>
-                      <input className="form-control" value={form.vat_number} onChange={set('vat_number')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Website</label>
-                      <input className="form-control" placeholder="https://" value={form.website} onChange={set('website')} />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Head Office Address</label>
-                    <textarea className="form-control" rows={2} value={form.head_office_address} onChange={set('head_office_address')} />
-                  </div>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label className="form-label">Trading Name</label>
-                      <input className="form-control" value={form.trading_name} onChange={set('trading_name')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Email</label>
-                      <input type="email" className="form-control" value={form.mfg_email} onChange={set('mfg_email')} />
-                    </div>
-                  </div>
-                  <div className="form-grid-3">
-                    <div className="form-group">
-                      <label className="form-label">Years in Business</label>
-                      <input className="form-control" value={form.years_in_business} onChange={set('years_in_business')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Operating Hours</label>
-                      <input className="form-control" value={form.operating_hours} onChange={set('operating_hours')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">No. of Employees</label>
-                      <input className="form-control" value={form.num_employees} onChange={set('num_employees')} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 3: Existing Client */}
-                <div>
-                  <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1B7A7A', marginBottom: 16 }}>Existing Client Information</h3>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label className="form-label">Client Code</label>
-                      <input className="form-control" value={form.client_code} onChange={set('client_code')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Category</label>
-                      <select className="form-control" value={form.client_category} onChange={set('client_category')}>
-                        <option value="">Select Category</option>
-                        <option value="Annual Certification - Food and General processing">Annual Certification - Food and General processing</option>
-                        <option value="Annual Certification - Meat Processing">Annual Certification - Meat Processing</option>
-                        <option value="UAE/GSO Approved Halal Certification For Exporters To The UAE">UAE/GSO Approved Halal Certification For Exporters To The UAE</option>
-                      </select>
                     </div>
                   </div>
                 </div>

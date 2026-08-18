@@ -91,6 +91,7 @@ const emptyProduct = () => ({ name: '', code: '', type: 'Add product', original_
 export default function AddOnApplicationPage() {
   const navigate = useNavigate();
   const [certs, setCerts] = useState([]);
+  const [sites, setSites] = useState([]);
   const [myApps, setMyApps] = useState([]);
   const [clientProducts, setClientProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +100,7 @@ export default function AddOnApplicationPage() {
   const [expandedId, setExpandedId] = useState(null);
 
   const [form, setForm] = useState({
+    site_id: '',
     certificate_id: '',
     contact_name: '',
     contact_email: '',
@@ -110,18 +112,31 @@ export default function AddOnApplicationPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [certsRes, appsRes, prodsRes] = await Promise.all([
-        api.get('/api/certificates'),
-        api.get('/api/add-on-applications'),
+      const [certsRes, sitesRes, appsRes, prodsRes] = await Promise.all([
+        api.get('/api/certificates').catch(() => ({ data: [] })),
+        api.get('/api/sites').catch(() => ({ data: [] })),
+        api.get('/api/add-on-applications').catch(() => ({ data: [] })),
         api.get('/api/products').catch(() => ({ data: [] }))
       ]);
       const active = (certsRes.data || []).filter(c =>
         c.status === 'active' && new Date(c.expiry_date) >= new Date()
       );
+      const userSites = sitesRes.data || [];
       setCerts(active);
+      setSites(userSites);
       setMyApps(appsRes.data?.data || appsRes.data || []);
       setClientProducts(prodsRes.data?.data || prodsRes.data || []);
-      if (active.length === 1) {
+      
+      // Auto-preselect primary site if only 1 site exists
+      if (userSites.length === 1) {
+        const singleSite = userSites[0];
+        const linkedCert = active.find(c => String(c.site_id?._id || c.site_id?.id || c.site_id) === String(singleSite.id || singleSite._id));
+        setForm(f => ({
+          ...f,
+          site_id: singleSite.id || singleSite._id,
+          certificate_id: linkedCert ? (linkedCert._id || linkedCert.id) : (active[0]?._id || active[0]?.id || '')
+        }));
+      } else if (active.length === 1 && userSites.length === 0) {
         setForm(f => ({ ...f, certificate_id: active[0]._id || active[0].id }));
       }
     } catch {
@@ -155,9 +170,22 @@ export default function AddOnApplicationPage() {
     setForm(f => ({ ...f, products: f.products.filter((_, i) => i !== idx) }));
   };
 
+  const handleSiteChange = (selectedSiteId) => {
+    // Find if an active certificate exists for this site
+    const matchingCert = certs.find(c => {
+      const sId = c.site_id?._id || c.site_id?.id || c.site_id;
+      return String(sId) === String(selectedSiteId);
+    });
+    setForm(f => ({
+      ...f,
+      site_id: selectedSiteId,
+      certificate_id: matchingCert ? (matchingCert._id || matchingCert.id) : (f.certificate_id || '')
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.certificate_id) return toast.error('Please select a site.');
+    if (!form.site_id && !form.certificate_id) return toast.error('Please select a site.');
     if (!form.contact_name.trim()) return toast.error('Contact Person Name is required.');
     if (!form.contact_email.trim()) return toast.error('Contact Person Email is required.');
     for (const [i, p] of form.products.entries()) {
@@ -169,7 +197,15 @@ export default function AddOnApplicationPage() {
       await api.post('/api/add-on-applications', form);
       toast.success('Add-on application submitted successfully!');
       setShowForm(false);
-      setForm({ certificate_id: certs.length === 1 ? (certs[0]._id || certs[0].id) : '', contact_name: '', contact_email: '', contact_phone: '', message: '', products: [emptyProduct()] });
+      setForm({
+        site_id: sites.length === 1 ? (sites[0].id || sites[0]._id) : '',
+        certificate_id: certs.length === 1 ? (certs[0]._id || certs[0].id) : '',
+        contact_name: '',
+        contact_email: '',
+        contact_phone: '',
+        message: '',
+        products: [emptyProduct()]
+      });
       fetchData();
     } catch (err) {
       toast.error(err.response?.data?.error || err.message || 'Failed to submit application.');
@@ -182,20 +218,19 @@ export default function AddOnApplicationPage() {
     return <div style={{ padding: 80, textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>;
   }
 
-  // If no active cert but there are existing add-on apps (e.g., submitted alongside a new application), still show the page.
-  // Only hide the "New Add-on Application" button — clients can still track in-progress requests.
-  const hasNoCert = certs.length === 0;
+  // Check if client has sites or existing add-on apps
+  const hasNoSites = sites.length === 0 && certs.length === 0;
 
-  if (hasNoCert && myApps.length === 0) {
+  if (hasNoSites && myApps.length === 0) {
     return (
       <div style={{ maxWidth: 650, margin: '40px auto', padding: '32px', background: 'white', borderRadius: 24, border: '1px solid #e2e8f0', textAlign: 'center' }}>
         <Award size={48} style={{ color: '#94a3b8', margin: '0 auto 16px' }} />
-        <h3 style={{ fontSize: 18, fontWeight: 800, color: '#334155', marginBottom: 12 }}>Add-on Application Unavailable</h3>
+        <h3 style={{ fontSize: 18, fontWeight: 800, color: '#334155', marginBottom: 12 }}>Register a Site First</h3>
         <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
-          Add-on applications are available once you have an active site certificate. If you submitted products during your application, they will appear here once your application is processed.
+          Before submitting an add-on product request, please register your manufacturing site in the portal.
         </p>
-        <button className="btn btn-outline" onClick={() => navigate('/applications')}>
-          <ArrowLeft size={14} style={{ marginRight: 6 }} /> Back to Applications
+        <button className="btn btn-primary" onClick={() => navigate('/sites')}>
+          <PlusCircle size={15} style={{ marginRight: 6 }} /> Register Site
         </button>
       </div>
     );
@@ -211,18 +246,21 @@ export default function AddOnApplicationPage() {
           </button>
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Add-on Product Applications</h1>
-            <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>Add, remove, or modify products covered under your existing Halal certificates.</p>
+            <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>Add, remove, or modify products covered under your business sites.</p>
           </div>
         </div>
-        {!hasNoCert && (
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowForm(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', fontWeight: 700 }}
-          >
-            <PlusCircle size={16} /> New Add-on Application
-          </button>
-        )}
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            if (sites.length === 1) {
+              handleSiteChange(sites[0].id || sites[0]._id);
+            }
+            setShowForm(true);
+          }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', fontWeight: 700 }}
+        >
+          <PlusCircle size={16} /> New Add-on Application
+        </button>
       </div>
 
       {/* Info banner when no active cert but has submitted add-on apps (from new application) */}
@@ -481,20 +519,39 @@ export default function AddOnApplicationPage() {
               <div className="modal-body" style={{ padding: 28, display: 'grid', gap: 20 }}>
                 {/* 1. Site */}
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>1. Site</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>1. Manufacturing Site</div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">Select Site <span>*</span></label>
-                    {certs.length === 1 ? (
-                      <div style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, fontWeight: 600, fontSize: 14 }}>
-                        {getSiteName(certs[0])}
-                      </div>
-                    ) : (
-                      <select className="form-control" value={form.certificate_id} onChange={e => setForm(f => ({ ...f, certificate_id: e.target.value }))} required>
-                        <option value="">-- Select Site --</option>
+                    {sites.length > 0 ? (
+                      <select 
+                        className="form-control" 
+                        value={form.site_id || ''} 
+                        onChange={e => handleSiteChange(e.target.value)} 
+                        required
+                      >
+                        <option value="">-- Choose Manufacturing Site --</option>
+                        {sites.map(s => (
+                          <option key={s.id || s._id} value={s.id || s._id}>
+                            {s.name} {s.city ? `(${s.city})` : (s.address_1 ? `(${s.address_1})` : '')}
+                          </option>
+                        ))}
+                      </select>
+                    ) : certs.length > 0 ? (
+                      <select 
+                        className="form-control" 
+                        value={form.certificate_id || ''} 
+                        onChange={e => setForm(f => ({ ...f, certificate_id: e.target.value }))} 
+                        required
+                      >
+                        <option value="">-- Choose Site / Certificate --</option>
                         {certs.map(c => (
                           <option key={c._id || c.id} value={c._id || c.id}>{getSiteName(c)}</option>
                         ))}
                       </select>
+                    ) : (
+                      <div style={{ padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#991b1b', fontSize: 13 }}>
+                        No sites registered. Please <button type="button" onClick={() => navigate('/sites')} style={{ background: 'none', border: 'none', color: '#0369a1', textDecoration: 'underline', cursor: 'pointer', fontWeight: 700 }}>register a site</button> first.
+                      </div>
                     )}
                   </div>
                 </div>
