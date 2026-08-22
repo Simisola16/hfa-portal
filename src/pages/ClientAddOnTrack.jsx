@@ -215,7 +215,7 @@ export default function ClientAddOnTrack() {
             {app.status === 'accepted' && 'Application accepted. HFA is assigning Food Technologies staff to verify your product formulations.'}
             {app.status === 'ft_assigned' && `Food Technology staff assigned (${ftNames || 'Inspector'}). Awaiting Product Approval Form setup.`}
             {app.status === 'product_approval_form_enabled' && (
-              (app.product_approval_form?.more_info_requested || app.product_approval_form?.more_info_message)
+              app.product_approval_form?.more_info_requested
                 ? 'Action Required: HFA has requested additional information or supporting documents. Please upload your reply and documents.'
                 : 'The Product Approval Form has been enabled! Please complete and submit the specifications for each requested product.'
             )}
@@ -232,8 +232,8 @@ export default function ClientAddOnTrack() {
             <button
               className="btn btn-primary"
               style={{
-                background: (app.product_approval_form?.more_info_requested || app.product_approval_form?.more_info_message) ? '#ea580c' : '#7c3aed',
-                borderColor: (app.product_approval_form?.more_info_requested || app.product_approval_form?.more_info_message) ? '#ea580c' : '#7c3aed',
+                background: app.product_approval_form?.more_info_requested ? '#ea580c' : '#7c3aed',
+                borderColor: app.product_approval_form?.more_info_requested ? '#ea580c' : '#7c3aed',
                 fontWeight: 700,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -241,7 +241,7 @@ export default function ClientAddOnTrack() {
               }}
               onClick={() => navigate(`/addon-applications/${app._id}/approval-form`)}
             >
-              <FileText size={15} /> {(app.product_approval_form?.more_info_requested || app.product_approval_form?.more_info_message) ? 'Upload Requested Documents & Reply' : 'Complete Product Approval Form'}
+              <FileText size={15} /> {app.product_approval_form?.more_info_requested ? 'Upload Requested Documents & Reply' : 'Complete Product Approval Form'}
             </button>
           )}
 

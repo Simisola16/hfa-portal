@@ -119,7 +119,7 @@ export default function ClientAddOnApprovalForm() {
 
   const allSaved = savedCount === (app.products || []).length;
 
-  const isMoreInfoRequested = app.product_approval_form?.more_info_requested || app.product_approval_form?.more_info_message;
+  const isMoreInfoRequested = Boolean(app.product_approval_form?.more_info_requested);
 
   return (
     <div className="animate-in" style={{ maxWidth: 860, margin: '0 auto', paddingBottom: 48 }}>
@@ -197,14 +197,14 @@ export default function ClientAddOnApprovalForm() {
             whiteSpace: 'pre-wrap',
             marginBottom: 14
           }}>
-            {app.product_approval_form?.more_info_message || formText}
+            {isMoreInfoRequested ? (app.product_approval_form?.more_info_message || formText) : formText}
           </div>
 
           {/* Admin attached file (if any) */}
-          {(app.product_approval_form?.more_info_file_url || app.product_approval_form?.form_file_url) && (
+          {(isMoreInfoRequested ? app.product_approval_form?.more_info_file_url : app.product_approval_form?.form_file_url) && (
             <div style={{ marginBottom: 14 }}>
               <a
-                href={getPdfUrl(app.product_approval_form?.more_info_file_url || app.product_approval_form?.form_file_url)}
+                href={getPdfUrl(isMoreInfoRequested ? app.product_approval_form?.more_info_file_url : app.product_approval_form?.form_file_url)}
                 target="_blank"
                 rel="noreferrer"
                 className="btn btn-outline btn-sm"
@@ -215,112 +215,114 @@ export default function ClientAddOnApprovalForm() {
             </div>
           )}
 
-          {/* Client Reply & Document Upload Section */}
-          <div style={{
-            marginTop: 16,
-            paddingTop: 16,
-            borderTop: `1px solid ${isMoreInfoRequested ? '#fed7aa' : '#e9d5ff'}`,
-            background: 'white',
-            borderRadius: 10,
-            padding: 16
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <UploadCloud size={16} color="#ea580c" /> Submit Your Reply &amp; Upload Supporting Documents
-            </div>
-
-            <form onSubmit={handleReplySubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4, display: 'block' }}>
-                  Response Note / Explanation
-                </label>
-                <textarea
-                  className="form-control"
-                  rows={3}
-                  value={replyText}
-                  onChange={e => setReplyText(e.target.value)}
-                  placeholder="Provide any explanations, remarks, or clarifications regarding the requested documents..."
-                  style={{ width: '100%', fontSize: 13, borderRadius: 8, padding: 10, border: '1px solid #cbd5e1' }}
-                />
+          {/* Client Reply & Document Upload Section (ONLY shown when Admin requested more info) */}
+          {isMoreInfoRequested && (
+            <div style={{
+              marginTop: 16,
+              paddingTop: 16,
+              borderTop: '1px solid #fed7aa',
+              background: 'white',
+              borderRadius: 10,
+              padding: 16
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <UploadCloud size={16} color="#ea580c" /> Submit Your Reply &amp; Upload Supporting Documents
               </div>
 
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4, display: 'block' }}>
-                  Upload Supporting Document(s) (PDF, DOCX, Images, etc.)
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <input
-                    type="file"
-                    id="reply-file-upload"
-                    style={{ display: 'none' }}
-                    onChange={e => setReplyFile(e.target.files?.[0] || null)}
-                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip"
-                  />
-                  <label
-                    htmlFor="reply-file-upload"
-                    className="btn btn-outline btn-sm"
-                    style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0, fontWeight: 600 }}
-                  >
-                    <UploadCloud size={14} /> {replyFile ? 'Change Document' : 'Choose Document'}
+              <form onSubmit={handleReplySubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4, display: 'block' }}>
+                    Response Note / Explanation
                   </label>
-                  {replyFile && (
-                    <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <CheckCircle size={14} /> {replyFile.name} ({(replyFile.size / 1024).toFixed(0)} KB)
-                      <button
-                        type="button"
-                        onClick={() => setReplyFile(null)}
-                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 11, textDecoration: 'underline' }}
-                      >
-                        Remove
-                      </button>
+                  <textarea
+                    className="form-control"
+                    rows={3}
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
+                    placeholder="Provide any explanations, remarks, or clarifications regarding the requested documents..."
+                    style={{ width: '100%', fontSize: 13, borderRadius: 8, padding: 10, border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4, display: 'block' }}>
+                    Upload Supporting Document(s) (PDF, DOCX, Images, etc.)
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <input
+                      type="file"
+                      id="reply-file-upload"
+                      style={{ display: 'none' }}
+                      onChange={e => setReplyFile(e.target.files?.[0] || null)}
+                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip"
+                    />
+                    <label
+                      htmlFor="reply-file-upload"
+                      className="btn btn-outline btn-sm"
+                      style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0, fontWeight: 600 }}
+                    >
+                      <UploadCloud size={14} /> {replyFile ? 'Change Document' : 'Choose Document'}
+                    </label>
+                    {replyFile && (
+                      <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <CheckCircle size={14} /> {replyFile.name} ({(replyFile.size / 1024).toFixed(0)} KB)
+                        <button
+                          type="button"
+                          onClick={() => setReplyFile(null)}
+                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 11, textDecoration: 'underline' }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Previously Submitted Reply (if any) */}
+                {(app.product_approval_form?.client_reply_text || app.product_approval_form?.client_reply_file_url) && (
+                  <div style={{ marginTop: 6, paddingTop: 10, borderTop: '1px solid #f1f5f9', background: '#f8fafc', padding: 12, borderRadius: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>
+                      Your Latest Submitted Reply {app.product_approval_form?.client_replied_at ? `(${new Date(app.product_approval_form.client_replied_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })})` : ''}
                     </div>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={submittingReply || (!replyText.trim() && !replyFile)}
-                  style={{
-                    background: '#ea580c',
-                    borderColor: '#ea580c',
-                    fontWeight: 700,
-                    fontSize: 13,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6
-                  }}
-                >
-                  <Send size={14} /> {submittingReply ? 'Submitting Reply...' : 'Submit Reply & Documents to HFA'}
-                </button>
-              </div>
-            </form>
-
-            {/* Previously Submitted Reply (if any) */}
-            {(app.product_approval_form?.client_reply_text || app.product_approval_form?.client_reply_file_url) && (
-              <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #f1f5f9', background: '#f8fafc', padding: 12, borderRadius: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>
-                  Your Latest Submitted Reply {app.product_approval_form?.client_replied_at ? `(${new Date(app.product_approval_form.client_replied_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })})` : ''}
-                </div>
-                {app.product_approval_form?.client_reply_text && (
-                  <div style={{ fontSize: 12.5, color: '#334155', whiteSpace: 'pre-wrap', marginBottom: 6 }}>
-                    {app.product_approval_form.client_reply_text}
+                    {app.product_approval_form?.client_reply_text && (
+                      <div style={{ fontSize: 12.5, color: '#334155', whiteSpace: 'pre-wrap', marginBottom: 6 }}>
+                        {app.product_approval_form.client_reply_text}
+                      </div>
+                    )}
+                    {app.product_approval_form?.client_reply_file_url && (
+                      <a
+                        href={getPdfUrl(app.product_approval_form.client_reply_file_url)}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ fontSize: 12, color: '#2563eb', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
+                      >
+                        <Download size={12} /> View Uploaded Reply Document
+                      </a>
+                    )}
                   </div>
                 )}
-                {app.product_approval_form?.client_reply_file_url && (
-                  <a
-                    href={getPdfUrl(app.product_approval_form.client_reply_file_url)}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ fontSize: 12, color: '#2563eb', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={submittingReply || (!replyText.trim() && !replyFile)}
+                    style={{
+                      background: '#ea580c',
+                      borderColor: '#ea580c',
+                      fontWeight: 700,
+                      fontSize: 13,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}
                   >
-                    <Download size={12} /> View Uploaded Reply Document
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
+                    <Send size={14} /> {submittingReply ? 'Submitting Reply...' : 'Submit Reply & Documents to HFA'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       )}
 
