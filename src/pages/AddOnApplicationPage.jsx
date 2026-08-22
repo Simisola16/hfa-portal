@@ -40,7 +40,7 @@ const STATUS_LABELS = {
   all_forms_received: 'Product Form Received',
   logsheet_created: 'Under Review',
   waiting_sharia_signature: 'Under Review',
-  product_form_approved: 'Product Form Approved',
+  product_form_approved: 'Product Approved',
   ready_for_certificate: 'Ready For Certificate',
   completed: 'Certificate'
 };
@@ -126,7 +126,7 @@ export default function AddOnApplicationPage() {
       setSites(userSites);
       setMyApps(appsRes.data?.data || appsRes.data || []);
       setClientProducts(prodsRes.data?.data || prodsRes.data || []);
-      
+
       // Auto-preselect primary site if only 1 site exists
       if (userSites.length === 1) {
         const singleSite = userSites[0];
@@ -374,7 +374,7 @@ export default function AddOnApplicationPage() {
                           <CheckCircle size={12} /> Certificate Updated
                         </span>
                       )}
-                      
+
                       {/* Track Button matching Admin */}
                       <button
                         className="btn btn-ghost btn-sm"
@@ -524,10 +524,10 @@ export default function AddOnApplicationPage() {
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">Select Site <span>*</span></label>
                     {sites.length > 0 ? (
-                      <select 
-                        className="form-control" 
-                        value={form.site_id || ''} 
-                        onChange={e => handleSiteChange(e.target.value)} 
+                      <select
+                        className="form-control"
+                        value={form.site_id || ''}
+                        onChange={e => handleSiteChange(e.target.value)}
                         required
                       >
                         <option value="">-- Choose Manufacturing Site --</option>
@@ -538,10 +538,10 @@ export default function AddOnApplicationPage() {
                         ))}
                       </select>
                     ) : certs.length > 0 ? (
-                      <select 
-                        className="form-control" 
-                        value={form.certificate_id || ''} 
-                        onChange={e => setForm(f => ({ ...f, certificate_id: e.target.value }))} 
+                      <select
+                        className="form-control"
+                        value={form.certificate_id || ''}
+                        onChange={e => setForm(f => ({ ...f, certificate_id: e.target.value }))}
                         required
                       >
                         <option value="">-- Choose Site / Certificate --</option>
@@ -587,7 +587,7 @@ export default function AddOnApplicationPage() {
                 {/* 4. Products Table */}
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>4. Products</div>
-                  
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {form.products.map((p, idx) => (
                       <div

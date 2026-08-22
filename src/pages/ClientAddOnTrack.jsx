@@ -33,7 +33,7 @@ const STATUS_LABELS = {
   all_forms_received: 'Product Form Received',
   logsheet_created: 'Under Committee Review',
   waiting_sharia_signature: 'Under Committee Review',
-  product_form_approved: 'Product Form Approved',
+  product_form_approved: 'Product Approved',
   ready_for_certificate: 'Ready For Certificate',
   completed: 'Certificate Issued'
 };
@@ -58,7 +58,7 @@ const FLOW_STEPS = [
   { id: 'ft_assigned', label: 'Assign FT' },
   { id: 'product_approval_form_enabled', label: 'Product Form Enabled' },
   { id: 'all_forms_received', label: 'Product Form Received' },
-  { id: 'product_form_approved', label: 'Product Form Approved' },
+  { id: 'product_form_approved', label: 'Product Approved' },
   { id: 'ready_for_certificate', label: 'Ready for Cert' },
   { id: 'completed', label: 'Certificate' }
 ];
@@ -259,10 +259,10 @@ export default function ClientAddOnTrack() {
 
       {/* ─── Main 2-Column Grid (1fr 380px) ─── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24, alignItems: 'start' }}>
-        
+
         {/* ── LEFT COLUMN: Content Cards Stack ── */}
         <div style={{ display: 'grid', gap: 20 }}>
-          
+
           {/* Card 1: Requested Products Table */}
           <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
@@ -541,7 +541,7 @@ export default function ClientAddOnTrack() {
 
         {/* ── RIGHT COLUMN: Sidebar (Timeline & Site Info) ── */}
         <div>
-          
+
           {/* Stepper Timeline Card matching Admin Processing */}
           <div className="card" style={{ marginBottom: 20 }}>
             <div className="card-header">
