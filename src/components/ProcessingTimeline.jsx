@@ -144,11 +144,15 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
   
   let mappedStatus = effectiveStatus;
   if (isRenewal) {
-    if (mappedStatus === 'logsheet_created' || mappedStatus === 'logsheet_signed' || mappedStatus === 'application_successful') {
+    if (mappedStatus === 'logsheet_created') {
+      mappedStatus = 'audit_successful';
+    } else if (mappedStatus === 'logsheet_signed' || mappedStatus === 'application_successful') {
       mappedStatus = 'ready_for_certificate';
     }
   } else {
-    if (mappedStatus === 'logsheet_created' || mappedStatus === 'logsheet_signed') {
+    if (mappedStatus === 'logsheet_created') {
+      mappedStatus = 'audit_successful';
+    } else if (mappedStatus === 'logsheet_signed') {
       mappedStatus = 'application_successful';
     }
   }
