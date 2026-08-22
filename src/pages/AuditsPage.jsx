@@ -1,447 +1,650 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  Calendar, Search, RefreshCw, AlertTriangle, CheckCircle2, Clock, 
+  FileText, Download, ChevronRight, ChevronDown, User, MapPin, 
+  ExternalLink, MessageSquare, AlertCircle, Eye, ShieldCheck
+} from 'lucide-react';
 import api from '../lib/api';
-import { Calendar, Users, AlertCircle, CheckCircle, FileText, ArrowRight, RefreshCw, Search, ShieldCheck, Clock, Download, Upload } from 'lucide-react';
+import toast from 'react-hot-toast';
 import ClientAuditModal from '../components/ClientAuditModal';
-import { STATUS_LABELS } from '../lib/applicationStatuses';
 
 const getPdfUrl = (url) => {
   if (!url) return '#';
   if (url.startsWith('/api/files/') || url.startsWith('/uploads/')) {
-    const API_URL = import.meta.env.VITE_API_URL || 'https://hfa-portal-backend.vercel.app';
+    const API_URL = import.meta.env.VITE_API_URL || 'https://backend.hfaportal.company';
     return `${API_URL}${url}`;
   }
   return url;
 };
 
-const STATUS_BADGE = {
-  dates_proposed: 'badge-yellow',
-  dates_accepted: 'badge-blue',
-  dates_rejected: 'badge-red',
-  date_finalized: 'badge-purple',
-  auditors_assigned: 'badge-blue',
-  audit_completed: 'badge-green',
-  on_hold: 'badge-red',
-  scheduled: 'badge-purple',
-  completed: 'badge-green',
-};
-
-const roleLabels = { lead_auditor: 'Lead Auditor', sharia_board: 'Sharia Board', audit_trainee: 'Audit Trainee', auditor: 'Auditor' };
-const roleColors = {
-  lead_auditor: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
-  sharia_board: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
-  audit_trainee: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
-  auditor: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
-};
-
-const formatProcessStatus = (s) => {
-  if (!s) return 'Pending';
-  const statusMap = {
-    dates_proposed: 'Dates Proposed',
-    dates_accepted: 'Dates Accepted',
-    dates_rejected: 'Dates Rejected',
-    date_finalized: 'Date Finalized',
-    auditors_assigned: 'Auditors Assigned',
-    audit_assigned: 'Auditors Assigned',
-    audit_completed: 'Audit Completed',
-    audit_successful: 'Audit Successful',
-    on_hold: 'On Hold',
-    pending: 'Pending',
-    scheduled: 'Scheduled',
-    in_progress: 'In Progress',
-    nc_flagged: 'NC Flagged',
-    nc_closed: 'NC Closed',
-    audit_report_submitted: 'Audit Report Submitted',
-  };
-  if (statusMap[s]) return statusMap[s];
-  return s
-    .replace(/_/g, ' ')
-    .split(' ')
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ');
+const AUDIT_STATUS_MAP = {
+  dates_proposed: { label: 'Dates Proposed', badge: 'badge-yellow', bg: '#fef3c7', text: '#92400e' },
+  dates_accepted: { label: 'Dates Selected', badge: 'badge-blue', bg: '#e0f2fe', text: '#0369a1' },
+  dates_rejected: { label: 'Dates Rejected', badge: 'badge-red', bg: '#fee2e2', text: '#b91c1c' },
+  date_finalized: { label: 'Date Finalized', badge: 'badge-green', bg: '#dcfce7', text: '#15803d' },
+  audit_assigned: { label: 'Scheduled', badge: 'badge-green', bg: '#dcfce7', text: '#15803d' },
+  in_progress: { label: 'Audit In Progress', badge: 'badge-blue', bg: '#e0f2fe', text: '#0369a1' },
+  nc_flagged: { label: 'NC Flagged', badge: 'badge-red', bg: '#fee2e2', text: '#b91c1c' },
+  nc_corrected: { label: 'NC Under Review', badge: 'badge-yellow', bg: '#fef3c7', text: '#92400e' },
+  nc_closed: { label: 'NC Resolved', badge: 'badge-green', bg: '#dcfce7', text: '#15803d' },
+  audit_completed: { label: 'Audit Completed', badge: 'badge-green', bg: '#dcfce7', text: '#15803d' },
+  completed: { label: 'Audit Completed', badge: 'badge-green', bg: '#dcfce7', text: '#15803d' },
+  audit_successful: { label: 'Audit Successful', badge: 'badge-green', bg: '#dcfce7', text: '#15803d' },
+  scheduled: { label: 'Scheduled', badge: 'badge-blue', bg: '#e0f2fe', text: '#0369a1' },
 };
 
 export default function AuditsPage() {
-  const navigate = useNavigate();
   const [audits, setAudits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  
-  // Shared Modal State
-  const [activeModal, setActiveModal] = useState(null); // { type: 'dates' | 'nc', audit: obj, reportId?: str }
+  const [expandedAuditId, setExpandedAuditId] = useState(null);
 
-  const fetchData = async () => {
+  // Modal control
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedAudit, setSelectedAudit] = useState(null);
+  const [modalMode, setModalMode] = useState('select_dates'); // 'select_dates' | 'nc_upload'
+  const [selectedReportId, setSelectedReportId] = useState(null);
+
+  const fetchAudits = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get('/api/audits');
-      setAudits(res.data || []);
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setAudits(list);
     } catch (err) {
-      console.error('Failed to load audits:', err);
+      toast.error('Failed to load audits');
       setAudits([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
   }, []);
 
-  const filteredAudits = audits.filter(a => {
-    const appNum = a.applications?.application_number || a.application_id?.application_number || '';
-    const compName = a.profiles?.company_name || a.sites?.name || '';
-    const matchSearch = !search || 
-      appNum.toLowerCase().includes(search.toLowerCase()) || 
-      compName.toLowerCase().includes(search.toLowerCase());
+  useEffect(() => {
+    fetchAudits();
+  }, [fetchAudits]);
 
-    const matchStatus = statusFilter === 'all' || 
-      (statusFilter === 'nc_flagged' && a.nc_reports?.some(nc => nc.status === 'flagged')) ||
-      a.status === statusFilter;
-
-    return matchSearch && matchStatus;
+  // Derived statistics
+  const actionRequiredAudits = audits.filter(a => {
+    const hasNc = a.nc_reports?.some(nc => nc.status === 'flagged');
+    const needsDateSelection = a.status === 'dates_proposed';
+    return hasNc || needsDateSelection;
   });
 
+  const scheduledAudits = audits.filter(a => 
+    ['audit_assigned', 'date_finalized', 'scheduled', 'dates_accepted'].includes(a.status)
+  );
+
+  const completedAudits = audits.filter(a => 
+    ['audit_completed', 'completed', 'audit_successful', 'nc_closed'].includes(a.status)
+  );
+
+  // Filtered List
+  const filteredAudits = audits.filter(a => {
+    const q = search.toLowerCase();
+    const siteName = (a.site_name || a.sites?.name || a.application_id?.site_name || a.application_id?.establishment_name || '').toLowerCase();
+    const appNum = (a.application_id?.application_number || a.applications?.application_number || '').toLowerCase();
+    const auditorNames = (a.auditors?.map(aud => aud.name).join(' ') || a.inspectors?.full_name || '').toLowerCase();
+    const auditType = (a.audit_type || '').toLowerCase();
+
+    const matchSearch = !search || siteName.includes(q) || appNum.includes(q) || auditorNames.includes(q) || auditType.includes(q);
+
+    if (!matchSearch) return false;
+
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'action_required') {
+      return a.status === 'dates_proposed' || a.nc_reports?.some(nc => nc.status === 'flagged');
+    }
+    if (statusFilter === 'dates_proposed') return a.status === 'dates_proposed';
+    if (statusFilter === 'scheduled') {
+      return ['audit_assigned', 'date_finalized', 'scheduled', 'dates_accepted'].includes(a.status);
+    }
+    if (statusFilter === 'nc') {
+      return a.status === 'nc_flagged' || a.nc_reports?.length > 0;
+    }
+    if (statusFilter === 'completed') {
+      return ['audit_completed', 'completed', 'audit_successful'].includes(a.status);
+    }
+
+    return true;
+  });
+
+  const openSelectDatesModal = (audit) => {
+    setSelectedAudit(audit);
+    setModalMode('select_dates');
+    setSelectedReportId(null);
+    setModalOpen(true);
+  };
+
+  const openNcModal = (audit, reportId = null) => {
+    setSelectedAudit(audit);
+    setModalMode('nc_upload');
+    setSelectedReportId(reportId);
+    setModalOpen(true);
+  };
+
   return (
-    <div className="animate-fade-in">
-      <div className="toolbar" style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1B7A7A', marginBottom: 4 }}>Manage Audits</h1>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
-            View assigned audit teams, confirm proposed dates, and resolve Non-Conformity (NC) reports.
-          </p>
+    <div className="page-wrapper">
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Calendar size={28} style={{ color: 'var(--primary)' }} /> Halal Audit Management
+        </h1>
+        <p style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
+          Manage your audit schedules, select proposed dates, and review or submit Non-Conformity (NC) resolution reports.
+        </p>
+      </div>
+
+      {/* Stats Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
+        <div className="stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Total Audits</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', marginTop: 6 }}>{audits.length}</div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Facility inspections & surveillance</div>
         </div>
 
-        <button 
-          className="btn btn-ghost btn-sm" 
-          onClick={fetchData} 
-          disabled={loading}
-          style={{ gap: 6 }}
+        <div className="stat-card" style={{ background: actionRequiredAudits.length > 0 ? '#fef2f2' : '#fff', border: actionRequiredAudits.length > 0 ? '1.5px solid #fecaca' : '1px solid #e2e8f0', borderRadius: 16, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: actionRequiredAudits.length > 0 ? '#dc2626' : '#64748b', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {actionRequiredAudits.length > 0 && <AlertTriangle size={14} />} Action Required
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: actionRequiredAudits.length > 0 ? '#b91c1c' : '#0f172a', marginTop: 6 }}>
+            {actionRequiredAudits.length}
+          </div>
+          <div style={{ fontSize: 12, color: actionRequiredAudits.length > 0 ? '#dc2626' : '#94a3b8', marginTop: 4 }}>
+            {actionRequiredAudits.length > 0 ? 'Dates to choose or NCs to resolve' : 'All clear — No pending actions'}
+          </div>
+        </div>
+
+        <div className="stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#0284c7', letterSpacing: '0.05em' }}>Scheduled / Confirmed</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: '#0369a1', marginTop: 6 }}>{scheduledAudits.length}</div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Upcoming site inspections</div>
+        </div>
+
+        <div className="stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#16a34a', letterSpacing: '0.05em' }}>Completed Audits</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: '#15803d', marginTop: 6 }}>{completedAudits.length}</div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Successfully conducted</div>
+        </div>
+      </div>
+
+      {/* Urgent Action Banner if any NCs or Proposed Dates */}
+      {actionRequiredAudits.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fff1f2 0%, #fee2e2 100%)',
+          border: '1.5px solid #fca5a5',
+          borderRadius: 16,
+          padding: '16px 20px',
+          marginBottom: 24,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 12
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: '#dc2626', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <AlertTriangle size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#991b1b' }}>
+                You have {actionRequiredAudits.length} audit{actionRequiredAudits.length > 1 ? 's' : ''} requiring your immediate response
+              </div>
+              <div style={{ fontSize: 12, color: '#b91c1c', marginTop: 2 }}>
+                Please select your preferred dates or submit your Non-Conformity (NC) corrective action document to prevent certification delays.
+              </div>
+            </div>
+          </div>
+          <button 
+            className="btn btn-primary"
+            style={{ background: '#dc2626', borderColor: '#dc2626', borderRadius: 8, fontSize: 12, fontWeight: 700, padding: '8px 16px' }}
+            onClick={() => setStatusFilter('action_required')}
+          >
+            View Pending Actions
+          </button>
+        </div>
+      )}
+
+      {/* Toolbar */}
+      <div className="toolbar" style={{ marginBottom: 20 }}>
+        <div className="search-box">
+          <Search size={15} className="search-icon" />
+          <input 
+            placeholder="Search by site, application number, auditor..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+          />
+        </div>
+        <select 
+          className="form-control w-auto" 
+          value={statusFilter} 
+          onChange={e => setStatusFilter(e.target.value)}
         >
-          <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh Data
+          <option value="all">All Audits</option>
+          <option value="action_required">⚠️ Action Required</option>
+          <option value="dates_proposed">Dates Proposed</option>
+          <option value="scheduled">Scheduled / Finalized</option>
+          <option value="nc">Non-Conformity (NC)</option>
+          <option value="completed">Completed</option>
+        </select>
+        <button className="btn btn-ghost btn-sm" onClick={fetchAudits} title="Refresh audits">
+          <RefreshCw size={14} />
         </button>
       </div>
 
-      {/* Filters Toolbar */}
-      <div className="card" style={{ padding: '16px 20px', marginBottom: 24 }}>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: 240 }}>
-            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Search by Application Ref or Company Name..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ paddingLeft: 36, height: 40 }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Status:</label>
-            <select
-              className="form-control"
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              style={{ height: 40, width: 180 }}
-            >
-              <option value="all">All Statuses</option>
-              <option value="dates_proposed">Dates Proposed</option>
-              <option value="date_finalized">Date Confirmed</option>
-              <option value="auditors_assigned">Auditors Assigned</option>
-              <option value="nc_flagged">NC Outstanding ⚠️</option>
-              <option value="audit_completed">Audit Completed</option>
-            </select>
+      {/* Audits Card / Table */}
+      <div className="card" style={{ borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+        <div className="card-header" style={{ padding: '20px 24px', background: '#fafafa', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div className="card-title" style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
+              My Halal Audits ({filteredAudits.length})
+            </div>
+            <div className="card-subtitle" style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+              Audit schedule history and corrective action tracking
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Main List */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: 20, border: '1px solid #e2e8f0' }}>
-          <div className="spinner" style={{ width: 36, height: 36, margin: '0 auto 16px' }} />
-          <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>Loading your audit records...</div>
-        </div>
-      ) : filteredAudits.length === 0 ? (
-        <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', padding: '50px 20px', textAlign: 'center' }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <Calendar size={28} style={{ color: 'var(--primary)' }} />
-          </div>
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 6 }}>No Audits Found</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 440, margin: '0 auto 20px', lineHeight: 1.5 }}>
-            {search || statusFilter !== 'all' 
-              ? 'No audit sessions match your search or filter criteria.' 
-              : 'No audits yet — your audit schedule and assigned team will appear here once an application reaches the audit stage.'}
-          </p>
-          {(search || statusFilter !== 'all') && (
-            <button className="btn btn-outline btn-sm" onClick={() => { setSearch(''); setStatusFilter('all'); }}>
-              Clear Filters
-            </button>
-          )}
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 20 }}>
-          {filteredAudits.map((item) => {
-            const auditId = item._id || item.id;
-            const appId = item.application_id?._id || item.application_id;
-            const appNumber = item.applications?.application_number || item.application_id?.application_number || 'N/A';
-            const companyName = item.profiles?.company_name || 'Operating Facility';
-            const siteName = item.sites?.name || 'Primary Site';
-            const hasNcFlagged = item.nc_reports?.some(nc => nc.status === 'flagged');
+        <div className="table-wrap">
+          {loading ? (
+            <div style={{ padding: 60, textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+          ) : filteredAudits.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+              <Calendar size={48} color="#94a3b8" style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+              <h4 style={{ fontSize: 16, fontWeight: 700, color: '#334155', marginBottom: 6 }}>No Audits Found</h4>
+              <p style={{ fontSize: 13, color: '#64748b', maxWidth: 400, margin: '0 auto' }}>
+                {search || statusFilter !== 'all' 
+                  ? 'No audits matched your search filters. Try clearing search criteria.' 
+                  : 'Audits will appear here once scheduled for your halal applications.'}
+              </p>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Facility / Site</th>
+                  <th>Application Ref</th>
+                  <th>Audit Stage</th>
+                  <th>Schedule / Date</th>
+                  <th>Lead Auditor</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAudits.map(audit => {
+                  const auditId = audit._id || audit.id;
+                  const isExpanded = expandedAuditId === auditId;
+                  const siteStr = audit.site_name || audit.sites?.name || audit.application_id?.site_name || audit.application_id?.establishment_name || 'Manufacturing Site';
+                  const appNum = audit.application_id?.application_number || audit.applications?.application_number || '—';
+                  const stageStr = `Stage ${audit.stage || 1} Audit (${audit.audit_type || 'Initial'})`;
+                  const auditorsList = audit.auditors?.length > 0 
+                    ? audit.auditors.map(a => a.name).join(', ') 
+                    : (audit.inspectors?.full_name || 'Assigned by HFA');
 
-            return (
-              <div 
-                key={auditId} 
-                className="card"
-                style={{
-                  borderRadius: 20,
-                  border: hasNcFlagged ? '1.5px solid #fecaca' : '1px solid #e2e8f0',
-                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
-                  overflow: 'hidden'
-                }}
-              >
-                {/* Header */}
-                <div style={{ 
-                  padding: '18px 24px', 
-                  background: hasNcFlagged ? '#fff5f5' : '#f8fafc', 
-                  borderBottom: '1px solid #e2e8f0',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 
-                }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--primary)' }}>{siteName || companyName}</span>
-                      <span className={`badge ${STATUS_BADGE[item.status] || 'badge-blue'}`} style={{ fontWeight: 700 }}>
-                        {formatProcessStatus(item.status)}
-                      </span>
-                      {hasNcFlagged && (
-                        <span className="badge badge-red" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <AlertCircle size={12} /> Outstanding NC
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginTop: 4 }}>
-                      {companyName} &middot; <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{siteName}</span>
-                    </div>
-                  </div>
+                  const hasFlaggedNc = audit.nc_reports?.some(nc => nc.status === 'flagged');
+                  const hasNc = audit.nc_reports && audit.nc_reports.length > 0;
+                  const needsDateResponse = audit.status === 'dates_proposed';
+                  const statusInfo = AUDIT_STATUS_MAP[audit.status] || { label: audit.status ? audit.status.replace(/_/g, ' ') : 'Scheduled', badge: 'badge-blue' };
 
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    {item.status === 'dates_proposed' && (
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => setActiveModal({ type: 'dates', audit: item })}
+                  const displayDate = audit.finalized_date 
+                    ? new Date(audit.finalized_date).toLocaleDateString('en-GB')
+                    : (audit.scheduled_date 
+                      ? new Date(audit.scheduled_date).toLocaleDateString('en-GB')
+                      : (audit.proposed_dates?.length > 0 ? `${audit.proposed_dates.length} Dates Proposed` : 'TBD'));
+
+                  return (
+                    <React.Fragment key={auditId}>
+                      <tr 
+                        style={{ 
+                          background: isExpanded ? '#f8fafc' : (hasFlaggedNc || needsDateResponse ? '#fffdfa' : 'inherit'),
+                          cursor: 'pointer',
+                          borderLeft: hasFlaggedNc ? '4px solid #dc2626' : (needsDateResponse ? '4px solid #f59e0b' : 'none')
+                        }}
+                        onClick={() => setExpandedAuditId(isExpanded ? null : auditId)}
                       >
-                        Select Audit Dates
-                      </button>
-                    )}
-                    
-                    {hasNcFlagged && (
-                      <button
-                        className="btn btn-sm"
-                        style={{ background: '#dc2626', color: '#fff', border: 'none', fontWeight: 700 }}
-                        onClick={() => setActiveModal({ type: 'nc', audit: item })}
-                      >
-                        Upload NC Correction
-                      </button>
-                    )}
-
-                    {appId && (
-                      <Link 
-                        to={`/applications/${appId}/track`} 
-                        className="btn btn-outline btn-sm"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                      >
-                        Track Progress <ArrowRight size={14} />
-                      </Link>
-                    )}
-                  </div>
-                </div>
-
-                {/* Body Content */}
-                <div style={{ padding: '20px 24px', display: 'grid', gap: 20 }}>
-                  
-                  {/* Stages if Dual Stage */}
-                  {item.stage > 1 && (
-                    <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 800, background: '#eff6ff', color: '#1d4ed8', padding: '4px 10px', borderRadius: 6, width: 'fit-content' }}>
-                      Stage {item.stage} Session
-                    </div>
-                  )}
-
-                  {/* Dates Banner */}
-                  {item.finalized_date ? (
-                    <div style={{ padding: '12px 16px', background: '#f0fdf4', borderRadius: 12, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <Calendar size={18} style={{ color: '#16a34a' }} />
-                      <div>
-                        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#166534' }}>Confirmed Audit Date</div>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: '#14532d' }}>{new Date(item.finalized_date).toDateString()}</div>
-                      </div>
-                    </div>
-                  ) : item.status === 'dates_proposed' ? (
-                    <div style={{ padding: '12px 16px', background: '#fefce8', borderRadius: 12, border: '1px solid #fde68a' }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: '#a16207' }}>Proposed Audit Dates Available</div>
-                      <div style={{ fontSize: 12, color: '#854d0e', marginTop: 2 }}>
-                        Admin proposed: {item.proposed_dates?.map(d => new Date(d).toLocaleDateString('en-GB')).join(', ')}. Please click <strong>Select Audit Dates</strong> to respond.
-                      </div>
-                    </div>
-                  ) : item.status === 'dates_accepted' ? (
-                    <div style={{ padding: '12px 16px', background: '#eff6ff', borderRadius: 12, border: '1px solid #bfdbfe', fontSize: 13, color: '#1e40af' }}>
-                      <strong>Dates Selected:</strong> {item.selected_dates?.map(d => new Date(d).toLocaleDateString('en-GB')).join(' & ')}. Awaiting HFA Admin final confirmation.
-                    </div>
-                  ) : null}
-
-                  {/* Assigned Audit Team */}
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: 10 }}>
-                      Assigned Audit Team ({item.auditors?.length || 0})
-                    </div>
-
-                    {item.auditors && item.auditors.length > 0 ? (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-                        {item.auditors.map((aud, i) => {
-                          const role = aud.role || 'lead_auditor';
-                          const rc = roleColors[role] || roleColors.lead_auditor;
-                          return (
-                            <div key={i} style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <div>
-                                <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{aud.name || 'Auditor'}</div>
-                                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{aud.email || 'Contact on portal'}</div>
-                              </div>
-                              <span style={{ fontSize: 10, fontWeight: 800, background: rc.bg, color: rc.color, border: `1px solid ${rc.border}`, padding: '3px 8px', borderRadius: 10 }}>
-                                {roleLabels[role] || role}
-                              </span>
+                        <td>
+                          <div style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <MapPin size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                            <span>{siteStr}</span>
+                          </div>
+                          {audit.application_id?.category && (
+                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, marginLeft: 20 }}>
+                              Category: {audit.application_id.category}
                             </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', background: '#f8fafc', padding: '12px 16px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                        No auditors assigned to this session yet.
-                      </div>
-                    )}
-                  </div>
+                          )}
+                        </td>
 
-                  {/* NC Reports Section if present */}
-                  {(() => {
-                    const uniqueNcReports = (item.nc_reports || []).filter((nc, idx, self) => {
-                      return self.findIndex(o => {
-                        if (o._id && nc._id && String(o._id) === String(nc._id)) return true;
-                        if (o.text && nc.text && o.text.trim().toLowerCase() === nc.text.trim().toLowerCase()) return true;
-                        return false;
-                      }) === idx;
-                    });
+                        <td style={{ fontWeight: 700, color: 'var(--primary)' }}>
+                          {appNum}
+                        </td>
 
-                    if (uniqueNcReports.length === 0) return null;
+                        <td>
+                          <span style={{ fontWeight: 600, color: '#334155', fontSize: 13 }}>{stageStr}</span>
+                        </td>
 
-                    return (
-                      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
-                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#b91c1c', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <AlertCircle size={14} color="#dc2626" /> Non-Conformity (NC) Reports ({uniqueNcReports.length})
-                        </div>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#0f172a', fontSize: 13 }}>
+                            <Calendar size={14} style={{ color: '#0284c7' }} />
+                            <span>{displayDate}</span>
+                          </div>
+                          {needsDateResponse && (
+                            <span className="badge badge-orange" style={{ fontSize: 10, marginTop: 4, display: 'inline-block' }}>
+                              ⚡ Choose 2 Dates
+                            </span>
+                          )}
+                        </td>
 
-                        <div style={{ display: 'grid', gap: 10 }}>
-                          {uniqueNcReports.map((nc, idx) => {
-                            const isCorrected = nc.status === 'corrected' || nc.status === 'closed';
-                            const fileUrl = nc.document_url || nc.url;
-                            const replyFileUrl = nc.correction_document_url || nc.client_response_url;
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#334155' }}>
+                            <User size={14} style={{ color: '#64748b' }} />
+                            <span>{auditorsList}</span>
+                          </div>
+                        </td>
 
-                            return (
-                              <div 
-                                key={idx} 
-                                style={{ 
-                                  padding: '14px 16px', 
-                                  background: isCorrected ? '#f0fdf4' : '#fff5f5', 
-                                  borderRadius: 12, 
-                                  border: `1px solid ${isCorrected ? '#bbf7d0' : '#fecaca'}`,
-                                  display: 'flex', flexDirection: 'column', gap: 8
-                                }}
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                            <span className={`badge ${statusInfo.badge}`} style={{ textTransform: 'capitalize', fontSize: 11, fontWeight: 700 }}>
+                              {statusInfo.label}
+                            </span>
+                            {hasFlaggedNc && (
+                              <span className="badge badge-red" style={{ fontSize: 10, fontWeight: 800 }}>
+                                ⚠️ NC Flagged
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                            {needsDateResponse && (
+                              <button 
+                                className="btn btn-primary btn-sm"
+                                style={{ background: '#f59e0b', borderColor: '#f59e0b', fontSize: 12, fontWeight: 700 }}
+                                onClick={() => openSelectDatesModal(audit)}
                               >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    {isCorrected ? <CheckCircle size={15} color="#16a34a" /> : <AlertCircle size={15} color="#dc2626" />}
-                                    <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: isCorrected ? '#166534' : '#b91c1c' }}>
-                                      {isCorrected ? 'Closed / Resolved' : 'Action Required'}
-                                    </span>
-                                    {nc.flagged_at && (
-                                      <span style={{ fontSize: 11, color: '#64748b' }}>&middot; {new Date(nc.flagged_at).toLocaleDateString('en-GB')}</span>
-                                    )}
+                                Select Dates
+                              </button>
+                            )}
+
+                            {hasFlaggedNc && (
+                              <button 
+                                className="btn btn-primary btn-sm"
+                                style={{ background: '#dc2626', borderColor: '#dc2626', fontSize: 12, fontWeight: 700 }}
+                                onClick={() => openNcModal(audit)}
+                              >
+                                Resolve NC
+                              </button>
+                            )}
+
+                            <button 
+                              className="btn btn-ghost btn-sm"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+                              onClick={() => setExpandedAuditId(isExpanded ? null : auditId)}
+                            >
+                              {isExpanded ? 'Hide Details' : 'Details'}
+                              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Expandable Audit Details Row */}
+                      {isExpanded && (
+                        <tr style={{ background: '#f8fafc' }}>
+                          <td colSpan={7} style={{ padding: '20px 24px', borderBottom: '2px solid #e2e8f0' }}>
+                            <div style={{ display: 'grid', gap: 20 }}>
+                              
+                              {/* Schedule and Date Options */}
+                              <div style={{ background: '#fff', borderRadius: 12, padding: 18, border: '1px solid #e2e8f0' }}>
+                                <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#475569', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <Calendar size={16} style={{ color: '#0284c7' }} /> Audit Schedule &amp; Team Details
+                                </div>
+                                
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+                                  <div>
+                                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Finalized Date</div>
+                                    <div style={{ fontSize: 14, fontWeight: 800, color: audit.finalized_date ? '#15803d' : '#0f172a', marginTop: 2 }}>
+                                      {audit.finalized_date ? new Date(audit.finalized_date).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Awaiting Final Confirmation'}
+                                    </div>
                                   </div>
 
-                                  {!isCorrected && (
-                                    <button
-                                      className="btn btn-sm"
-                                      style={{ background: '#dc2626', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px' }}
-                                      onClick={() => setActiveModal({ type: 'nc', audit: item, reportId: nc._id || nc.id })}
+                                  <div>
+                                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Proposed Dates by Admin</div>
+                                    <div style={{ fontSize: 13, color: '#334155', marginTop: 2 }}>
+                                      {audit.proposed_dates && audit.proposed_dates.length > 0 ? (
+                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                                          {audit.proposed_dates.map((d, i) => (
+                                            <span key={i} style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600 }}>
+                                              {new Date(d).toLocaleDateString('en-GB')}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      ) : 'None proposed'}
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Your Selected Preferences</div>
+                                    <div style={{ fontSize: 13, color: '#334155', marginTop: 2 }}>
+                                      {audit.selected_dates && audit.selected_dates.length > 0 ? (
+                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                                          {audit.selected_dates.map((d, i) => (
+                                            <span key={i} style={{ background: '#e0f2fe', color: '#0369a1', padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700 }}>
+                                              ✓ {new Date(d).toLocaleDateString('en-GB')}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      ) : (audit.client_unavailable ? <span style={{ color: '#dc2626', fontWeight: 700 }}>Marked as Unavailable</span> : 'Not submitted yet')}
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Assigned Auditor(s)</div>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>
+                                      {auditorsList}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {needsDateResponse && (
+                                  <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                                    <span style={{ fontSize: 12, color: '#92400e', fontWeight: 600 }}>
+                                      Action Required: Please pick 2 preferred dates or inform HFA if unavailable.
+                                    </span>
+                                    <button 
+                                      className="btn btn-primary btn-sm"
+                                      style={{ background: '#f59e0b', borderColor: '#f59e0b', fontWeight: 700 }}
+                                      onClick={() => openSelectDatesModal(audit)}
                                     >
-                                      <Upload size={13} /> Upload NC Correction
+                                      Select Audit Dates
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Non-Conformity (NC) Findings Section */}
+                              <div style={{ background: '#fff', borderRadius: 12, padding: 18, border: hasFlaggedNc ? '1.5px solid #fca5a5' : '1px solid #e2e8f0' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: hasFlaggedNc ? '#b91c1c' : '#475569', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <AlertTriangle size={16} style={{ color: hasFlaggedNc ? '#dc2626' : '#64748b' }} /> 
+                                    Non-Conformity (NC) Findings &amp; Corrective Actions ({audit.nc_reports?.length || 0})
+                                  </div>
+                                  
+                                  {hasFlaggedNc && (
+                                    <button 
+                                      className="btn btn-primary btn-sm"
+                                      style={{ background: '#dc2626', borderColor: '#dc2626', fontWeight: 700, fontSize: 12 }}
+                                      onClick={() => openNcModal(audit)}
+                                    >
+                                      + Upload NC Correction
                                     </button>
                                   )}
                                 </div>
 
-                                <div style={{ fontSize: 13, color: '#1e293b', fontWeight: 500, lineHeight: 1.5 }}>
-                                  {nc.text || 'Non-Conformity flagged during audit inspection.'}
-                                </div>
+                                {audit.nc_reports && audit.nc_reports.length > 0 ? (
+                                  <div style={{ display: 'grid', gap: 14 }}>
+                                    {audit.nc_reports.map((nc, idx) => {
+                                      const isNcOpen = nc.status === 'flagged';
+                                      const isCorrected = nc.status === 'corrected';
+                                      const isClosed = nc.status === 'closed';
 
-                                {fileUrl && (
-                                  <div>
-                                    <a
-                                      href={getPdfUrl(fileUrl)}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="btn btn-outline btn-sm"
-                                      style={{ color: '#dc2626', borderColor: '#fecaca', gap: 6, display: 'inline-flex', alignItems: 'center', fontSize: 11.5 }}
-                                    >
-                                      <Download size={13} /> View NC Report Sheet
-                                    </a>
+                                      return (
+                                        <div 
+                                          key={nc._id || idx} 
+                                          style={{ 
+                                            background: isNcOpen ? '#fef2f2' : '#f8fafc', 
+                                            borderRadius: 10, 
+                                            padding: 16, 
+                                            border: isNcOpen ? '1px solid #fecaca' : '1px solid #e2e8f0' 
+                                          }}
+                                        >
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                              <span style={{ fontSize: 12, fontWeight: 800, color: isNcOpen ? '#dc2626' : '#334155' }}>
+                                                Observation #{idx + 1}
+                                              </span>
+                                              <span className={`badge ${isClosed ? 'badge-green' : (isCorrected ? 'badge-yellow' : 'badge-red')}`} style={{ fontSize: 10 }}>
+                                                {isClosed ? 'Resolved & Closed' : (isCorrected ? 'Correction Submitted' : 'Action Required')}
+                                              </span>
+                                            </div>
+                                            {nc.flagged_at && (
+                                              <span style={{ fontSize: 11, color: '#64748b' }}>
+                                                Flagged: {new Date(nc.flagged_at).toLocaleDateString('en-GB')}
+                                              </span>
+                                            )}
+                                          </div>
+
+                                          {/* NC Auditor Text */}
+                                          <div style={{ fontSize: 13, color: '#1e293b', fontWeight: 600, background: '#fff', padding: 12, borderRadius: 8, border: '1px solid #f1f5f9' }}>
+                                            <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>
+                                              Auditor Observation / Non-Conformity:
+                                            </div>
+                                            {nc.text || 'Non-Conformity flagged during site inspection.'}
+                                          </div>
+
+                                          {/* Auditor Attached Document */}
+                                          {(nc.document_url || nc.url) && (
+                                            <div style={{ marginTop: 8 }}>
+                                              <a 
+                                                href={getPdfUrl(nc.document_url || nc.url)} 
+                                                target="_blank" 
+                                                rel="noreferrer" 
+                                                className="btn btn-outline btn-sm"
+                                                style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                                              >
+                                                <Download size={12} /> View Auditor Attachment
+                                              </a>
+                                            </div>
+                                          )}
+
+                                          {/* Client Response */}
+                                          {nc.client_response && (
+                                            <div style={{ marginTop: 10, background: '#f0fdf4', padding: 12, borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                                              <div style={{ fontSize: 11, color: '#15803d', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>
+                                                Your Corrective Action Explanation:
+                                              </div>
+                                              <div style={{ fontSize: 13, color: '#14532d' }}>
+                                                {nc.client_response}
+                                              </div>
+                                              {(nc.correction_document_url || nc.client_response_url) && (
+                                                <div style={{ marginTop: 8 }}>
+                                                  <a 
+                                                    href={getPdfUrl(nc.correction_document_url || nc.client_response_url)} 
+                                                    target="_blank" 
+                                                    rel="noreferrer" 
+                                                    className="btn btn-outline btn-sm"
+                                                    style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                                                  >
+                                                    <Download size={12} /> View Uploaded Resolution Document
+                                                  </a>
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          {/* Admin Reply */}
+                                          {nc.admin_reply && (
+                                            <div style={{ marginTop: 10, background: '#eff6ff', padding: 12, borderRadius: 8, border: '1px solid #bfdbfe' }}>
+                                              <div style={{ fontSize: 11, color: '#1d4ed8', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>
+                                                HFA Auditor Review Reply:
+                                              </div>
+                                              <div style={{ fontSize: 13, color: '#1e3a8a' }}>
+                                                {nc.admin_reply}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {/* Action button if open */}
+                                          {isNcOpen && (
+                                            <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                                              <button 
+                                                className="btn btn-primary btn-sm"
+                                                style={{ background: '#dc2626', borderColor: '#dc2626', fontSize: 12, fontWeight: 700 }}
+                                                onClick={() => openNcModal(audit, nc._id)}
+                                              >
+                                                Submit Corrective Action for Observation #{idx + 1}
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
-                                )}
-
-                                {nc.client_response && (
-                                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#334155' }}>
-                                    <div style={{ fontWeight: 700, color: '#475569', marginBottom: 2 }}>Your Response:</div>
-                                    <div>{nc.client_response}</div>
-                                    {replyFileUrl && (
-                                      <div style={{ marginTop: 4 }}>
-                                        <a href={getPdfUrl(replyFileUrl)} target="_blank" rel="noreferrer" style={{ color: '#16a34a', fontWeight: 600 }}>
-                                          📎 View Attached Evidence
-                                        </a>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                {nc.admin_reply && (
-                                  <div style={{ background: '#f0fdf4', border: '1px solid #bae6fd', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#0369a1' }}>
-                                    <div style={{ fontWeight: 700, marginBottom: 2 }}>💬 HFA Response / Guidance:</div>
-                                    <div>{nc.admin_reply}</div>
+                                ) : (
+                                  <div style={{ textAlign: 'center', padding: '20px', background: '#f8fafc', borderRadius: 8, color: '#64748b', fontSize: 13 }}>
+                                    <CheckCircle2 size={24} style={{ color: '#16a34a', margin: '0 auto 6px' }} />
+                                    No Non-Conformity reports flagged for this audit.
                                   </div>
                                 )}
                               </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })()}
 
-                </div>
-              </div>
-            );
-          })}
+                              {/* Audit Report Document Download if available */}
+                              {audit.report_url && (
+                                <div style={{ background: '#fff', borderRadius: 12, padding: 16, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <FileText size={20} style={{ color: 'var(--primary)' }} />
+                                    <div>
+                                      <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Official Audit Inspection Report</div>
+                                      <div style={{ fontSize: 11, color: '#64748b' }}>Generated and signed by the HFA Halal Audit Committee</div>
+                                    </div>
+                                  </div>
+                                  <a 
+                                    href={getPdfUrl(audit.report_url)} 
+                                    target="_blank" 
+                                    rel="noreferrer" 
+                                    className="btn btn-outline btn-sm"
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                                  >
+                                    <Download size={14} /> Download Audit Report PDF
+                                  </a>
+                                </div>
+                              )}
+
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Shared Audit Modal for Date Selection or NC Upload */}
-      {activeModal && (
-        <ClientAuditModal
-          isOpen={true}
-          onClose={() => setActiveModal(null)}
-          audit={activeModal.audit}
-          mode={activeModal.type === 'nc' ? 'nc_upload' : 'select_dates'}
-          onSuccess={() => {
-            setActiveModal(null);
-            fetchData();
-          }}
-        />
-      )}
+      {/* Client Audit Action Modal (Select Dates & Upload NC) */}
+      <ClientAuditModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        audit={selectedAudit}
+        mode={modalMode}
+        reportId={selectedReportId}
+        onSuccess={() => {
+          fetchAudits();
+        }}
+      />
     </div>
   );
 }
