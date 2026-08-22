@@ -83,8 +83,13 @@ export default function InvoiceCard({ invoice, status, isInitial, isFinal, onPay
             )}
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 14, color: isPaid ? '#14532d' : isFinal ? '#581c87' : 'var(--text-primary)' }}>
+            <div style={{ fontWeight: 800, fontSize: 14, color: isPaid ? '#14532d' : isFinal ? '#581c87' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
               {cardTitle}
+              {invoice.version > 1 && (
+                <span style={{ fontSize: 10, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+                  Revised (v{invoice.version})
+                </span>
+              )}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
               No: {invoice.invoice_number} &middot; Status:{' '}

@@ -98,8 +98,13 @@ export default function PaymentModal({ isOpen, onClose, invoice: propInvoice, ap
                 {isFinal ? 'Final Certification Invoice' : 'Initial Application Fee Invoice'}
               </div>
               {invoice && (
-                <div style={{ fontSize: 12, color: '#c2410c', marginTop: 2, fontWeight: 600 }}>
-                  Invoice #{invoice.invoice_number}
+                <div style={{ fontSize: 12, color: '#c2410c', marginTop: 2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>Invoice #{invoice.invoice_number}</span>
+                  {invoice.version > 1 && (
+                    <span style={{ fontSize: 10, background: '#ffedd5', color: '#c2410c', border: '1px solid #fed7aa', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+                      Revised (v{invoice.version})
+                    </span>
+                  )}
                 </div>
               )}
             </div>
