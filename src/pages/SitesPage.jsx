@@ -96,7 +96,7 @@ export default function SitesPage() {
                       <td>{s.address_1}{s.city ? `, ${s.city}` : ''}</td>
                       <td>{s.contact_name}</td>
                       <td>{s.contact_phone_code} {s.contact_phone_number}</td>
-                      <td><span className={`badge ${s.status === 'active' ? 'badge-green' : 'badge-gray'}`}>{s.status}</span></td>
+                      <td><span className={`badge ${s.status === 'active' ? 'badge-green' : 'badge-gray'}`} style={{ textTransform: 'capitalize' }}>{s.status ? (s.status.charAt(0).toUpperCase() + s.status.slice(1)) : 'Active'}</span></td>
                       <td>
                         <button 
                           className="btn btn-outline btn-sm" 

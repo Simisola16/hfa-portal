@@ -129,7 +129,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
           products: validProducts.map(prod => ({
             name: prod.name.trim(),
             code: prod.code?.trim() || '',
-            type: prod.type === 'Change ingredient' ? 'Change ingredients' : prod.type
+            type: 'Add product'
           }))
         };
 
@@ -188,8 +188,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
                   <tr>
                     <th>Product Name</th>
                     <th>Category</th>
-                    <th>Product Type</th>
-                    <th>Barcode / SKU</th>
+                    <th>Code</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -198,11 +197,10 @@ export default function ProductsPage({ openNew: openNewProp }) {
                     <tr key={p.id || p._id}>
                       <td style={{ fontWeight: 700, color: '#0f172a' }}>{p.name}</td>
                       <td>{p.category || '—'}</td>
-                      <td>{p.product_type || '—'}</td>
-                      <td><code style={{ fontSize: 12 }}>{p.barcode || '—'}</code></td>
+                      <td><code style={{ fontSize: 12 }}>{p.code || p.barcode || '—'}</code></td>
                       <td>
-                        <span className={`badge ${p.status === 'approved' || p.status === 'active' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-yellow'}`}>
-                          {p.status === 'active' ? 'Certified' : (p.status || 'Active')}
+                        <span className={`badge ${p.status === 'rejected' ? 'badge-red' : p.status === 'pending' ? 'badge-yellow' : 'badge-green'}`} style={{ textTransform: 'capitalize' }}>
+                          {p.status === 'rejected' ? 'Rejected' : (p.status === 'pending' ? 'Pending' : 'Approved')}
                         </span>
                       </td>
                     </tr>
@@ -216,7 +214,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
 
       {showModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)} style={{ padding: '20px' }}>
-          <div className="modal" style={{ maxWidth: editing ? '500px' : '1000px', width: '100%', maxHeight: '95vh', overflowY: 'auto' }}>
+          <div className="modal" style={{ maxWidth: editing ? '500px' : '900px', width: '100%', maxHeight: '95vh', overflowY: 'auto' }}>
             <div className="modal-header" style={{ background: '#fff', borderBottom: '1px solid #e2e8f0' }}>
               <span className="modal-title" style={{ fontSize: '16px', fontWeight: 700 }}>{editing ? 'Edit Product' : 'Add New Product (Add-on Request)'}</span>
               <button className="modal-close" onClick={() => setShowModal(false)}><X size={16} /></button>
@@ -224,50 +222,19 @@ export default function ProductsPage({ openNew: openNewProp }) {
             
             <form onSubmit={handleSubmit}>
               {editing ? (
-                // OLD EDIT FORM
+                // EDIT FORM
                 <div className="modal-body">
                   <div className="form-group"><label className="form-label">Product Name <span>*</span></label><input className="form-control" value={form.name} onChange={setF('name')} required /></div>
                   <div className="form-grid">
                     <div className="form-group"><label className="form-label">Category</label><input className="form-control" value={form.category} onChange={setF('category')} placeholder="e.g. Meat, Snacks, Dairy" /></div>
-                    <div className="form-group">
-                      <label className="form-label">Product Type</label>
-                      <select className="form-control" value={form.product_type || ''} onChange={setF('product_type')}>
-                        <option value="">Select Type</option>
-                        {PRODUCT_TYPES.map(t => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <div className="form-group"><label className="form-label">Code</label><input className="form-control" value={form.code || form.barcode || ''} onChange={setF('code')} placeholder="e.g. PRD-001" /></div>
                   </div>
-                  <div className="form-group"><label className="form-label">Barcode / SKU</label><input className="form-control" value={form.barcode} onChange={setF('barcode')} /></div>
                   <div className="form-group"><label className="form-label">Ingredients</label><textarea className="form-control" value={form.ingredients} onChange={setF('ingredients')} placeholder="List main ingredients..." /></div>
                   <div className="form-group"><label className="form-label">Description</label><textarea className="form-control" value={form.description} onChange={setF('description')} /></div>
                 </div>
               ) : (
-                // NATIVE UI FOR NEW PRODUCTS
+                // NATIVE UI FOR NEW PRODUCTS (NO SITE PICKER - AUTO-LINKED)
                 <div className="modal-body" style={{ background: '#f9fafb' }}>
-                  
-                  {/* Section 0: Certified Site (if available) */}
-                  {certs.length > 0 && (
-                    <div style={{ marginBottom: 20 }}>
-                      <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>Certified Facility / Site</h4>
-                      {certs.length === 1 ? (
-                        <div style={{ padding: '10px 14px', background: '#fff', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', fontWeight: 600, fontSize: 13, color: '#334155' }}>
-                          {getSiteName(certs[0])} ({certs[0].certificate_number})
-                        </div>
-                      ) : (
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <select className="form-control" value={bulkForm.certificate_id} onChange={setB('certificate_id')}>
-                            <option value="">-- Select Facility / Certificate --</option>
-                            {certs.map(c => (
-                              <option key={c._id || c.id} value={c._id || c.id}>{getSiteName(c)} ({c.certificate_number})</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                      <div style={{ height: 1, background: 'var(--border)', margin: '16px 0 20px' }}></div>
-                    </div>
-                  )}
 
                   {/* Section 1: Contact Person */}
                   <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Contact Person</h4>
@@ -298,7 +265,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
                     <textarea className="form-control" value={bulkForm.message} onChange={setB('message')} placeholder="Any additional details..." style={{ minHeight: '100px' }} />
                   </div>
 
-                  {/* Section 3: Products (TYPE) */}
+                  {/* Section 3: Products */}
                   <div style={{ height: 1, background: 'var(--border)', margin: '8px 0 24px' }}></div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Products to Add</h4>
@@ -310,8 +277,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
                         <tr>
                           <th style={{ padding: '10px 16px', width: '50px', textAlign: 'center' }}>ID</th>
                           <th style={{ padding: '10px 16px' }}>Product Name</th>
-                          <th style={{ padding: '10px 16px' }}>Code / SKU</th>
-                          <th style={{ padding: '10px 16px', width: '220px' }}>Type</th>
+                          <th style={{ padding: '10px 16px', width: '220px' }}>Code</th>
                           <th style={{ padding: '10px 16px', width: '50px' }}></th>
                         </tr>
                       </thead>
@@ -320,17 +286,10 @@ export default function ProductsPage({ openNew: openNewProp }) {
                           <tr key={index} style={{ borderBottom: '1px solid var(--border)' }}>
                             <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 600, color: 'var(--text-secondary)' }}>{prod.id}</td>
                             <td style={{ padding: '10px 16px' }}>
-                              <input className="form-control" value={prod.name} onChange={e => updateProductRow(index, 'name', e.target.value)} required placeholder="Name" />
+                              <input className="form-control" value={prod.name} onChange={e => updateProductRow(index, 'name', e.target.value)} required placeholder="Product Name" />
                             </td>
                             <td style={{ padding: '10px 16px' }}>
-                              <input className="form-control" value={prod.code} onChange={e => updateProductRow(index, 'code', e.target.value)} placeholder="Code" />
-                            </td>
-                            <td style={{ padding: '10px 16px' }}>
-                              <select className="form-control" value={prod.type || 'Add product'} onChange={e => updateProductRow(index, 'type', e.target.value)}>
-                                {PRODUCT_TYPES.map(t => (
-                                  <option key={t} value={t}>{t}</option>
-                                ))}
-                              </select>
+                              <input className="form-control" value={prod.code} onChange={e => updateProductRow(index, 'code', e.target.value)} placeholder="Code (e.g. PRD-001)" />
                             </td>
                             <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                               <button type="button" className="btn btn-ghost btn-icon" onClick={() => removeProductRow(index)} style={{ color: 'var(--text-muted)' }}>

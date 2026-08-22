@@ -122,8 +122,8 @@ export default function AgreementPage() {
                     <td>
                       <span className={`badge ${
                         a.client_signed ? 'badge-green' : 'badge-yellow'
-                      }`}>
-                        {a.client_signed ? 'signed' : 'pending signature'}
+                      }`} style={{ textTransform: 'capitalize' }}>
+                        {a.client_signed ? 'Signed' : 'Pending Signature'}
                       </span>
                     </td>
                     <td>

@@ -112,8 +112,8 @@ export default function ProposalsPage() {
                         p.status === 'accepted' ? 'badge-green' : 
                         p.status === 'rejected' ? 'badge-red' : 
                         'badge-yellow'
-                      }`}>
-                        {p.status || 'pending'}
+                      }`} style={{ textTransform: 'capitalize' }}>
+                        {p.status === 'accepted' ? 'Accepted' : p.status === 'rejected' ? 'Rejected' : 'Pending'}
                       </span>
                     </td>
                     <td>

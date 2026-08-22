@@ -45,7 +45,7 @@ export default function ApplicationsPage({ openNew }) {
     const statusParam = searchParams.get('status');
     const actionParam = searchParams.get('action');
 
-    if (openNew || actionParam === 'new') {
+    if (actionParam === 'new') {
       setShowModal(true);
       setForm(f => ({ ...f, application_type: 'new' }));
     }
@@ -679,6 +679,49 @@ export default function ApplicationsPage({ openNew }) {
           <Plus size={15} /> Create Application
         </button>
       </div>
+
+      {pendingApp && (
+        <div style={{
+          background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+          border: '1.5px solid #86efac',
+          borderRadius: 20,
+          padding: '20px 24px',
+          marginTop: 20,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
+          boxShadow: '0 4px 12px -2px rgba(22, 163, 74, 0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: '#16a34a', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <FileText size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#15803d' }}>
+                Ongoing Application
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#14532d', marginTop: 2 }}>
+                {pendingApp.site_name || pendingApp.establishment_name || 'Manufacturing Site'} &middot; <span style={{ fontSize: 13, fontWeight: 600, color: '#166534' }}>{pendingApp.application_number}</span>
+              </div>
+              <div style={{ fontSize: 12, color: '#166534', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>Status:</span>
+                <span className={`badge ${STATUS_BADGE[pendingApp.status] || 'badge-green'}`} style={{ textTransform: 'capitalize', fontSize: 11, fontWeight: 700 }}>
+                  {STATUS_LABELS[pendingApp.status] || pendingApp.status?.replace(/_/g, ' ')}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button
+            className="btn btn-primary"
+            style={{ background: '#15803d', borderColor: '#15803d', borderRadius: 10, padding: '10px 22px', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}
+            onClick={() => navigate(`/applications/${pendingApp._id || pendingApp.id}/track`)}
+          >
+            Track Ongoing Application <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
 
       <div style={{ background: '#fff', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)', overflow: 'hidden', marginTop: 24 }}>
         <div style={{ padding: '24px 32px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fafaf9' }}>

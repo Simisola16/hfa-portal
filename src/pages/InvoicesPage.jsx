@@ -62,8 +62,8 @@ export default function InvoicesPage() {
                   <td>{inv.description || inv.title || 'Certification Invoice'}</td>
                   <td style={{ fontWeight: 600 }}>£{parseFloat(inv.amount || 0).toFixed(2)}</td>
                   <td>
-                    <span className={`badge ${inv.status === 'paid' ? 'badge-green' : inv.status === 'client_paid' ? 'badge-orange' : inv.status === 'overdue' ? 'badge-red' : 'badge-yellow'}`}>
-                      {inv.status === 'client_paid' ? 'paid (awaiting confirmation)' : inv.status}
+                    <span className={`badge ${inv.status === 'paid' ? 'badge-green' : inv.status === 'client_paid' ? 'badge-orange' : inv.status === 'overdue' ? 'badge-red' : 'badge-yellow'}`} style={{ textTransform: 'capitalize' }}>
+                      {inv.status === 'client_paid' ? 'Paid (Awaiting Confirmation)' : inv.status === 'paid' ? 'Paid' : inv.status === 'unpaid' ? 'Unpaid' : inv.status === 'overdue' ? 'Overdue' : (inv.status ? inv.status.charAt(0).toUpperCase() + inv.status.slice(1) : 'Unpaid')}
                     </span>
                   </td>
                   <td>

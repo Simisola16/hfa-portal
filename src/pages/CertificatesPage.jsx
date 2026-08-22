@@ -72,7 +72,22 @@ export default function CertificatesPage() {
   };
 
   const filtered = certs.filter(c => {
-    const matchSearch = !search || c.certificate_number?.toLowerCase().includes(search.toLowerCase()) || c.certificate_type?.toLowerCase().includes(search.toLowerCase());
+    const q = search.toLowerCase();
+    const siteName = (
+      c.site_name ||
+      c.site_id?.name ||
+      c.site_id?.est_name ||
+      c.sites?.name ||
+      c.establishment_name ||
+      c.application_id?.establishment_name ||
+      c.application_id?.site_name ||
+      ''
+    ).toLowerCase();
+
+    const matchSearch = !search || 
+      c.certificate_number?.toLowerCase().includes(q) || 
+      c.certificate_type?.toLowerCase().includes(q) ||
+      siteName.includes(q);
     
     let matchStatus = true;
     if (statusFilter) {
@@ -168,7 +183,7 @@ export default function CertificatesPage() {
       <div className="toolbar">
         <div className="search-box">
           <Search size={15} className="search-icon" />
-          <input placeholder="Search certificates..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input placeholder="Search by certificate number, site, or type..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <button className="btn btn-ghost btn-sm" onClick={fetchData}><RefreshCw size={14} /></button>
       </div>
@@ -215,7 +230,9 @@ export default function CertificatesPage() {
                             {cert.certificate_type}
                             {is3Yr && <span className="badge badge-blue" style={{ marginLeft: 6, fontSize: 10 }}>3-Year Expiry</span>}
                           </td>
-                          <td>{cert.sites?.name || '—'}</td>
+                          <td style={{ fontWeight: 600, color: '#334155' }}>
+                            {cert.site_name || cert.site_id?.name || cert.site_id?.est_name || cert.sites?.name || cert.establishment_name || cert.application_id?.establishment_name || cert.application_id?.site_name || '—'}
+                          </td>
                           <td>{cert.issue_date ? new Date(cert.issue_date).toLocaleDateString('en-GB') : '—'}</td>
                           <td>
                             <span style={{ color: isExpiringSoon(cert.expiry_date) && effectiveStatus !== 'renewed' ? 'var(--warning)' : 'inherit' }}>
@@ -229,10 +246,17 @@ export default function CertificatesPage() {
                             <span className={`badge ${
                               effectiveStatus === 'active' ? 'badge-green' :
                               effectiveStatus === 'renewed' ? 'badge-blue' :
+                              effectiveStatus === 'outdated' || effectiveStatus === 'superseded' ? 'badge-orange' :
                               effectiveStatus === 'revoked' ? 'badge-red' :
                               'badge-gray'
-                            }`}>
-                              {effectiveStatus}
+                            }`} style={{ textTransform: 'capitalize' }}>
+                              {effectiveStatus === 'outdated' ? 'Outdated' :
+                               effectiveStatus === 'superseded' ? 'Superseded' :
+                               effectiveStatus === 'renewed' ? 'Renewed' :
+                               effectiveStatus === 'active' ? 'Active' :
+                               effectiveStatus === 'expired' ? 'Expired' :
+                               effectiveStatus === 'revoked' ? 'Revoked' :
+                               (effectiveStatus ? effectiveStatus.charAt(0).toUpperCase() + effectiveStatus.slice(1) : 'Active')}
                             </span>
                           </td>
                           <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
