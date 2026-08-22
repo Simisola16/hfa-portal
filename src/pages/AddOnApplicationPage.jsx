@@ -220,6 +220,7 @@ export default function AddOnApplicationPage() {
 
   // Check if client has sites or existing add-on apps
   const hasNoSites = sites.length === 0 && certs.length === 0;
+  const hasNoCert = certs.length === 0;
 
   if (hasNoSites && myApps.length === 0) {
     return (
