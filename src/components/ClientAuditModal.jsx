@@ -314,7 +314,7 @@ export default function ClientAuditModal({
             <button
               className="btn"
               style={{ background: '#dc2626', color: '#fff', fontWeight: 700 }}
-              disabled={submitting || !audit || loading || (!responseText.trim() && !ncFile)}
+              disabled={submitting || !audit || loading}
               onClick={handleSubmitNc}
             >
               {submitting ? 'Submitting...' : 'Submit NC Correction'}
@@ -322,7 +322,7 @@ export default function ClientAuditModal({
           ) : (
             <button
               className="btn btn-primary"
-              disabled={submitting || !audit || loading || (!unavailable && selectedDates.length !== 2)}
+              disabled={submitting || !audit || loading}
               onClick={handleSubmitDates}
             >
               {submitting ? 'Submitting...' : 'Confirm Date Selection'}

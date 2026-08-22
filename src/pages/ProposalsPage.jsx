@@ -246,7 +246,7 @@ export default function ProposalsPage() {
               <button 
                 className="btn btn-primary" 
                 style={{ background: '#dc2626' }}
-                disabled={!rejectComment || submitting}
+                disabled={submitting}
                 onClick={() => handleStatusUpdate(selected.id, 'rejected', rejectComment)}
               >
                 {submitting ? 'Submitting...' : 'Confirm Rejection'}

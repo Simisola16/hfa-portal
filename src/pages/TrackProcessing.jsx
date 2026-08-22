@@ -985,7 +985,7 @@ export default function TrackProcessing() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setShowRejectModal(false)} disabled={actionSubmitting}>Cancel</button>
-              <button className="btn btn-danger" style={{ background: '#dc2626' }} onClick={handleRejectProposal} disabled={actionSubmitting || !rejectReason.trim()}>
+              <button className="btn btn-danger" style={{ background: '#dc2626' }} onClick={handleRejectProposal} disabled={actionSubmitting}>
                 {actionSubmitting ? 'Rejecting...' : 'Confirm Reject'}
               </button>
             </div>

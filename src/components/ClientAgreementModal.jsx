@@ -238,7 +238,7 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
             <button
               className="btn btn-primary"
               onClick={handleSubmit}
-              disabled={submitting || !agreement || loading || !signName.trim() || !signedFile}
+              disabled={submitting || !agreement || loading}
               style={{ background: '#0e7490', borderColor: '#0e7490' }}
             >
               {submitting ? 'Submitting Agreement...' : 'Upload & Submit Signed Agreement'}

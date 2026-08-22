@@ -854,7 +854,7 @@ export default function ApplicationsPage({ openNew }) {
                 </div>
                 <div style={{ padding: '16px 32px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: 12, flexShrink: 0 }}>
                   <button type="button" className="btn btn-ghost" onClick={handleCloseModal}>Cancel</button>
-                  <button type="button" className="btn btn-primary" disabled={submitting || !form.declared_true || !form.managing_director?.trim() || !form.primary_email?.trim() || !form.primary_work_tel?.trim() || !form.site_id || getGatingStatus()?.blocked} onClick={handleSubmit} style={{ background: 'linear-gradient(135deg, #d97706, #b45309)', borderColor: '#d97706' }}>
+                  <button type="button" className="btn btn-primary" disabled={submitting} onClick={handleSubmit} style={{ background: 'linear-gradient(135deg, #d97706, #b45309)', borderColor: '#d97706' }}>
                     {submitting ? <span className="spinner-white" /> : <><ShieldCheck size={18} /> Submit Renewal Application</>}
                   </button>
                 </div>
@@ -1342,7 +1342,7 @@ export default function ApplicationsPage({ openNew }) {
                           Next <ChevronRight size={16} />
                         </button>
                       ) : (
-                        <button type="button" className="btn btn-primary" disabled={submitting || !form.declared_true} onClick={handleSubmit} style={{ gap: 8, background: 'linear-gradient(135deg, #065f46, #1B7A7A)', borderColor: '#065f46', padding: '10px 24px' }}>
+                        <button type="button" className="btn btn-primary" disabled={submitting} onClick={handleSubmit} style={{ gap: 8, background: 'linear-gradient(135deg, #065f46, #1B7A7A)', borderColor: '#065f46', padding: '10px 24px' }}>
                           {submitting ? <span className="spinner-white" /> : <><ShieldCheck size={18} /> Submit Application</>}
                         </button>
                       )}

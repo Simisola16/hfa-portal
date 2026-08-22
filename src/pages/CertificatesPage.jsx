@@ -607,7 +607,7 @@ export default function CertificatesPage() {
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    disabled={renewSubmitting || !renewForm.contact_person?.trim() || !renewForm.contact_email?.trim() || !renewForm.contact_phone?.trim()}
+                    disabled={renewSubmitting}
                     style={{
                       background: 'linear-gradient(135deg, #15803d, #166534)',
                       minWidth: 160,

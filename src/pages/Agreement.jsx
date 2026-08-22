@@ -315,7 +315,7 @@ export default function AgreementPage() {
                 <button 
                   className="btn btn-primary"
                   onClick={handleSignAgreement}
-                  disabled={submitting || !signName.trim() || !signedFile}
+                  disabled={submitting}
                   style={{ background: '#0e7490', borderColor: '#0e7490' }}
                 >
                   {submitting ? 'Uploading Signed Copy...' : 'Upload & Submit Signed Agreement'}

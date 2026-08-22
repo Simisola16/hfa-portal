@@ -246,7 +246,7 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
                 className="btn btn-danger"
                 style={{ gap: 6 }}
                 onClick={handleReject}
-                disabled={submitting || !rejectReason.trim()}
+                disabled={submitting}
               >
                 <XCircle size={16} /> {submitting ? 'Submitting Rejection...' : 'Confirm Rejection'}
               </button>
