@@ -48,6 +48,8 @@ export default function ApplicationsPage({ openNew }) {
     if (actionParam === 'new') {
       setShowModal(true);
       setForm(f => ({ ...f, application_type: 'new' }));
+    } else if (actionParam === 'surveillance') {
+      handleOpenSurveillanceModal();
     }
 
     if (typeParam !== null) {
@@ -143,6 +145,21 @@ export default function ApplicationsPage({ openNew }) {
   const [certs, setCerts] = useState([]);
   const [renewalFiles, setRenewalFiles] = useState([]);
 
+  // Surveillance Modal State (UAE/GSO 3-Year Cycle)
+  const [showSurveillanceModal, setShowSurveillanceModal] = useState(false);
+  const [surveillanceForm, setSurveillanceForm] = useState({
+    site_id: '',
+    site_name: '',
+    establishment_name: '',
+    primary_contact_name: '',
+    primary_email: '',
+    primary_work_tel: '',
+    surveillance_year: 1,
+    notes: '',
+    declared_true: false
+  });
+  const [surveillanceFiles, setSurveillanceFiles] = useState([]);
+
   // Post-submit "Add Product?" prompt state
   const [showAddProductPrompt, setShowAddProductPrompt] = useState(false);
   const [addProductChoice, setAddProductChoice] = useState(null); // null | 'yes' | 'no'
@@ -225,6 +242,234 @@ export default function ApplicationsPage({ openNew }) {
       }
       return false;
     });
+  };
+
+  // Helper: Find GSO Certified applications/sites eligible for annual surveillance (Year 1 & Year 2)
+  const getGSOSurveillanceEligibleList = () => {
+    const safeApps = Array.isArray(apps) ? apps : [];
+    const safeCerts = Array.isArray(certs) ? certs : [];
+    const now = Date.now();
+    const oneYearInMs = 365 * 24 * 60 * 60 * 1000;
+
+    // Find all GSO applications and GSO certificates
+    const gsoApps = safeApps.filter(a => {
+      if (!a) return false;
+      const cat = (a.category || '').toLowerCase();
+      const type = (a.application_type || '').toLowerCase();
+      return cat.includes('gso') || cat.includes('uae') || type.includes('gso');
+    });
+
+    const gsoCerts = safeCerts.filter(c => {
+      if (!c) return false;
+      const cat = (c.category || '').toLowerCase();
+      const scope = (c.scope || '').toLowerCase();
+      const scheme = (c.scheme || '').toLowerCase();
+      return cat.includes('gso') || cat.includes('uae') || scope.includes('gso') || scheme.includes('gso');
+    });
+
+    const gsoSiteMap = new Map();
+
+    // 1. Process from apps
+    gsoApps.forEach(a => {
+      const sId = typeof a.site_id === 'object' ? a.site_id?._id || a.site_id?.id : a.site_id;
+      if (!sId) return;
+      
+      const key = String(sId);
+      const isCertified = a.status === 'certificate_issued' || a.has_certificate;
+      const isOngoingSurveillance = a.application_type === 'surveillance' && !['certificate_issued', 'rejected'].includes(a.status?.toLowerCase());
+
+      if (!gsoSiteMap.has(key)) {
+        gsoSiteMap.set(key, {
+          site_id: key,
+          site_name: a.site_name || a.establishment_name || 'Manufacturing Site',
+          establishment_name: a.establishment_name || a.site_name || '',
+          category: a.category || 'UAE/GSO Approved Halal Certification For Exporters To UAE',
+          managing_director: a.managing_director || a.primary_contact_name || '',
+          primary_email: a.primary_email || a.company_email || '',
+          primary_work_tel: a.primary_work_tel || a.primary_mobile || '',
+          created_at: a.created_at,
+          certified: isCertified,
+          hasOngoingSurveillance: isOngoingSurveillance,
+          ongoingAppNumber: isOngoingSurveillance ? a.application_number : null,
+          surveillanceCount: 0,
+          application_id: a._id
+        });
+      } else {
+        const existing = gsoSiteMap.get(key);
+        if (isCertified) existing.certified = true;
+        if (isOngoingSurveillance) {
+          existing.hasOngoingSurveillance = true;
+          existing.ongoingAppNumber = a.application_number;
+        }
+      }
+    });
+
+    // 2. Process from certificates
+    gsoCerts.forEach(c => {
+      const sId = typeof c.site_id === 'object' ? c.site_id?._id || c.site_id?.id : c.site_id;
+      if (!sId) return;
+      const key = String(sId);
+
+      if (gsoSiteMap.has(key)) {
+        const existing = gsoSiteMap.get(key);
+        existing.certified = true;
+        existing.certificate_number = c.certificate_number;
+        existing.issue_date = c.issue_date;
+        existing.expiry_date = c.expiry_date;
+      } else {
+        const matchingSite = sites.find(s => String(s._id) === key);
+        gsoSiteMap.set(key, {
+          site_id: key,
+          site_name: matchingSite?.name || c.site_name || 'Manufacturing Site',
+          establishment_name: matchingSite?.est_name || c.company_name || '',
+          category: c.category || 'UAE/GSO Approved Halal Certification For Exporters To UAE',
+          managing_director: c.contact_person || '',
+          primary_email: c.contact_email || '',
+          primary_work_tel: c.contact_phone || '',
+          created_at: c.issue_date || c.created_at,
+          certified: true,
+          certificate_number: c.certificate_number,
+          issue_date: c.issue_date,
+          expiry_date: c.expiry_date,
+          hasOngoingSurveillance: false,
+          ongoingAppNumber: null,
+          surveillanceCount: 0
+        });
+      }
+    });
+
+    // 3. Count completed surveillances
+    safeApps.forEach(a => {
+      if (a.application_type === 'surveillance' && (a.status === 'certificate_issued' || a.status === 'ready_for_certificate')) {
+        const sId = typeof a.site_id === 'object' ? a.site_id?._id || a.site_id?.id : a.site_id;
+        if (sId && gsoSiteMap.has(String(sId))) {
+          gsoSiteMap.get(String(sId)).surveillanceCount++;
+        }
+      }
+    });
+
+    const result = [];
+    gsoSiteMap.forEach(item => {
+      const year = item.surveillanceCount >= 1 ? 2 : 1;
+      item.cycle_year = year;
+      
+      const startDate = item.issue_date ? new Date(item.issue_date).getTime() : (item.created_at ? new Date(item.created_at).getTime() : now);
+      const elapsedMs = now - startDate;
+      const elapsedYears = elapsedMs / oneYearInMs;
+
+      item.isEligible = item.certified && !item.hasOngoingSurveillance;
+      item.elapsedYears = elapsedYears;
+
+      result.push(item);
+    });
+
+    return result;
+  };
+
+  const handleOpenSurveillanceModal = () => {
+    const gsoList = getGSOSurveillanceEligibleList();
+    if (gsoList.length > 0) {
+      const firstEligible = gsoList.find(g => g.isEligible) || gsoList[0];
+      if (firstEligible) {
+        setSurveillanceForm({
+          site_id: firstEligible.site_id,
+          site_name: firstEligible.site_name,
+          establishment_name: firstEligible.establishment_name,
+          primary_contact_name: firstEligible.managing_director || '',
+          primary_email: firstEligible.primary_email || '',
+          primary_work_tel: firstEligible.primary_work_tel || '',
+          surveillance_year: firstEligible.cycle_year || 1,
+          notes: '',
+          declared_true: false
+        });
+      }
+    }
+    setShowSurveillanceModal(true);
+  };
+
+  const handleSurveillanceSiteChange = (siteId) => {
+    const gsoList = getGSOSurveillanceEligibleList();
+    const target = gsoList.find(g => String(g.site_id) === String(siteId));
+    const selectedSite = sites.find(s => String(s._id) === String(siteId));
+
+    if (target) {
+      setSurveillanceForm(f => ({
+        ...f,
+        site_id: siteId,
+        site_name: target.site_name || selectedSite?.name || 'Manufacturing Site',
+        establishment_name: target.establishment_name || selectedSite?.est_name || selectedSite?.name || '',
+        primary_contact_name: target.managing_director || f.primary_contact_name || '',
+        primary_email: target.primary_email || f.primary_email || '',
+        primary_work_tel: target.primary_work_tel || f.primary_work_tel || '',
+        surveillance_year: target.cycle_year || 1
+      }));
+    } else if (selectedSite) {
+      setSurveillanceForm(f => ({
+        ...f,
+        site_id: siteId,
+        site_name: selectedSite.name || 'Manufacturing Site',
+        establishment_name: selectedSite.est_name || selectedSite.name || ''
+      }));
+    }
+  };
+
+  const handleSubmitSurveillance = async (e) => {
+    if (e) e.preventDefault();
+    if (!surveillanceForm.site_id) {
+      toast.error('Please select a GSO certified site for surveillance.');
+      return;
+    }
+    if (!surveillanceForm.primary_contact_name?.trim()) {
+      toast.error('Contact Person Name is required.');
+      return;
+    }
+    if (!surveillanceForm.primary_email?.trim()) {
+      toast.error('Contact Person Email is required.');
+      return;
+    }
+    if (!surveillanceForm.primary_work_tel?.trim()) {
+      toast.error('Contact Person Phone Number is required.');
+      return;
+    }
+    if (!surveillanceForm.declared_true) {
+      toast.error('Please confirm the compliance declaration before submitting.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const gsoList = getGSOSurveillanceEligibleList();
+      const selectedGSO = gsoList.find(g => String(g.site_id) === String(surveillanceForm.site_id));
+      const selectedSite = sites.find(s => String(s._id) === String(surveillanceForm.site_id));
+
+      const fd = new FormData();
+      fd.append('application_type', 'surveillance');
+      fd.append('category', 'UAE/GSO Approved Halal Certification For Exporters To UAE');
+      fd.append('site_id', surveillanceForm.site_id);
+      fd.append('site_name', selectedSite?.name || selectedGSO?.site_name || 'Manufacturing Site');
+      fd.append('establishment_name', selectedGSO?.establishment_name || selectedSite?.est_name || selectedSite?.name || '');
+      fd.append('primary_contact_name', surveillanceForm.primary_contact_name.trim());
+      fd.append('managing_director', surveillanceForm.primary_contact_name.trim());
+      fd.append('primary_email', surveillanceForm.primary_email.trim());
+      fd.append('company_email', surveillanceForm.primary_email.trim());
+      fd.append('primary_work_tel', surveillanceForm.primary_work_tel.trim());
+      fd.append('primary_mobile', surveillanceForm.primary_work_tel.trim());
+      fd.append('notes', `[Year ${surveillanceForm.surveillance_year || 1} Surveillance] ${surveillanceForm.notes || ''}`);
+      fd.append('declared_true', 'true');
+
+      if (surveillanceFiles.length > 0) {
+        surveillanceFiles.forEach(f => fd.append('supporting_docs', f));
+      }
+
+      await api.post('/api/applications', fd, true);
+      toast.success('🎉 Surveillance application submitted successfully!');
+      setShowSurveillanceModal(false);
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Failed to submit surveillance application.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const getGatingStatus = () => {
@@ -663,21 +908,40 @@ export default function ApplicationsPage({ openNew }) {
             </span>
           </div>
         )}
-        <button className={pendingApp ? "btn btn-primary" : "btn btn-primary ml-auto"}
-          onClick={() => {
-            if (sites.length === 0) {
-              toast.error('Please add a site in "Manage Sites" first.');
-              return;
-            }
-            if (pendingApp) {
-              toast.error(`You already have a pending application in progress (${pendingApp.application_number}).`);
-              return;
-            }
-            setShowModal(true);
-          }}
-        >
-          <Plus size={15} /> Create Application
-        </button>
+        <div style={{ display: 'flex', gap: 10, marginLeft: pendingApp ? 0 : 'auto', flexWrap: 'wrap' }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              if (sites.length === 0) {
+                toast.error('Please add a site in "Manage Sites" first.');
+                return;
+              }
+              if (pendingApp) {
+                toast.error(`You already have a pending application in progress (${pendingApp.application_number}).`);
+                return;
+              }
+              setShowModal(true);
+            }}
+          >
+            <Plus size={15} /> Create Application
+          </button>
+
+          <button
+            className="btn btn-outline"
+            style={{
+              borderColor: '#0284c7',
+              color: '#0284c7',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: '#f0f9ff'
+            }}
+            onClick={handleOpenSurveillanceModal}
+          >
+            <ShieldCheck size={15} /> Create Surveillance
+          </button>
+        </div>
       </div>
 
       {pendingApp && (
@@ -780,8 +1044,19 @@ export default function ApplicationsPage({ openNew }) {
                     <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{app.establishment_name || app.site_name}</div>
                   </div>
                   <div>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', background: '#f1f5f9', color: '#475569', borderRadius: 6, textTransform: 'uppercase' }}>
-                      {app.application_type}
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        padding: '4px 10px',
+                        background: app.application_type === 'surveillance' ? '#f0f9ff' : (app.application_type === 'renewal' ? '#fef3c7' : '#f1f5f9'),
+                        color: app.application_type === 'surveillance' ? '#0284c7' : (app.application_type === 'renewal' ? '#b45309' : '#475569'),
+                        border: `1px solid ${app.application_type === 'surveillance' ? '#bae6fd' : (app.application_type === 'renewal' ? '#fde68a' : '#e2e8f0')}`,
+                        borderRadius: 6,
+                        textTransform: 'uppercase'
+                      }}
+                    >
+                      {app.application_type || 'new'}
                     </span>
                   </div>
                   <div style={{ fontSize: 13, color: '#334155', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1804,6 +2079,298 @@ export default function ApplicationsPage({ openNew }) {
                 </div>
               </div>
             )}
+          </div>
+        </div>,
+        document.body
+      )}
+      {/* ─── SURVEILLANCE APPLICATION MODAL (UAE/GSO 3-YEAR SCHEME) ─── */}
+      {showSurveillanceModal && createPortal(
+        <div className="modal-overlay" style={{ zIndex: 1200 }} onClick={() => !submitting && setShowSurveillanceModal(false)}>
+          <div
+            className="modal"
+            style={{
+              maxWidth: 680,
+              width: '95%',
+              maxHeight: '90vh',
+              padding: 0,
+              borderRadius: 20,
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                padding: '20px 28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexShrink: 0
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ShieldCheck size={24} color="white" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: '-0.01em' }}>
+                    Create Surveillance Application
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
+                    UAE/GSO 3-Year Halal Certification Scheme &bull; Annual Surveillance
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => !submitting && setShowSurveillanceModal(false)}
+                style={{
+                  background: 'rgba(255,255,255,0.18)',
+                  border: 'none',
+                  borderRadius: 8,
+                  width: 34,
+                  height: 34,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'white'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Explanatory Info Card */}
+            <div style={{ padding: '14px 28px', background: '#f0f9ff', borderBottom: '1px solid #bae6fd', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+              <RefreshCw size={18} style={{ color: '#0284c7', flexShrink: 0 }} />
+              <div style={{ fontSize: 12.5, color: '#0369a1', lineHeight: 1.4 }}>
+                <strong>Annual GSO Surveillance Cycle:</strong> GSO certifications follow a 3-year cycle with <strong>2 audit stages</strong> in Year 1 and Year 2. Upon completion, an official <strong>Surveillance Letter</strong> is issued (no certificate re-issue).
+              </div>
+            </div>
+
+            {/* Modal Body / Form */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 18, background: '#fafafa' }}>
+              {(() => {
+                const gsoList = getGSOSurveillanceEligibleList();
+                const hasGSO = gsoList.length > 0;
+
+                if (!hasGSO) {
+                  return (
+                    <div style={{ padding: '32px 20px', textAlign: 'center', background: '#fff', borderRadius: 14, border: '1.5px dashed #cbd5e1' }}>
+                      <AlertTriangle size={36} style={{ color: '#f59e0b', margin: '0 auto 12px' }} />
+                      <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', marginBottom: 6 }}>
+                        No Eligible GSO Certifications Found
+                      </div>
+                      <div style={{ fontSize: 13, color: '#64748b', maxWidth: 440, margin: '0 auto 16px', lineHeight: 1.5 }}>
+                        Surveillance applications are designed for facilities holding an active <strong>UAE/GSO 3-Year Certification</strong>. You do not currently have a certified GSO site.
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={{ margin: '0 auto', fontSize: 13, fontWeight: 700 }}
+                        onClick={() => {
+                          setShowSurveillanceModal(false);
+                          setShowModal(true);
+                          setForm(f => ({ ...f, application_type: 'new', category: CATEGORIES[2] }));
+                        }}
+                      >
+                        Apply for UAE/GSO Certification
+                      </button>
+                    </div>
+                  );
+                }
+
+                const selectedGSO = gsoList.find(g => String(g.site_id) === String(surveillanceForm.site_id));
+                const isOngoing = selectedGSO?.hasOngoingSurveillance;
+
+                return (
+                  <>
+                    {/* Site Selection */}
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>
+                        Select GSO Certified Site <span style={{ color: '#dc2626' }}>*</span>
+                      </label>
+                      <select
+                        className="form-control"
+                        value={surveillanceForm.site_id}
+                        onChange={e => handleSurveillanceSiteChange(e.target.value)}
+                        required
+                        style={{ fontSize: 13.5, padding: '10px 14px', borderRadius: 10 }}
+                      >
+                        <option value="">-- Choose GSO Facility --</option>
+                        {gsoList.map(g => (
+                          <option key={g.site_id} value={g.site_id}>
+                            {g.site_name} &bull; {g.establishment_name || g.site_name} (Year {g.cycle_year} Surveillance) {g.hasOngoingSurveillance ? '— [Surveillance in progress]' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {isOngoing && (
+                      <div style={{ padding: '12px 16px', background: '#fffbeb', borderRadius: 10, border: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <AlertTriangle size={18} style={{ color: '#d97706', flexShrink: 0 }} />
+                        <div style={{ fontSize: 12.5, color: '#92400e' }}>
+                          This facility already has a surveillance application in progress (<strong>#{selectedGSO.ongoingAppNumber}</strong>). You cannot submit another surveillance request until the current one concludes.
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Surveillance Year Selection */}
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontWeight: 700, fontSize: 13, color: '#0f172a', marginBottom: 8 }}>
+                        Surveillance Stage / Milestone <span style={{ color: '#dc2626' }}>*</span>
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        {[
+                          { year: 1, title: 'Year 1 Surveillance', desc: '1st Annual Review (12 months)' },
+                          { year: 2, title: 'Year 2 Surveillance', desc: '2nd Annual Review (24 months)' },
+                        ].map(s => {
+                          const isSelected = (surveillanceForm.surveillance_year || 1) === s.year;
+                          return (
+                            <div
+                              key={s.year}
+                              onClick={() => setSurveillanceForm(f => ({ ...f, surveillance_year: s.year }))}
+                              style={{
+                                padding: '12px 14px',
+                                borderRadius: 10,
+                                border: `2px solid ${isSelected ? '#0284c7' : '#e2e8f0'}`,
+                                background: isSelected ? '#f0f9ff' : '#fff',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <input
+                                  type="radio"
+                                  checked={isSelected}
+                                  onChange={() => {}}
+                                  style={{ accentColor: '#0284c7' }}
+                                />
+                                <span style={{ fontWeight: 800, fontSize: 13, color: isSelected ? '#0369a1' : '#0f172a' }}>
+                                  {s.title}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: 11.5, color: isSelected ? '#0284c7' : '#64748b', marginTop: 4, marginLeft: 24 }}>
+                                {s.desc}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Contact Person Details */}
+                    <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#475569' }}>
+                        Primary Contact Person
+                      </div>
+
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" style={{ fontSize: 12.5, fontWeight: 700 }}>Full Name <span style={{ color: '#dc2626' }}>*</span></label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="e.g. Dr. Jane Smith"
+                          value={surveillanceForm.primary_contact_name}
+                          onChange={e => setSurveillanceForm(f => ({ ...f, primary_contact_name: e.target.value }))}
+                          required
+                        />
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontSize: 12.5, fontWeight: 700 }}>Email Address <span style={{ color: '#dc2626' }}>*</span></label>
+                          <input
+                            type="email"
+                            className="form-control"
+                            placeholder="contact@company.com"
+                            value={surveillanceForm.primary_email}
+                            onChange={e => setSurveillanceForm(f => ({ ...f, primary_email: e.target.value }))}
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontSize: 12.5, fontWeight: 700 }}>Phone / Tel Number <span style={{ color: '#dc2626' }}>*</span></label>
+                          <input
+                            type="tel"
+                            className="form-control"
+                            placeholder="+44 7700 900077"
+                            value={surveillanceForm.primary_work_tel}
+                            onChange={e => setSurveillanceForm(f => ({ ...f, primary_work_tel: e.target.value }))}
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Operational Notes / Updates */}
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontSize: 12.5, fontWeight: 700 }}>
+                        Surveillance Notes &amp; Facility Updates <span style={{ fontSize: 11, fontWeight: 400, color: '#64748b' }}>(Optional)</span>
+                      </label>
+                      <textarea
+                        className="form-control"
+                        rows={2}
+                        placeholder="Detail any changes to facility layout, ingredients, production volume, or QA coordinators..."
+                        value={surveillanceForm.notes}
+                        onChange={e => setSurveillanceForm(f => ({ ...f, notes: e.target.value }))}
+                      />
+                    </div>
+
+                    {/* Compliance Declaration */}
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '12px 14px', background: '#fff', borderRadius: 10, border: '1.5px solid #cbd5e1' }}>
+                      <input
+                        type="checkbox"
+                        checked={surveillanceForm.declared_true}
+                        onChange={e => setSurveillanceForm(f => ({ ...f, declared_true: e.target.checked }))}
+                        style={{ marginTop: 2, width: 16, height: 16, accentColor: '#0284c7' }}
+                      />
+                      <span style={{ fontSize: 12.5, color: '#334155', lineHeight: 1.4 }}>
+                        I hereby declare that this facility continues to adhere strictly to all UAE/GSO Halal Certification standards and procedures.
+                      </span>
+                    </label>
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: '16px 28px', borderTop: '1px solid #e2e8f0', background: '#fff', display: 'flex', justifyContent: 'flex-end', gap: 12, flexShrink: 0 }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setShowSurveillanceModal(false)}
+                disabled={submitting}
+                style={{ fontWeight: 600 }}
+              >
+                Cancel
+              </button>
+
+              {getGSOSurveillanceEligibleList().length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={submitting || !surveillanceForm.site_id || getGSOSurveillanceEligibleList().find(g => String(g.site_id) === String(surveillanceForm.site_id))?.hasOngoingSurveillance}
+                  onClick={handleSubmitSurveillance}
+                  style={{
+                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                    borderColor: '#0284c7',
+                    fontWeight: 800,
+                    padding: '10px 22px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8
+                  }}
+                >
+                  {submitting ? <span className="spinner-white" /> : <><ShieldCheck size={18} /> Submit Surveillance Application</>}
+                </button>
+              )}
+            </div>
           </div>
         </div>,
         document.body

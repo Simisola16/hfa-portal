@@ -255,6 +255,8 @@ export default function TrackProcessing() {
   const latestNcReport = allNcReports.length > 0 ? allNcReports[allNcReports.length - 1] : null;
 
   const isRenewal = app?.application_type === 'renewal';
+  const isSurveillance = app?.application_type === 'surveillance';
+  const isFastTrack = isRenewal || isSurveillance;
 
   // Invoice resolution (differentiate initial vs final invoice with robust fallbacks)
   const finalInvoice = allInvoices.find(i => i.invoice_type === 'final' || (i.title && i.title.toLowerCase().includes('final')))
@@ -267,7 +269,7 @@ export default function TrackProcessing() {
   const activeInvoiceForBanner = (status === 'final_invoice_sent' || status === 'final_invoice_paid' || (finalInvoice && !initialInvoice)) ? (finalInvoice || invoice) : (initialInvoice || invoice);
 
   // Agreement states
-  const showProposalAction = !isRenewal && status === 'proposal_sent';
+  const showProposalAction = !isFastTrack && status === 'proposal_sent';
   const showPaymentAction = (status === 'invoice_sent' || status === 'final_invoice_sent') && activeInvoiceForBanner && activeInvoiceForBanner.status !== 'client_paid' && activeInvoiceForBanner.status !== 'paid';
   const showPaymentPending = ((status === 'invoice_sent' || status === 'final_invoice_sent') && activeInvoiceForBanner && activeInvoiceForBanner.status === 'client_paid') || ((status === 'payment_received' || status === 'final_invoice_paid') && activeInvoiceForBanner && activeInvoiceForBanner.status !== 'paid');
   const showPaymentConfirmed = (status === 'payment_received' || (activeInvoiceForBanner && activeInvoiceForBanner.status === 'paid' && status === 'invoice_sent')) && (!activeAudit || activeAudit.status === 'pending' || activeAudit.status === 'scheduled');
@@ -276,7 +278,7 @@ export default function TrackProcessing() {
   const showAuditDatesAccepted = status === 'dates_accepted' || activeAudit?.status === 'dates_accepted';
   const showAuditScheduled = status === 'date_finalized' || status === 'audit_assigned' || activeAudit?.status === 'date_finalized' || activeAudit?.status === 'auditors_assigned';
   const showAuditComplete = ['audit_successful', 'audit_completed', 'logsheet_created', 'logsheet_signed', 'application_successful'].includes(status) && status !== 'agreement_sent';
-  const showAgreementAction = !isRenewal && status === 'agreement_sent';
+  const showAgreementAction = !isFastTrack && status === 'agreement_sent';
 
 
   return (
