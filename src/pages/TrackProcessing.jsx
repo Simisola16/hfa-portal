@@ -726,18 +726,36 @@ export default function TrackProcessing() {
           background: 'linear-gradient(135deg, #f0fdf4, #f7fffe)',
           border: '1.5px solid #bbf7d0', borderRadius: 16,
           padding: '20px 24px', marginBottom: 24,
-          display: 'flex', alignItems: 'flex-start', gap: 16,
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap'
         }}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <CheckCircle size={22} style={{ color: '#15803d' }} />
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>Halal Certification Complete!</div>
-            <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
-              Your certificate has been issued and is ready. You can view or download it under your{' '}
-              <Link to="/certificates" style={{ color: 'var(--primary)', fontWeight: 700 }}>Certificates</Link> page.
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <CheckCircle size={22} style={{ color: '#15803d' }} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>
+                {isSurveillance ? 'Surveillance Audit Complete — Letter Issued!' : 'Halal Certification Complete!'}
+              </div>
+              <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
+                {isSurveillance ? (
+                  'Your annual UAE/GSO surveillance audit has concluded successfully and your official Surveillance Letter is ready.'
+                ) : (
+                  <>Your certificate has been issued and is ready. You can view or download it under your <Link to="/certificates" style={{ color: 'var(--primary)', fontWeight: 700 }}>Certificates</Link> page.</>
+                )}
+              </div>
             </div>
           </div>
+          {isSurveillance && (app.documents?.surveillance_letter || app.certificate_url) && (
+            <a
+              href={getPdfUrl(app.documents?.surveillance_letter || app.certificate_url)}
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-primary"
+              style={{ background: '#0284c7', borderColor: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+            >
+              <Download size={15} /> Download Surveillance Letter
+            </a>
+          )}
         </div>
       )}
 
@@ -745,11 +763,11 @@ export default function TrackProcessing() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'start' }}>
         {/* Left Column: Progress Stack Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {/* Proposal Card (Initial only) */}
-          {!isRenewal && <ProposalCard app={app} proposal={proposal} />}
+          {/* Proposal Card (Standard only) */}
+          {!isFastTrack && <ProposalCard app={app} proposal={proposal} />}
 
-          {/* Initial Invoice Card (Initial only) */}
-          {!isRenewal && (
+          {/* Initial Invoice Card (Standard only) */}
+          {!isFastTrack && (
             <InvoiceCard
               invoice={initialInvoice}
               status={status}
@@ -773,8 +791,8 @@ export default function TrackProcessing() {
             onNcResolve={handleNcResolve}
           />
 
-          {/* Renewal Invoice Card (Post-Audit for Renewal) */}
-          {isRenewal && (
+          {/* Post-Audit Invoice Card (Renewal / Surveillance) */}
+          {isFastTrack && invoice && (
             <InvoiceCard
               invoice={invoice}
               status={status}
@@ -785,8 +803,8 @@ export default function TrackProcessing() {
             />
           )}
 
-          {/* Agreement Card (Initial only) */}
-          {!isRenewal && (
+          {/* Agreement Card (Standard only) */}
+          {!isFastTrack && (
             <AgreementCard
               agreement={agreement}
               status={status}
@@ -794,8 +812,8 @@ export default function TrackProcessing() {
             />
           )}
 
-          {/* Final Invoice Card (at the bottom of certification agreement) */}
-          {!isRenewal && (finalInvoice || ['agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(status)) && (
+          {/* Final Invoice Card (Standard only) */}
+          {!isFastTrack && (finalInvoice || ['agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(status)) && (
             <InvoiceCard
               invoice={finalInvoice}
               status={status}
