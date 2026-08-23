@@ -61,17 +61,16 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
       const isNcClosedOrBeyond = status === 'nc_closed' || status === 'audit_report_submitted' || STATUS_ORDER.indexOf(status) >= STATUS_ORDER.indexOf('nc_closed');
       if (isNcClosedOrBeyond || isNcFlagged) {
         stepsToShow.push('nc_closed');
-        // Downstream renewal/surveillance steps (Invoice -> Payment -> Logsheet -> Application Successful -> Letter / Certificate)
-        if (status !== 'on_hold') {
-          stepsToShow.push(
-            'invoice_sent',
-            'payment_received',
-            'logsheet_created',
-            'logsheet_signed',
-            'application_successful',
-            'certificate_issued'
-          );
-        }
+      }
+
+      // Downstream renewal steps (Invoice -> Payment -> Ready for Certificate -> Certificate Issued)
+      if (status !== 'on_hold') {
+        stepsToShow.push(
+          'invoice_sent',
+          'payment_received',
+          'ready_for_certificate',
+          'certificate_issued'
+        );
       }
     } else {
       // Non-Renewal (Initial) flow:
@@ -135,7 +134,7 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
       if (stepKey === 'approved') return 'Surveillance Application Accepted';
       if (stepKey === 'invoice_sent') return 'Surveillance Invoice Received';
       if (stepKey === 'payment_received') return 'Surveillance Payment Confirmed';
-      if (stepKey === 'ready_for_certificate' || stepKey === 'application_successful') return 'Application Successful';
+      if (stepKey === 'ready_for_certificate') return 'Application Successful';
       if (stepKey === 'certificate_issued') return 'Surveillance Letter Issued';
     }
     if (isRenewal) {
@@ -143,8 +142,6 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
       if (stepKey === 'approved') return 'Renewal Application Accepted';
       if (stepKey === 'invoice_sent') return 'Renewal Invoice Received';
       if (stepKey === 'payment_received') return 'Renewal Payment Confirmed';
-      if (stepKey === 'ready_for_certificate' || stepKey === 'application_successful') return 'Application Successful';
-      if (stepKey === 'certificate_issued') return 'Certificate Issued';
     }
     return STATUS_LABELS[stepKey] || stepKey.replace(/_/g, ' ');
   };
@@ -160,8 +157,6 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
     if (s === 'audit_completed') s = 'audit_successful';
     if (s === 'dates_rejected') s = 'dates_proposed';
     if (s === 'audit_report_submitted') s = 'nc_closed';
-    if (s === 'ready_for_certificate' && stepsToShow.includes('application_successful')) s = 'application_successful';
-    if (s === 'application_successful' && stepsToShow.includes('ready_for_certificate')) s = 'ready_for_certificate';
     return stepsToShow.indexOf(s);
   };
 
@@ -206,9 +201,7 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
         const histEntry = historyMap[s] || 
           (s === 'dates_proposed' ? (historyMap['dates_rejected'] || historyMap['dates_proposed']) : null) ||
           (s === 'audit_successful' ? (historyMap['audit_completed'] || historyMap['audit_successful']) : null) ||
-          (s === 'nc_closed' ? (historyMap['nc_closed'] || historyMap['audit_report_submitted']) : null) ||
-          (s === 'application_successful' ? (historyMap['application_successful'] || historyMap['ready_for_certificate']) : null) ||
-          (s === 'ready_for_certificate' ? (historyMap['ready_for_certificate'] || historyMap['application_successful']) : null);
+          (s === 'nc_closed' ? (historyMap['nc_closed'] || historyMap['audit_report_submitted']) : null);
         
         let isComplete = false;
         let isCurrent = false;
@@ -219,94 +212,95 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
           isCurrent = currentIndex === idx;
           isPending = currentIndex < idx;
         } else {
+          // Fallback using canonical STATUS_ORDER when current status is an internal / off-timeline status (e.g. logsheet_created)
           const stepOrderIdx = STATUS_ORDER.indexOf(s);
-          const currentOrderIdx = STATUS_ORDER.indexOf(effectiveStatus);
-          isComplete = stepOrderIdx < currentOrderIdx;
-          isCurrent = stepOrderIdx === currentOrderIdx;
-          isPending = stepOrderIdx > currentOrderIdx;
+          if (currentOrderIdx !== -1 && stepOrderIdx !== -1) {
+            if (stepOrderIdx < currentOrderIdx) {
+              isComplete = true;
+            } else if (stepOrderIdx === currentOrderIdx) {
+              isCurrent = true;
+            } else {
+              isPending = true;
+            }
+          } else {
+            isComplete = Boolean(historyMap[s]);
+            isPending = !isComplete;
+          }
         }
 
-        // Special handling for rejected step
         const isRejectedStep = s === 'rejected' || s === 'proposal_rejected';
-        const isDatesRejectedStep = s === 'dates_proposed' && (status === 'dates_rejected' || historyMap['dates_rejected']);
+        const isDatesRejectedStep = normStatus === 'dates_rejected' && s === 'dates_proposed';
+        const isHoldStep = s === 'on_hold';
 
-        let dotBg = '#f1f5f9';
-        let dotBorder = '#cbd5e1';
-        let dotColor = '#94a3b8';
-        let labelColor = 'var(--text-muted)';
-        let IconComponent = Circle;
+        let circleColor, lineColor, labelColor, bgColor, borderColor;
 
-        if (isDatesRejectedStep) {
-          dotBg = '#fef2f2';
-          dotBorder = '#dc2626';
-          dotColor = '#dc2626';
-          labelColor = '#dc2626';
-          IconComponent = XCircle;
-        } else if (isRejectedStep && (isComplete || isCurrent)) {
-          dotBg = '#fef2f2';
-          dotBorder = '#dc2626';
-          dotColor = '#dc2626';
-          labelColor = '#dc2626';
-          IconComponent = XCircle;
+        if (isRejectedStep && (status === s || (s === 'proposal_rejected' && status === 'proposal_rejected'))) {
+          circleColor = '#dc2626'; lineColor = '#fecaca';
+          labelColor = '#991b1b'; bgColor = '#fef2f2'; borderColor = '#fecaca';
+        } else if (isDatesRejectedStep) {
+          circleColor = '#dc2626'; lineColor = '#fecaca';
+          labelColor = '#991b1b'; bgColor = '#fef2f2'; borderColor = '#fecaca';
+        } else if (isHoldStep && status === 'on_hold') {
+          circleColor = '#64748b'; lineColor = '#e2e8f0'; // Muted slate/grey
+          labelColor = '#334155'; bgColor = '#f8fafc'; borderColor = '#cbd5e1';
         } else if (isComplete) {
-          dotBg = '#16a34a';
-          dotBorder = '#16a34a';
-          dotColor = '#ffffff';
-          labelColor = 'var(--text-primary)';
-          IconComponent = CheckCircle;
+          circleColor = '#15803d'; lineColor = '#86efac';
+          labelColor = '#0f172a'; bgColor = '#f0fdf4'; borderColor = '#bbf7d0';
         } else if (isCurrent) {
-          dotBg = '#2563eb';
-          dotBorder = '#2563eb';
-          dotColor = '#ffffff';
-          labelColor = 'var(--text-primary)';
-          IconComponent = Circle;
+          circleColor = '#2563eb'; lineColor = '#cbd5e1';
+          labelColor = '#0f172a'; bgColor = '#eff6ff'; borderColor = '#2563eb';
+        } else {
+          circleColor = '#cbd5e1'; lineColor = '#e2e8f0';
+          labelColor = '#94a3b8'; bgColor = '#ffffff'; borderColor = '#e2e8f0';
         }
 
         const isLast = idx === stepsToShow.length - 1;
 
         return (
-          <div key={s} style={{ display: 'flex', position: 'relative' }}>
-            {/* Left connector line and dot */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 24 }}>
-              {/* Dot */}
+          <div key={s} style={{ display: 'flex', alignItems: 'flex-start', gap: 0 }}>
+            {/* Left: circle + vertical line */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 36, flexShrink: 0 }}>
               <div style={{
-                width: 24,
-                height: 24,
+                width: 32, height: 32,
                 borderRadius: '50%',
-                background: dotBg,
-                border: `2px solid ${dotBorder}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: dotColor,
-                zIndex: 2,
-                boxShadow: isCurrent ? '0 0 0 4px rgba(37, 99, 235, 0.2)' : 'none',
-                transition: 'all 0.2s',
+                background: (isComplete || isCurrent || (isHoldStep && status === 'on_hold')) ? circleColor : '#f1f5f9',
+                border: isCurrent ? `3px solid ${circleColor}` : `2px solid ${isComplete ? circleColor : '#e2e8f0'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: isCurrent ? `0 0 0 4px ${isDatesRejectedStep ? 'rgba(220, 38, 38, 0.18)' : 'rgba(37, 99, 235, 0.18)'}` : 'none',
+                position: 'relative',
+                zIndex: 1,
               }}>
-                {isComplete ? (
-                  <CheckCircle size={14} />
+                {isRejectedStep && isRejected ? (
+                  <XCircle size={18} color="white" />
                 ) : isDatesRejectedStep ? (
-                  <XCircle size={14} />
+                  <XCircle size={18} color="white" />
+                ) : isHoldStep && status === 'on_hold' ? (
+                  <Clock size={16} color="white" />
+                ) : isComplete ? (
+                  <CheckCircle size={16} color="white" strokeWidth={2.5} />
                 ) : isCurrent ? (
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />
+                  <div style={{
+                    width: 12, height: 12, borderRadius: '50%',
+                    background: 'white',
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                  }} />
                 ) : (
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#cbd5e1' }} />
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#cbd5e1' }} />
                 )}
               </div>
-
-              {/* Line connector */}
               {!isLast && (
                 <div style={{
                   width: 2,
-                  flexGrow: 1,
-                  background: isComplete ? '#16a34a' : '#e2e8f0',
-                  margin: '4px 0',
-                  minHeight: 28,
+                  flex: 1,
+                  minHeight: 40,
+                  background: isComplete ? '#86efac' : '#e2e8f0',
+                  margin: '2px 0',
                 }} />
               )}
             </div>
 
-            {/* Right content */}
+            {/* Right: content */}
             <div style={{
               marginLeft: 12,
               paddingBottom: isLast ? 0 : 24,
@@ -319,11 +313,7 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
                   fontWeight: isCurrent ? 800 : isComplete ? 700 : 500,
                   color: labelColor,
                 }}>
-                  {isDatesRejectedStep
-                    ? 'Audit Dates Rejected'
-                    : (s === 'logsheet_created' && isGSO
-                      ? 'Waiting for Shari\'a Board Approval'
-                      : getStepLabel(s))}
+                  {isDatesRejectedStep ? 'Audit Dates Rejected' : getStepLabel(s)}
                 </span>
                 {isCurrent && (
                   <span style={{
