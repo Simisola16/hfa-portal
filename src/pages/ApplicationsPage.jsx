@@ -175,8 +175,8 @@ export default function ApplicationsPage({ openNew }) {
       setSites(loadedSites);
       setCerts(loadedCerts);
       setClientProducts(loadedProds);
-      
-      const active = loadedCerts.some(c => 
+
+      const active = loadedCerts.some(c =>
         c && c.status === 'active' && (!c.expiry_date || new Date(c.expiry_date) >= new Date())
       );
       setHasActiveCert(active);
@@ -229,7 +229,7 @@ export default function ApplicationsPage({ openNew }) {
 
   const getGatingStatus = () => {
     if (!form.site_id) return null;
-    
+
     // Active Certificate blocks a new application if certificate has > 3 months left
     if (form.application_type === 'new') {
       const safeCerts = Array.isArray(certs) ? certs : [];
@@ -614,7 +614,7 @@ export default function ApplicationsPage({ openNew }) {
   const filtered = safeApps.filter(a => {
     if (!a) return false;
     const matchSearch = !search || a.application_number?.toLowerCase().includes(search.toLowerCase()) || a.category?.toLowerCase().includes(search.toLowerCase());
-    
+
     let matchStatus = true;
     if (filterStatus) {
       if (filterStatus === 'in_progress' || filterStatus === 'audit_scheduled') {
@@ -663,7 +663,7 @@ export default function ApplicationsPage({ openNew }) {
             </span>
           </div>
         )}
-        <button className={pendingApp ? "btn btn-primary" : "btn btn-primary ml-auto"} 
+        <button className={pendingApp ? "btn btn-primary" : "btn btn-primary ml-auto"}
           onClick={() => {
             if (sites.length === 0) {
               toast.error('Please add a site in "Manage Sites" first.');
@@ -726,11 +726,11 @@ export default function ApplicationsPage({ openNew }) {
       <div style={{ background: '#fff', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)', overflow: 'hidden', marginTop: 24 }}>
         <div style={{ padding: '24px 32px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fafaf9' }}>
           <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <FileText size={20} style={{ color: 'var(--primary)' }} /> 
+            <FileText size={20} style={{ color: 'var(--primary)' }} />
             My Applications <span style={{ background: '#e2e8f0', color: '#475569', fontSize: 12, padding: '2px 10px', borderRadius: 30 }}>{filtered.length}</span>
           </h3>
         </div>
-        
+
         <div style={{ padding: '24px 32px' }}>
           {loading ? (
             <div style={{ padding: 60, textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
@@ -751,7 +751,7 @@ export default function ApplicationsPage({ openNew }) {
                 <div>Status</div>
                 <div style={{ textAlign: 'right' }}>Actions</div>
               </div>
-              
+
               {/* Data Rows */}
               {filtered.map(app => (
                 <div
@@ -868,12 +868,14 @@ export default function ApplicationsPage({ openNew }) {
                       {sites.map(s => <option key={s._id} value={s._id}>{s.name} ({s.city})</option>)}
                     </select>
                   </div>
-                  {(() => { const g = getGatingStatus(); return g?.blocked ? (
-                    <div style={{ padding: '14px 16px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fef08a', display: 'flex', gap: 10 }}>
-                      <AlertTriangle size={18} style={{ color: '#d97706', flexShrink: 0 }} />
-                      <p style={{ margin: 0, fontSize: 13, color: '#854d0e' }}>{g.message}</p>
-                    </div>
-                  ) : null; })()}
+                  {(() => {
+                    const g = getGatingStatus(); return g?.blocked ? (
+                      <div style={{ padding: '14px 16px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fef08a', display: 'flex', gap: 10 }}>
+                        <AlertTriangle size={18} style={{ color: '#d97706', flexShrink: 0 }} />
+                        <p style={{ margin: 0, fontSize: 13, color: '#854d0e' }}>{g.message}</p>
+                      </div>
+                    ) : null;
+                  })()}
                   <div className="form-group">
                     <label className="form-label">Contact Person Name <span>*</span></label>
                     <input type="text" className="form-control" placeholder="Full Name and Role" value={form.managing_director} onChange={e => setForm(f => ({ ...f, managing_director: e.target.value, primary_contact_name: e.target.value }))} required />
@@ -977,12 +979,14 @@ export default function ApplicationsPage({ openNew }) {
                           </div>
                         )}
 
-                        {(() => { const g = getGatingStatus(); return g?.blocked ? (
-                          <div style={{ marginBottom: 20, padding: '14px 16px', background: '#fffbeb', borderRadius: 10, border: '1px solid #fef08a', display: 'flex', gap: 10 }}>
-                            <AlertTriangle size={18} style={{ color: '#d97706', flexShrink: 0 }} />
-                            <p style={{ margin: 0, fontSize: 13, color: '#854d0e', lineHeight: 1.6 }}>{g.message}</p>
-                          </div>
-                        ) : null; })()}
+                        {(() => {
+                          const g = getGatingStatus(); return g?.blocked ? (
+                            <div style={{ marginBottom: 20, padding: '14px 16px', background: '#fffbeb', borderRadius: 10, border: '1px solid #fef08a', display: 'flex', gap: 10 }}>
+                              <AlertTriangle size={18} style={{ color: '#d97706', flexShrink: 0 }} />
+                              <p style={{ margin: 0, fontSize: 13, color: '#854d0e', lineHeight: 1.6 }}>{g.message}</p>
+                            </div>
+                          ) : null;
+                        })()}
 
                         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '20px 24px', display: 'grid', gap: 18 }}>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
@@ -1648,11 +1652,11 @@ export default function ApplicationsPage({ openNew }) {
                                   />
                                 </div>
                                 <div>
-                                  <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Code / SKU</label>
+                                  <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Code</label>
                                   <input
                                     type="text"
                                     className="form-control"
-                                    placeholder="Code / SKU"
+                                    placeholder="Code"
                                     value={p.code}
                                     onChange={e => {
                                       const val = e.target.value;
@@ -1719,11 +1723,11 @@ export default function ApplicationsPage({ openNew }) {
                                   />
                                 </div>
                                 <div>
-                                  <label style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', display: 'block', marginBottom: 4 }}>New Code / SKU</label>
+                                  <label style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', display: 'block', marginBottom: 4 }}>New Code</label>
                                   <input
                                     type="text"
                                     className="form-control"
-                                    placeholder="New Code / SKU"
+                                    placeholder="New Code"
                                     value={p.new_code || ''}
                                     onChange={e => {
                                       const val = e.target.value;

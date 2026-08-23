@@ -27,25 +27,30 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
         api.get('/api/signatures').catch(() => ({ data: [] }))
       ]);
 
-      const allApps = appRes.data?.data || appRes.data || [];
-      const allInvoices = invRes.data?.data || invRes.data || [];
-      const allAgreements = agRes.data?.data || agRes.data || [];
-      const allAudits = audRes.data?.data || audRes.data || [];
-      const allSignatures = sigRes.data?.data || sigRes.data || [];
+      const allApps = appRes.data?.data || (Array.isArray(appRes.data) ? appRes.data : []);
+      const allInvoices = invRes.data?.data || (Array.isArray(invRes.data) ? invRes.data : []);
+      const allAgreements = agRes.data?.data || (Array.isArray(agRes.data) ? agRes.data : []);
+      const allAudits = audRes.data?.data || (Array.isArray(audRes.data) ? audRes.data : []);
+      const allSignatures = sigRes.data?.data || (Array.isArray(sigRes.data) ? sigRes.data : []);
 
       setInvoices(allInvoices);
       setAgreements(allAgreements);
       setAudits(allAudits);
       setSignatures(allSignatures);
 
-      const pendingApps = allApps.filter(app => [
-        'proposal_sent',
-        'invoice_sent',
-        'dates_proposed',
-        'on_hold',
-        'agreement_sent',
-        'final_invoice_sent'
-      ].includes(app.status));
+      const pendingApps = allApps.filter(app => {
+        if (!app || !app.status) return false;
+        const norm = (app.status || '').toLowerCase().trim();
+        return [
+          'proposal_sent',
+          'invoice_sent',
+          'dates_proposed',
+          'on_hold',
+          'nc_flagged',
+          'agreement_sent',
+          'final_invoice_sent'
+        ].includes(norm);
+      });
 
       setApps(pendingApps);
     } catch {
@@ -69,15 +74,18 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
     const linkedInvoice = invoices.find(inv => String(inv.application_id?._id || inv.application_id) === appId);
     const linkedAgreement = agreements.find(ag => String(ag.application_id?._id || ag.application_id) === appId);
     const linkedAudit = audits.find(aud => String(aud.application_id?._id || aud.application_id) === appId);
+    const facilityName = app.site_name || app.establishment_name || 'your site';
 
-    switch (app.status) {
+    const norm = (app.status || '').toLowerCase().trim();
+
+    switch (norm) {
       case 'proposal_sent':
         return {
           icon: <FileText size={18} style={{ color: '#854d0e' }} />,
           bg: '#fef08a',
           badge: '#713f12',
           title: 'Proposal Received',
-          desc: `Review certification proposal for ${app.establishment_name}`,
+          desc: `Review certification proposal for ${facilityName}`,
           buttonText: 'Review & Respond',
           buttonBg: '#854d0e',
           modalType: 'proposal'
@@ -89,7 +97,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           bg: '#ffedd5',
           badge: '#c2410c',
           title: isRen ? 'Renewal Invoice Payment Required' : 'Initial Invoice Payment Required',
-          desc: isRen ? `Pay renewal certification fee for ${app.establishment_name}` : `Pay initial certification fee for ${app.establishment_name}`,
+          desc: isRen ? `Pay renewal certification fee for ${facilityName}` : `Pay initial certification fee for ${facilityName}`,
           buttonText: 'Pay Invoice',
           buttonBg: '#ea580c',
           modalType: 'payment',
@@ -102,19 +110,20 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           bg: '#e0f2fe',
           badge: '#075985',
           title: 'Select Audit Dates',
-          desc: `Select 2 preferred audit dates for ${app.establishment_name}`,
+          desc: `Select 2 preferred audit dates for ${facilityName}`,
           buttonText: 'Select Dates',
           buttonBg: '#0284c7',
           modalType: 'audit',
           audit: linkedAudit
         };
       case 'on_hold':
+      case 'nc_flagged':
         return {
           icon: <AlertCircle size={18} style={{ color: '#dc2626' }} />,
           bg: '#fef2f2',
           badge: '#991b1b',
           title: 'Action Needed: NC Flagged',
-          desc: `Submit corrective action report for ${app.establishment_name}`,
+          desc: `Submit corrective action report for ${facilityName}`,
           buttonText: 'Upload Action',
           buttonBg: '#dc2626',
           modalType: 'audit',
@@ -126,7 +135,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           bg: '#eff6ff',
           badge: '#1e40af',
           title: 'Certification Agreement Ready',
-          desc: `Review & sign certification agreement for ${app.establishment_name}`,
+          desc: `Review & sign certification agreement for ${facilityName}`,
           buttonText: 'Sign Agreement',
           buttonBg: '#2563eb',
           modalType: 'agreement',
@@ -138,7 +147,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           bg: '#ffedd5',
           badge: '#c2410c',
           title: 'Final Invoice Payment Required',
-          desc: `Pay final invoice fee for ${app.establishment_name}`,
+          desc: `Pay final invoice fee for ${facilityName}`,
           buttonText: 'Pay Final Invoice',
           buttonBg: '#ea580c',
           modalType: 'payment',

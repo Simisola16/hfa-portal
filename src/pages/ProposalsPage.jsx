@@ -30,7 +30,7 @@ export default function ProposalsPage() {
   const fetch = () => { 
     setLoading(true); 
     api.get('/api/proposals')
-      .then(d => setProposals(d.data || []))
+      .then(d => setProposals(d.data?.data || (Array.isArray(d.data) ? d.data : [])))
       .catch(() => toast.error('Failed to load proposals'))
       .finally(() => setLoading(false)); 
   };
@@ -49,8 +49,9 @@ export default function ProposalsPage() {
       
       // Update application status correctly for both accepted and rejected
       const newAppStatus = status === 'accepted' ? 'proposal_approved' : 'proposal_rejected';
-      if (selected?.application_id?._id) {
-        await api.put(`/api/applications/${selected.application_id._id}/status`, { status: newAppStatus });
+      const appId = selected?.application_id?._id || selected?.application_id;
+      if (appId) {
+        await api.put(`/api/applications/${appId}/status`, { status: newAppStatus }).catch(() => {});
       }
 
       toast.success(`Proposal ${status === 'accepted' ? 'accepted' : 'rejected'} successfully`);
@@ -98,31 +99,36 @@ export default function ProposalsPage() {
                 </tr>
               </thead>
               <tbody>
-                {proposals.map(p => (
-                  <tr key={p.id}>
-                    <td>
-                      <div style={{ fontWeight: 700, color: 'var(--primary)' }}>{p.title || 'Certification Proposal'}</div>
-                      <div style={{ fontSize: 11, color: '#64748b' }}>{p.reference_number || 'No Ref'}</div>
-                    </td>
-                    <td>{p.application_id?.site_name || p.application_id?.establishment_name || '—'}</td>
-                    <td style={{ fontWeight: 600 }}>£{p.estimated_cost || p.amount || '—'}</td>
-                    <td>{new Date(p.createdAt).toLocaleDateString('en-GB')}</td>
-                    <td>
-                      <span className={`badge ${
-                        p.status === 'accepted' ? 'badge-green' : 
-                        p.status === 'rejected' ? 'badge-red' : 
-                        'badge-yellow'
-                      }`} style={{ textTransform: 'capitalize' }}>
-                        {p.status === 'accepted' ? 'Accepted' : p.status === 'rejected' ? 'Rejected' : 'Pending'}
-                      </span>
-                    </td>
-                    <td>
-                      <button className="btn btn-ghost btn-sm" onClick={() => setSelected(p)}>
-                        View & Respond
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {proposals.map(p => {
+                  const pCost = Number(p.estimated_cost !== undefined && p.estimated_cost !== null && p.estimated_cost !== '' ? p.estimated_cost : (p.amount || 0));
+                  return (
+                    <tr key={p._id || p.id}>
+                      <td>
+                        <div style={{ fontWeight: 700, color: 'var(--primary)' }}>{p.title || 'Certification Proposal'}</div>
+                        <div style={{ fontSize: 11, color: '#64748b' }}>{p.reference_number || p.application_id?.application_number || 'No Ref'}</div>
+                      </td>
+                      <td>{p.application_id?.site_name || p.application_id?.establishment_name || '—'}</td>
+                      <td style={{ fontWeight: 700, color: '#15803d' }}>
+                        £{pCost.toLocaleString('en-GB', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td>{new Date(p.createdAt).toLocaleDateString('en-GB')}</td>
+                      <td>
+                        <span className={`badge ${
+                          p.status === 'accepted' ? 'badge-green' : 
+                          p.status === 'rejected' ? 'badge-red' : 
+                          'badge-yellow'
+                        }`} style={{ textTransform: 'capitalize' }}>
+                          {p.status === 'accepted' ? 'Accepted' : p.status === 'rejected' ? 'Rejected' : 'Pending'}
+                        </span>
+                      </td>
+                      <td>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setSelected(p)}>
+                          View & Respond
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -140,12 +146,10 @@ export default function ProposalsPage() {
               <div style={{ marginBottom: 24 }}>
                 <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1e293b', marginBottom: 4 }}>{selected.title}</h3>
                 <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-                  <div style={{ fontSize: 13, color: '#64748b' }}>Reference: {selected.reference_number || 'N/A'}</div>
-                  {selected.estimated_cost && (
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#166534', background: '#f0fdf4', padding: '2px 8px', borderRadius: 6 }}>
-                      Estimated Cost: £{selected.estimated_cost}
-                    </div>
-                  )}
+                  <div style={{ fontSize: 13, color: '#64748b' }}>Reference: {selected.reference_number || selected.application_id?.application_number || 'N/A'}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#166534', background: '#f0fdf4', padding: '2px 8px', borderRadius: 6 }}>
+                    Estimated Cost: £{Number(selected.estimated_cost !== undefined && selected.estimated_cost !== null && selected.estimated_cost !== '' ? selected.estimated_cost : (selected.amount || 0)).toLocaleString('en-GB', { minimumFractionDigits: 2 })}
+                  </div>
                 </div>
               </div>
 
@@ -175,8 +179,8 @@ export default function ProposalsPage() {
                 )}
                 <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: 16, borderRadius: 12 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Estimated Cost</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)', marginTop: 4 }}>
-                    £{selected.estimated_cost || selected.amount || '—'}
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#15803d', marginTop: 4 }}>
+                    £{Number(selected.estimated_cost !== undefined && selected.estimated_cost !== null && selected.estimated_cost !== '' ? selected.estimated_cost : (selected.amount || 0)).toLocaleString('en-GB', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
@@ -211,7 +215,7 @@ export default function ProposalsPage() {
                   </button>
                   <button 
                     className="btn btn-primary"
-                    onClick={() => handleStatusUpdate(selected.id, 'accepted')}
+                    onClick={() => handleStatusUpdate(selected._id || selected.id, 'accepted')}
                   >
                     <CheckCircle size={16} /> Accept Proposal
                   </button>
@@ -247,7 +251,7 @@ export default function ProposalsPage() {
                 className="btn btn-primary" 
                 style={{ background: '#dc2626' }}
                 disabled={submitting}
-                onClick={() => handleStatusUpdate(selected.id, 'rejected', rejectComment)}
+                onClick={() => handleStatusUpdate(selected._id || selected.id, 'rejected', rejectComment)}
               >
                 {submitting ? 'Submitting...' : 'Confirm Rejection'}
               </button>

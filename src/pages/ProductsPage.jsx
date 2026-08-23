@@ -44,11 +44,11 @@ export default function ProductsPage({ openNew: openNewProp }) {
     setLoading(true);
     Promise.all([
       api.get('/api/products').then(d => setProducts(d.data || [])).catch(() => toast.error('Failed to load products')),
-      api.get('/api/sites').then(d => setSites(d.data || [])).catch(() => {}),
+      api.get('/api/sites').then(d => setSites(d.data || [])).catch(() => { }),
       api.get('/api/certificates').then(d => {
         const active = (d.data || []).filter(c => c.status === 'active' && new Date(c.expiry_date) >= new Date());
         setCerts(active);
-      }).catch(() => {})
+      }).catch(() => { })
     ]).finally(() => setLoading(false));
   };
 
@@ -58,20 +58,20 @@ export default function ProductsPage({ openNew: openNewProp }) {
     if (openNewProp) openNew();
   }, [openNewProp]);
 
-  const setF = (k) => (e) => setForm(f => ({...f, [k]: e.target.value}));
-  const setB = (k) => (e) => setBulkForm(b => ({...b, [k]: e.target.value}));
+  const setF = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+  const setB = (k) => (e) => setBulkForm(b => ({ ...b, [k]: e.target.value }));
 
-  const openEdit = (p) => { 
-    setEditing(p); 
+  const openEdit = (p) => {
+    setEditing(p);
     setForm({
       ...p,
       site_id: p.site_id?._id || p.site_id?.id || p.site_id || ''
-    }); 
-    setShowModal(true); 
+    });
+    setShowModal(true);
   };
 
-  const openNew = () => { 
-    setEditing(null); 
+  const openNew = () => {
+    setEditing(null);
     const defaultCertId = certs.length === 1 ? (certs[0]._id || certs[0].id) : '';
     const defaultSiteId = sites.length === 1 ? (sites[0]._id || sites[0].id) : '';
     setBulkForm({
@@ -84,7 +84,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
       message: ''
     });
     setProductList([{ id: 1, name: '', code: '', type: 'Add product' }]);
-    setShowModal(true); 
+    setShowModal(true);
   };
 
   const addProductRow = () => {
@@ -107,10 +107,10 @@ export default function ProductsPage({ openNew: openNewProp }) {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (editing) { 
-        await api.put(`/api/products/${editing.id || editing._id}`, form); 
-        toast.success('Product updated'); 
-      } else { 
+      if (editing) {
+        await api.put(`/api/products/${editing.id || editing._id}`, form);
+        toast.success('Product updated');
+      } else {
         // Bulk add products through Add-on Application flow
         const validProducts = productList.filter(p => p.name.trim() !== '');
         if (validProducts.length === 0) throw new Error('Please add at least one product name');
@@ -135,14 +135,14 @@ export default function ProductsPage({ openNew: openNewProp }) {
         };
 
         await api.post('/api/add-on-applications', payload);
-        toast.success(`${validProducts.length} product(s) submitted! Following the Add-on approval workflow.`); 
+        toast.success(`${validProducts.length} product(s) submitted! Following the Add-on approval workflow.`);
       }
       setShowModal(false);
       fetch();
-    } catch (err) { 
-      toast.error(err.response?.data?.error || err.message || 'Failed to save'); 
-    } finally { 
-      setSubmitting(false); 
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Failed to save');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -153,8 +153,8 @@ export default function ProductsPage({ openNew: openNewProp }) {
   };
 
   const filtered = products.filter(p => {
-    const matchSearch = !search || 
-      p.name?.toLowerCase().includes(search.toLowerCase()) || 
+    const matchSearch = !search ||
+      p.name?.toLowerCase().includes(search.toLowerCase()) ||
       (p.code || p.barcode || '').toLowerCase().includes(search.toLowerCase()) ||
       (p.category || '').toLowerCase().includes(search.toLowerCase());
     const prodSiteId = p.site_id?._id || p.site_id?.id || p.site_id;
@@ -190,9 +190,9 @@ export default function ProductsPage({ openNew: openNewProp }) {
           </div>
         )}
 
-        <button 
-          className="btn btn-outline" 
-          onClick={() => navigate('/addon-applications')} 
+        <button
+          className="btn btn-outline"
+          onClick={() => navigate('/addon-applications')}
           style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}
         >
           <Package size={15} /> Add-on Requests <ArrowRight size={14} />
@@ -226,7 +226,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
                     <th>Product Name</th>
                     <th>Manufacturing Site</th>
                     <th>Category</th>
-                    <th>Code / SKU</th>
+                    <th>Code</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -275,7 +275,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
               </div>
               <button className="modal-close" onClick={() => setShowModal(false)}><X size={16} /></button>
             </div>
-            
+
             <form onSubmit={handleSubmit}>
               {editing ? (
                 // EDIT FORM
@@ -312,7 +312,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
                       <MapPin size={16} style={{ color: '#059669' }} />
                       Manufacturing Site <span style={{ color: '#dc2626' }}>*</span>
                     </h4>
-                    
+
                     {sites.length > 0 ? (
                       <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="form-label" style={{ fontWeight: 600, fontSize: 12 }}>
@@ -374,14 +374,14 @@ export default function ProductsPage({ openNew: openNewProp }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Products to Add</h4>
                   </div>
-                  
+
                   <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: '#fff', overflow: 'hidden' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead style={{ background: '#f3f4f6' }}>
                         <tr>
                           <th style={{ padding: '10px 16px', width: '50px', textAlign: 'center' }}>#</th>
                           <th style={{ padding: '10px 16px' }}>Product Name <span>*</span></th>
-                          <th style={{ padding: '10px 16px', width: '220px' }}>Code / SKU</th>
+                          <th style={{ padding: '10px 16px', width: '220px' }}>Code</th>
                           <th style={{ padding: '10px 16px', width: '50px' }}></th>
                         </tr>
                       </thead>

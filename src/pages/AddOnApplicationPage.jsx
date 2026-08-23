@@ -464,7 +464,7 @@ export default function AddOnApplicationPage() {
                             <tr style={{ background: '#f1f5f9' }}>
                               <th style={{ padding: '6px 10px', textAlign: 'left', width: 40 }}>S/N</th>
                               <th style={{ padding: '6px 10px', textAlign: 'left' }}>Product Name</th>
-                              <th style={{ padding: '6px 10px', textAlign: 'left' }}>Code / SKU</th>
+                              <th style={{ padding: '6px 10px', textAlign: 'left' }}>Code</th>
                               <th style={{ padding: '6px 10px', textAlign: 'left' }}>Action</th>
                             </tr>
                           </thead>
@@ -647,7 +647,7 @@ export default function AddOnApplicationPage() {
                                 />
                               </div>
                               <div>
-                                <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Code / SKU</label>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Code</label>
                                 <input
                                   className="form-control"
                                   style={{ margin: 0, fontSize: 13 }}
@@ -712,7 +712,7 @@ export default function AddOnApplicationPage() {
                                 />
                               </div>
                               <div>
-                                <label style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', display: 'block', marginBottom: 4 }}>New Code / SKU</label>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', display: 'block', marginBottom: 4 }}>New Code</label>
                                 <input
                                   className="form-control"
                                   style={{ margin: 0, fontSize: 13 }}

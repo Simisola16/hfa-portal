@@ -41,15 +41,17 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
           !propApp ? api.get(`/api/applications/${targetAppId}`).catch(() => ({ data: null })) : Promise.resolve({ data: propApp })
         ])
           .then(([pRes, aRes]) => {
-            setProposal(pRes.data || null);
-            if (aRes.data) setApp(aRes.data);
+            const fetchedProp = pRes.data?.data !== undefined ? pRes.data.data : (pRes.data || null);
+            const fetchedApp = aRes.data?.data !== undefined ? aRes.data.data : (aRes.data || null);
+            setProposal(fetchedProp);
+            if (fetchedApp) setApp(fetchedApp);
           })
           .finally(() => setLoading(false));
       } else if (!propProposal && !targetAppId) {
         setLoading(true);
         api.get('/api/proposals')
           .then(res => {
-            const list = res.data?.data || res.data || [];
+            const list = res.data?.data || (Array.isArray(res.data) ? res.data : []);
             const active = list.find(p => p.status === 'pending') || list[0] || null;
             setProposal(active);
             if (active?.application_id) {
@@ -59,8 +61,10 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
           .catch(() => setProposal(null))
           .finally(() => setLoading(false));
       } else {
-        setProposal(propProposal || null);
-        setApp(propApp || null);
+        const pObj = propProposal?.data !== undefined ? propProposal.data : propProposal;
+        const aObj = propApp?.data !== undefined ? propApp.data : propApp;
+        setProposal(pObj || null);
+        setApp(aObj || null);
       }
     }
   }, [isOpen, propProposal, propApp, targetAppId]);
@@ -71,20 +75,24 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
     if (!proposal) return;
     setSubmitting(true);
     try {
-      const pId = getCleanId(proposal._id || proposal.id || proposal);
-      const aId = getCleanId(targetAppId) || getCleanId(proposal.application_id) || getCleanId(app?._id || app?.id);
+      const pId = getCleanId(proposal._id || proposal.id);
+      const aId = getCleanId(targetAppId) || getCleanId(proposal.application_id?._id || proposal.application_id) || getCleanId(app?._id || app?.id);
       
-      await api.put(`/api/proposals/${pId}`, { status: 'accepted' });
-      await api.put(`/api/applications/${aId}/status`, {
-        status: 'proposal_approved',
-        note: 'Proposal approved by client via quick action.',
-      });
+      if (pId) {
+        await api.put(`/api/proposals/${pId}`, { status: 'accepted' });
+      }
+      if (aId) {
+        await api.put(`/api/applications/${aId}/status`, {
+          status: 'proposal_approved',
+          note: 'Proposal approved by client via quick action.',
+        }).catch(() => {});
+      }
       
       toast.success('Proposal accepted successfully!');
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      toast.error(err.message || 'Failed to accept proposal');
+      toast.error(err.response?.data?.error || err.message || 'Failed to accept proposal');
     } finally {
       setSubmitting(false);
     }
@@ -98,31 +106,42 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
     }
     setSubmitting(true);
     try {
-      const pId = getCleanId(proposal._id || proposal.id || proposal);
-      const aId = getCleanId(targetAppId) || getCleanId(proposal.application_id) || getCleanId(app?._id || app?.id);
+      const pId = getCleanId(proposal._id || proposal.id);
+      const aId = getCleanId(targetAppId) || getCleanId(proposal.application_id?._id || proposal.application_id) || getCleanId(app?._id || app?.id);
 
-      await api.put(`/api/proposals/${pId}`, {
-        status: 'rejected',
-        client_comment: rejectReason.trim()
-      });
-      await api.put(`/api/applications/${aId}/status`, {
-        status: 'proposal_rejected',
-        note: `Proposal rejected by client: ${rejectReason.trim()}`,
-      });
+      if (pId) {
+        await api.put(`/api/proposals/${pId}`, {
+          status: 'rejected',
+          client_comment: rejectReason.trim()
+        });
+      }
+      if (aId) {
+        await api.put(`/api/applications/${aId}/status`, {
+          status: 'proposal_rejected',
+          note: `Proposal rejected by client: ${rejectReason.trim()}`,
+        }).catch(() => {});
+      }
 
       toast.success('Proposal rejection submitted.');
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      toast.error(err.message || 'Failed to submit rejection.');
+      toast.error(err.response?.data?.error || err.message || 'Failed to submit rejection.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const displayCost = proposal?.estimated_cost !== undefined && proposal?.estimated_cost !== null && proposal?.estimated_cost !== ''
+    ? Number(proposal.estimated_cost)
+    : (proposal?.amount !== undefined && proposal?.amount !== null && proposal?.amount !== '' ? Number(proposal.amount) : 0);
+
+  const companyName = app?.profiles?.company_name || app?.client_id?.company_name || app?.company_name || app?.establishment_name || 'Client Company';
+  const siteName = app?.site_name || app?.establishment_name || app?.site?.name || 'Main Facility';
+
   return (
     <div className="modal-overlay" style={{ zIndex: 1250 }} onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 560, width: '92%' }} onClick={e => e.stopPropagation()}>
+      <div className="modal" style={{ maxWidth: 580, width: '94%' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <FileText size={20} style={{ color: 'var(--primary)' }} />
@@ -143,22 +162,30 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
           ) : (
             <div>
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 18, marginBottom: 20 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>
-                  {app?.site_name || app?.establishment_name || 'Site'}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>
+                    {companyName} &bull; <span style={{ color: '#0f172a' }}>{siteName}</span>
+                  </div>
+                  {(app?.application_number || proposal?.reference_number) && (
+                    <span style={{ fontSize: 11, fontWeight: 700, background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: 6 }}>
+                      Ref: {app?.application_number || proposal?.reference_number}
+                    </span>
+                  )}
                 </div>
-                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: '6px 0 12px' }}>
+
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: '4px 0 14px' }}>
                   {proposal.title || 'Halal Certification Proposal'}
                 </h3>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 12, paddingTop: 12, borderTop: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, paddingTop: 12, borderTop: '1px solid #e2e8f0' }}>
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Scope</div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginTop: 2 }}>{proposal.scope || app?.scope || 'Certification Scope'}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Proposed Amount</div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--primary)', marginTop: 2 }}>
-                      £{Number(proposal.amount || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })}
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Estimated Cost</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#15803d', marginTop: 2 }}>
+                      £{displayCost.toLocaleString('en-GB', { minimumFractionDigits: 2 })}
                     </div>
                   </div>
                 </div>
@@ -177,6 +204,17 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
                   </div>
                 )}
               </div>
+
+              {proposal.admin_comment && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 14, marginBottom: 18 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#15803d', marginBottom: 4 }}>
+                    💬 HFA Note / Guidance
+                  </div>
+                  <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.5 }}>
+                    {proposal.admin_comment}
+                  </div>
+                </div>
+              )}
 
               {proposal.details && (
                 <div style={{ marginBottom: 20 }}>
