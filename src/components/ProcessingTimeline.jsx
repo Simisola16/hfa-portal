@@ -134,7 +134,8 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
       if (stepKey === 'approved') return 'Surveillance Application Accepted';
       if (stepKey === 'invoice_sent') return 'Surveillance Invoice Received';
       if (stepKey === 'payment_received') return 'Surveillance Payment Confirmed';
-      if (stepKey === 'certificate_issued' || stepKey === 'ready_for_certificate') return 'Surveillance Letter Issued';
+      if (stepKey === 'ready_for_certificate') return 'Application Successful';
+      if (stepKey === 'certificate_issued') return 'Surveillance Letter Issued';
     }
     if (isRenewal) {
       if (stepKey === 'submitted') return 'Renewal Application Submitted';
