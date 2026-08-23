@@ -10,13 +10,25 @@ const getPdfUrl = (url) => {
   return url;
 };
 
-export default function InvoiceCard({ invoice, status, isInitial, isFinal, onPayClick }) {
+export default function InvoiceCard({ app, invoice, status, isInitial, isFinal, isRenewal, isSurveillance, onPayClick }) {
   const normStatus = (status || '').toLowerCase().replace(/ /g, '_');
-  const isAvailable = isFinal
+  const isSurv = isSurveillance || app?.application_type === 'surveillance';
+  const isRen = !isSurv && (isRenewal || app?.application_type === 'renewal');
+  const isFastTrack = isSurv || isRen;
+
+  const isAvailable = isFastTrack
+    ? Boolean(invoice) || ['nc_closed', 'audit_report_submitted', 'audit_successful', 'audit_completed', 'invoice_sent', 'payment_received', 'logsheet_created', 'logsheet_signed', 'ready_for_certificate', 'certificate_issued'].includes(normStatus)
+    : isFinal
     ? Boolean(invoice) || ['agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(normStatus)
     : Boolean(invoice) || ['proposal_approved', 'invoice_sent', 'payment_received', 'dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'nc_flagged', 'nc_closed', 'audit_report_submitted', 'on_hold', 'audit_successful', 'logsheet_created', 'logsheet_signed', 'application_successful', 'agreement_sent', 'agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(normStatus);
 
-  const cardTitle = isFinal ? 'Final Halal Certificate Fee Invoice' : 'Initial Certification Invoice';
+  const cardTitle = isSurv
+    ? 'Surveillance Certification Invoice'
+    : isRen
+    ? 'Renewal Certification Invoice'
+    : isFinal
+    ? 'Final Halal Certificate Fee Invoice'
+    : 'Initial Certification Invoice';
 
   if (!isAvailable) {
     return (
@@ -24,7 +36,7 @@ export default function InvoiceCard({ invoice, status, isInitial, isFinal, onPay
         <Lock size={20} style={{ color: '#94a3b8', margin: '0 auto 8px' }} />
         <div style={{ fontWeight: 700, fontSize: 13, color: '#64748b' }}>{cardTitle} (Locked)</div>
         <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-          {isFinal ? 'Available once final agreement is signed' : 'Available once proposal is accepted'}
+          {isFastTrack ? 'Available once audit and NC are completed' : isFinal ? 'Available once final agreement is signed' : 'Available once proposal is accepted'}
         </div>
       </div>
     );
@@ -36,7 +48,7 @@ export default function InvoiceCard({ invoice, status, isInitial, isFinal, onPay
         <Receipt size={28} style={{ color: '#94a3b8', margin: '0 auto 10px' }} />
         <div style={{ fontWeight: 700, fontSize: 14, color: '#475569' }}>{cardTitle} Pending</div>
         <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
-          {isFinal ? 'Your final certificate fee invoice will be generated shortly.' : 'Your invoice will be generated shortly.'}
+          {isSurv ? 'Your surveillance invoice will be generated shortly.' : isRen ? 'Your renewal invoice will be generated shortly.' : isFinal ? 'Your final certificate fee invoice will be generated shortly.' : 'Your invoice will be generated shortly.'}
         </div>
       </div>
     );
