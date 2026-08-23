@@ -42,7 +42,7 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
   // If application is not rejected, we can show subsequent stages
   if (!appRejectedInHistory) {
     if (isRenewal) {
-      // Renewal & GSO Renewal Flow:
+      // Renewal & GSO Surveillance Flow:
       // Direct to Audit Scheduling after Application Accepted (No Proposal, No Pre-Audit Invoice, No Agreement)
       stepsToShow.push(
         'dates_proposed',
@@ -63,12 +63,14 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
         stepsToShow.push('nc_closed');
       }
 
-      // Downstream renewal steps (Invoice -> Payment -> Ready for Certificate -> Certificate Issued)
+      // Downstream renewal/surveillance steps (Invoice -> Payment -> Logsheet -> Application Successful -> Certificate / Letter)
       if (status !== 'on_hold') {
         stepsToShow.push(
           'invoice_sent',
           'payment_received',
-          'ready_for_certificate',
+          'logsheet_created',
+          'logsheet_signed',
+          'application_successful',
           'certificate_issued'
         );
       }
@@ -114,6 +116,8 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
       // If currently on hold, don't show downstream steps as pending. If NOT on hold, show normal flow.
       if (status !== 'on_hold') {
         const downstreamSteps = [
+          'logsheet_created',
+          'logsheet_signed',
           'application_successful',
           'agreement_sent',
           'agreement_signed',
@@ -132,31 +136,36 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
     if (isSurveillance) {
       if (stepKey === 'submitted') return 'Surveillance Application Submitted';
       if (stepKey === 'approved') return 'Surveillance Application Accepted';
-      if (stepKey === 'invoice_sent') return 'Surveillance Invoice Received';
-      if (stepKey === 'payment_received') return 'Surveillance Payment Confirmed';
-      if (stepKey === 'ready_for_certificate') return 'Application Successful';
+      if (stepKey === 'invoice_sent') return 'Surveillance Invoice Sent';
+      if (stepKey === 'payment_received') return 'Surveillance Payment Received';
+      if (stepKey === 'ready_for_certificate' || stepKey === 'application_successful') return 'Application Successful';
       if (stepKey === 'certificate_issued') return 'Surveillance Letter Issued';
     }
     if (isRenewal) {
       if (stepKey === 'submitted') return 'Renewal Application Submitted';
       if (stepKey === 'approved') return 'Renewal Application Accepted';
-      if (stepKey === 'invoice_sent') return 'Renewal Invoice Received';
-      if (stepKey === 'payment_received') return 'Renewal Payment Confirmed';
+      if (stepKey === 'invoice_sent') return 'Renewal Invoice Sent';
+      if (stepKey === 'payment_received') return 'Renewal Payment Received';
+      if (stepKey === 'ready_for_certificate' || stepKey === 'application_successful') return 'Application Successful';
+      if (stepKey === 'certificate_issued') return 'Certificate Issued';
     }
     return STATUS_LABELS[stepKey] || stepKey.replace(/_/g, ' ');
   };
 
   const normStatus = (status || 'submitted').toLowerCase().replace(/ /g, '_');
-  let effectiveStatus = (normStatus === 'audit_completed') ? 'audit_successful' : normStatus;
+  let effectiveStatus = normStatus;
+  if (normStatus === 'audit_completed') effectiveStatus = 'audit_successful';
   if (normStatus === 'dates_rejected') effectiveStatus = 'dates_proposed';
   if (normStatus === 'audit_report_submitted') effectiveStatus = 'nc_closed';
-  
+
   // Helper to map status to step index in stepsToShow
   const getStepIndex = (st) => {
     let s = (st || '').toLowerCase().replace(/ /g, '_');
     if (s === 'audit_completed') s = 'audit_successful';
     if (s === 'dates_rejected') s = 'dates_proposed';
     if (s === 'audit_report_submitted') s = 'nc_closed';
+    if (s === 'ready_for_certificate' && stepsToShow.includes('application_successful')) s = 'application_successful';
+    if (s === 'application_successful' && stepsToShow.includes('ready_for_certificate')) s = 'ready_for_certificate';
     return stepsToShow.indexOf(s);
   };
 
@@ -212,7 +221,6 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
           isCurrent = currentIndex === idx;
           isPending = currentIndex < idx;
         } else {
-          // Fallback using canonical STATUS_ORDER when current status is an internal / off-timeline status (e.g. logsheet_created)
           const stepOrderIdx = STATUS_ORDER.indexOf(s);
           if (currentOrderIdx !== -1 && stepOrderIdx !== -1) {
             if (stepOrderIdx < currentOrderIdx) {
@@ -313,7 +321,12 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
                   fontWeight: isCurrent ? 800 : isComplete ? 700 : 500,
                   color: labelColor,
                 }}>
-                  {isDatesRejectedStep ? 'Audit Dates Rejected' : getStepLabel(s)}
+                  {/* GSO-specific label: logsheet_created maps to Shari'a Board Approval */}
+                  {isDatesRejectedStep
+                    ? 'Audit Dates Rejected'
+                    : (s === 'logsheet_created' && isGSO
+                      ? 'Waiting for Shari\'a Board Approval'
+                      : getStepLabel(s))}
                 </span>
                 {isCurrent && (
                   <span style={{
