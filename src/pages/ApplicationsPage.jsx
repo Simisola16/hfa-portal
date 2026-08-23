@@ -357,8 +357,15 @@ export default function ApplicationsPage({ openNew }) {
       const elapsedMs = now - startDate;
       const elapsedYears = elapsedMs / oneYearInMs;
 
+      // Surveillance is due when:
+      // Year 1: Certified, has used ~1 year (>= 9 months / 0.75 year or 1 year) and surveillanceCount === 0
+      // Year 2: Certified, has used ~2 years (>= 21 months / 1.75 years or 2 years) and surveillanceCount === 1
+      const isDueForCycle = year === 1 ? (elapsedYears >= 0.75) : (elapsedYears >= 1.75);
+      const needsSurveillance = item.certified && item.surveillanceCount < 2 && !item.hasOngoingSurveillance && isDueForCycle;
+
       item.isEligible = item.certified && !item.hasOngoingSurveillance;
       item.elapsedYears = elapsedYears;
+      item.needsSurveillance = needsSurveillance;
 
       result.push(item);
     });
@@ -926,21 +933,23 @@ export default function ApplicationsPage({ openNew }) {
             <Plus size={15} /> Create Application
           </button>
 
-          <button
-            className="btn btn-outline"
-            style={{
-              borderColor: '#0284c7',
-              color: '#0284c7',
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: '#f0f9ff'
-            }}
-            onClick={handleOpenSurveillanceModal}
-          >
-            <ShieldCheck size={15} /> Create Surveillance
-          </button>
+          {getGSOSurveillanceEligibleList().some(g => g.needsSurveillance) && (
+            <button
+              className="btn btn-outline"
+              style={{
+                borderColor: '#0284c7',
+                color: '#0284c7',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: '#f0f9ff'
+              }}
+              onClick={handleOpenSurveillanceModal}
+            >
+              <ShieldCheck size={15} /> Create Surveillance
+            </button>
+          )}
         </div>
       </div>
 
