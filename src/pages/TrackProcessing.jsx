@@ -794,8 +794,11 @@ export default function TrackProcessing() {
           {/* Post-Audit Invoice Card (Renewal / Surveillance) */}
           {isFastTrack && invoice && (
             <InvoiceCard
+              app={app}
               invoice={invoice}
               status={status}
+              isRenewal={isRenewal}
+              isSurveillance={isSurveillance}
               onPayClick={() => {
                 setSelectedPaymentInvoice(invoice);
                 setShowPaymentModal(true);
