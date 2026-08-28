@@ -46,19 +46,76 @@ export default function InitialProductPage() {
       ]);
 
       const eligibleList = eligibleRes.data?.data || (Array.isArray(eligibleRes.data) ? eligibleRes.data : []);
-      const loadedAllApps = Array.isArray(allAppsRes) ? allAppsRes : (Array.isArray(allAppsRes?.data) ? allAppsRes.data : []);
+      const loadedAllApps = Array.isArray(allAppsRes) ? allAppsRes : (Array.isArray(allAppsRes?.data) ? allAppsRes.data : (Array.isArray(allAppsRes?.data?.data) ? allAppsRes.data.data : []));
       const loadedInitProds = initProdsRes.data?.data || (Array.isArray(initProdsRes.data) ? initProdsRes.data : []);
 
-      setEligibleApps(eligibleList);
+      const existingAppIds = new Set(loadedInitProds.map(p => String(p.application_id?._id || p.application_id)));
+
+      const VALID_PAID_STATUSES = [
+        'payment_received', 'initial_payment_received',
+        'dates_proposed', 'dates_rejected', 'dates_accepted', 'date_finalized',
+        'audit_assigned', 'audit_scheduled', 'auditor_assigned', 'audit_in_progress',
+        'audit_successful', 'audit_completed', 'audit_report_submitted',
+        'nc_raised', 'nc_closed', 'final_invoice_sent', 'final_invoice_paid',
+        'logsheet_created', 'logsheet_signed', 'application_successful',
+        'agreement_sent', 'agreement_signed', 'agreement_finalised',
+        'ready_for_certificate', 'certificate_issued', 'approved'
+      ];
+
+      // Merge backend eligible list with any validly paid apps from allApps
+      const combinedMap = new Map();
+
+      // First add backend eligible apps
+      eligibleList.forEach(app => {
+        combinedMap.set(String(app._id), app);
+      });
+
+      // Next evaluate all loaded apps
+      loadedAllApps.forEach(app => {
+        const appKey = String(app._id);
+        const hasInit = existingAppIds.has(appKey);
+        const isPaidStatus = VALID_PAID_STATUSES.includes(app.status?.toLowerCase());
+
+        if (combinedMap.has(appKey)) {
+          const existingItem = combinedMap.get(appKey);
+          combinedMap.set(appKey, {
+            ...existingItem,
+            isInvoiceConfirmed: existingItem.isInvoiceConfirmed || isPaidStatus,
+            hasInitialProduct: hasInit,
+            isEligible: (existingItem.isInvoiceConfirmed || isPaidStatus) && !hasInit
+          });
+        } else if (app.status !== 'rejected' && app.status !== 'on_hold') {
+          combinedMap.set(appKey, {
+            ...app,
+            isInvoiceConfirmed: isPaidStatus,
+            hasInitialProduct: hasInit,
+            isEligible: isPaidStatus && !hasInit
+          });
+        }
+      });
+
+      const finalEligibleList = Array.from(combinedMap.values());
+
+      setEligibleApps(finalEligibleList);
       setAllApps(loadedAllApps);
       setExistingInitialProducts(loadedInitProds);
 
-      // Auto-select first eligible application
-      const firstAvailable = eligibleList.find(a => a.isEligible);
-      if (firstAvailable) {
-        setSelectedAppId(firstAvailable._id);
-        if (firstAvailable.category && !product.category) {
-          setProduct(p => ({ ...p, category: firstAvailable.category }));
+      // Check URL query param first (e.g. ?application_id=...)
+      const queryAppId = searchParams.get('application_id') || searchParams.get('appId');
+      if (queryAppId && finalEligibleList.some(a => String(a._id) === String(queryAppId))) {
+        setSelectedAppId(queryAppId);
+        const qApp = finalEligibleList.find(a => String(a._id) === String(queryAppId));
+        if (qApp?.category && !product.category) {
+          setProduct(p => ({ ...p, category: qApp.category }));
+        }
+      } else {
+        // Auto-select first eligible application
+        const firstAvailable = finalEligibleList.find(a => a.isEligible);
+        if (firstAvailable) {
+          setSelectedAppId(firstAvailable._id);
+          if (firstAvailable.category && !product.category) {
+            setProduct(p => ({ ...p, category: firstAvailable.category }));
+          }
         }
       }
     } catch (err) {
@@ -70,7 +127,7 @@ export default function InitialProductPage() {
 
   useEffect(() => {
     fetchData();
-  }, [user]);
+  }, [user, searchParams]);
 
   const selectedApp = eligibleApps.find(a => String(a._id) === String(selectedAppId)) ||
     allApps.find(a => String(a._id) === String(selectedAppId));
