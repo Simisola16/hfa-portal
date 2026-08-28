@@ -388,86 +388,100 @@ export default function InitialProductPage() {
             </div>
           </div>
 
-          {/* Section 3: Initial Product Details (Strictly 1 Product) */}
-          <div style={{ background: '#fff', borderRadius: 16, border: '1.5px solid #059669', padding: '24px 26px', boxShadow: '0 4px 20px rgba(5,150,105,0.06)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: '1px solid #f1f5f9', paddingBottom: 12 }}>
-              <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Sparkles size={20} style={{ color: '#059669' }} />
-                3. Initial Product Information (Single Primary Item)
+          {/* Section 3: Initial Product Table (Matching Exact Layout) */}
+          <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#475569' }}>
+                Initial Product Details
               </div>
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#065f46', background: '#ecfdf5', padding: '4px 10px', borderRadius: 8, border: '1px solid #a7f3d0' }}>
-                Item 1 of 1 (Strict Limit)
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#065f46', background: '#ecfdf5', padding: '3px 9px', borderRadius: 6, border: '1px solid #a7f3d0' }}>
+                1 Initial Product Limit
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: 12.5, fontWeight: 800 }}>
-                    Product Name <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. Premium Halal Chicken Breast"
-                    value={product.name}
-                    onChange={e => setProduct({ ...product, name: e.target.value })}
-                    required
-                    style={{ fontSize: 14, fontWeight: 600 }}
-                  />
-                </div>
+            <div style={{ padding: 0 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                    <th style={{ width: 48, padding: '12px 16px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#64748b', textAlign: 'center' }}>#</th>
+                    <th style={{ padding: '12px 16px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#475569' }}>PRODUCT NAME *</th>
+                    <th style={{ width: 260, padding: '12px 16px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#475569' }}>CODE</th>
+                    <th style={{ width: 50, padding: '12px 16px', textAlign: 'center' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '16px', textAlign: 'center', fontSize: 14, fontWeight: 800, color: '#64748b' }}>
+                      1
+                    </td>
+                    <td style={{ padding: '16px 12px' }}>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Product Name (e.g. Halal Whole Chicken)"
+                        value={product.name}
+                        onChange={e => setProduct({ ...product, name: e.target.value })}
+                        required
+                        style={{ margin: 0, fontSize: 13.5, padding: '10px 14px', borderRadius: 8 }}
+                      />
+                    </td>
+                    <td style={{ padding: '16px 12px' }}>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Code (e.g. PRD-001)"
+                        value={product.code}
+                        onChange={e => setProduct({ ...product, code: e.target.value })}
+                        style={{ margin: 0, fontSize: 13.5, padding: '10px 14px', borderRadius: 8 }}
+                      />
+                    </td>
+                    <td style={{ padding: '16px', textAlign: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => setProduct({ ...product, name: '', code: '' })}
+                        title="Clear fields"
+                        style={{
+                          background: '#fff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: 8,
+                          width: 32,
+                          height: 32,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          color: '#94a3b8',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <X size={15} />
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
 
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: 12.5, fontWeight: 700 }}>
-                    Product Code / Barcode <span style={{ fontSize: 11, color: '#64748b' }}>(Optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. PRD-001 / SKU-99"
-                    value={product.code}
-                    onChange={e => setProduct({ ...product, code: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label" style={{ fontSize: 12.5, fontWeight: 700 }}>
-                  Product Category / Line
-                </label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="e.g. Fresh Poultry / Baked Goods / Dairy"
-                  value={product.category}
-                  onChange={e => setProduct({ ...product, category: e.target.value })}
-                />
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label" style={{ fontSize: 12.5, fontWeight: 700 }}>
-                  Ingredients Breakdown &amp; Raw Material Sourcing
-                </label>
-                <textarea
-                  className="form-control"
-                  rows={3}
-                  placeholder="List key ingredients, additives, stabilizers, processing aids, and country of origin..."
-                  value={product.ingredients}
-                  onChange={e => setProduct({ ...product, ingredients: e.target.value })}
-                />
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label" style={{ fontSize: 12.5, fontWeight: 700 }}>
-                  Production Description &amp; Processing Notes <span style={{ fontSize: 11, color: '#64748b' }}>(Optional)</span>
-                </label>
-                <textarea
-                  className="form-control"
-                  rows={2}
-                  placeholder="Describe production facility line, segregation protocols, packaging methods..."
-                  value={product.description}
-                  onChange={e => setProduct({ ...product, description: e.target.value })}
-                />
+              {/* Bottom Action Bar */}
+              <div style={{ padding: '14px 20px', background: '#fff', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9' }}>
+                <button
+                  type="button"
+                  onClick={() => toast('Initial Product registration is strictly limited to 1 primary product. Additional products can be added after certification via Add-on Products.', { icon: 'ℹ️' })}
+                  style={{
+                    background: '#fff',
+                    border: '1.5px solid #059669',
+                    borderRadius: 8,
+                    padding: '8px 16px',
+                    fontSize: 12.5,
+                    fontWeight: 800,
+                    color: '#059669',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  <Plus size={14} /> Add Another Product
+                </button>
               </div>
             </div>
           </div>
