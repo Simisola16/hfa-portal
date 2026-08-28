@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import {
   Package, ShieldCheck, CheckCircle, AlertTriangle, ArrowRight,
   Clock, MapPin, Building2, User, Mail, Phone, FileText, Plus,
-  Layers, Lock, Sparkles, HelpCircle, ChevronRight
+  Layers, Lock, Sparkles, HelpCircle, ChevronRight, X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
