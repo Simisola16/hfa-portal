@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, RefreshCw, Building2, Calendar,
   FileText, AlertTriangle, CheckCircle, XCircle,
-  Receipt, Users, FileCheck, PenTool, Download, X
+  Receipt, Users, FileCheck, PenTool, Download, X,
+  Package, Sparkles, Plus, ChevronRight, ArrowRight
 } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
@@ -49,6 +50,7 @@ export default function TrackProcessing() {
   const [audit, setAudit] = useState(null);
   const [agreement, setAgreement] = useState(null);
   const [signatures, setSignatures] = useState([]);
+  const [initialProduct, setInitialProduct] = useState(null);
 
   // Modal Visibility States
   const [showProposalModal, setShowProposalModal] = useState(false);
@@ -66,14 +68,15 @@ export default function TrackProcessing() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [appRes, propRes, invRes, allInvRes, auditRes, agreementRes, sigRes] = await Promise.all([
+      const [appRes, propRes, invRes, allInvRes, auditRes, agreementRes, sigRes, initProdRes] = await Promise.all([
         api.get(`/api/applications/${appId}`),
         api.get(`/api/proposals/application/${appId}`).catch(() => ({ data: null })),
         api.get(`/api/invoices/application/${appId}`).catch(() => ({ data: null })),
         api.get(`/api/invoices/application/${appId}/all`).catch(() => ({ data: [] })),
         api.get(`/api/audits/application/${appId}`).catch(() => ({ data: null })),
         api.get(`/api/agreements/application/${appId}`).catch(() => ({ data: null })),
-        api.get('/api/signatures').catch(() => ({ data: [] }))
+        api.get('/api/signatures').catch(() => ({ data: [] })),
+        api.get('/api/initial-products').catch(() => ({ data: { data: [] } }))
       ]);
 
       setApp(appRes.data);
@@ -84,6 +87,11 @@ export default function TrackProcessing() {
       setAudit(auditRes.data || null);
       setAgreement(agreementRes.data?.data || agreementRes.data || null);
       setSignatures(sigRes.data || sigRes.data?.data || []);
+
+      const initProds = initProdRes.data?.data || (Array.isArray(initProdRes.data) ? initProdRes.data : []) || [];
+      const matchingInitProd = initProds.find(p => String(p.application_id?._id || p.application_id) === String(appId));
+      setInitialProduct(matchingInitProd || null);
+
       setLastUpdated(new Date());
     } catch (err) {
       if (!silent) toast.error('Failed to load application details.');
@@ -470,16 +478,57 @@ export default function TrackProcessing() {
           background: 'linear-gradient(135deg, #f0fdf4, #fffbeb)',
           border: '1.5px solid #86efac', borderRadius: 16,
           padding: '20px 24px', marginBottom: 24,
-          display: 'flex', alignItems: 'flex-start', gap: 16
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16
         }}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <CheckCircle size={22} style={{ color: '#16a34a' }} />
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flex: 1, minWidth: 280 }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <CheckCircle size={22} style={{ color: '#16a34a' }} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>Payment Confirmed</div>
+              <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
+                Your payment has been successfully verified by HFA. Our administration team is preparing your audit schedule. We will propose three available audit dates for your selection shortly.
+              </div>
+            </div>
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>Payment Confirmed</div>
-            <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
-              Your payment has been successfully verified by HFA. Our administration team is preparing your audit schedule. We will propose three available audit dates for your selection shortly.
-            </div>
+            {!initialProduct ? (
+              <button
+                className="btn btn-primary"
+                onClick={() => navigate('/initial-products')}
+                style={{
+                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                  borderColor: '#059669',
+                  fontWeight: 800,
+                  fontSize: 13,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  boxShadow: '0 4px 14px rgba(5,150,105,0.3)',
+                  padding: '10px 18px'
+                }}
+              >
+                <Plus size={16} /> Add Initial Product
+              </button>
+            ) : (
+              <button
+                className="btn btn-outline"
+                onClick={() => navigate(`/initial-products/${initialProduct._id}/track`)}
+                style={{
+                  background: '#fff',
+                  borderColor: '#059669',
+                  color: '#059669',
+                  fontWeight: 800,
+                  fontSize: 13,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '10px 16px'
+                }}
+              >
+                <Package size={16} /> Track Initial Product &rarr;
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -777,6 +826,165 @@ export default function TrackProcessing() {
                 setShowPaymentModal(true);
               }}
             />
+          )}
+
+          {/* Initial Product Card (Unlocks when Initial Certification Invoice is confirmed) */}
+          {!isFastTrack && (initialInvoice?.status === 'paid' || initialInvoice?.status === 'client_paid' || status === 'payment_received' || showPaymentConfirmed || ['dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'nc_flagged', 'nc_closed', 'audit_report_submitted', 'audit_successful', 'logsheet_created', 'logsheet_signed', 'application_successful', 'agreement_sent', 'agreement_signed', 'agreement_finalised', 'ready_for_certificate', 'certificate_issued'].includes(normStatus)) && (
+            <div style={{
+              background: '#fff',
+              borderRadius: 20,
+              border: initialProduct ? (initialProduct.status === 'initial_product_approved' ? '1.5px solid #86efac' : '1.5px solid #a7f3d0') : '1.5px solid #059669',
+              boxShadow: '0 4px 14px rgba(5,150,105,0.06)',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                padding: '18px 24px',
+                borderBottom: '1px solid #f1f5f9',
+                background: 'linear-gradient(to right, #f0fdf4, #ffffff)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 12
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: '#dcfce7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#16a34a'
+                  }}>
+                    <Package size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: '#14532d', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      Initial Product Evaluation
+                      <span style={{ fontSize: 10, background: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0', padding: '1px 6px', borderRadius: 4, fontWeight: 800 }}>
+                        1 Product Required
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      {initialProduct ? `Registered: ${initialProduct.product?.name}` : 'Initial Invoice Confirmed — Ready to submit Initial Product'}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  {!initialProduct ? (
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => navigate('/initial-products')}
+                      style={{
+                        background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                        borderColor: '#059669',
+                        fontWeight: 800,
+                        fontSize: 12.5,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '7px 14px'
+                      }}
+                    >
+                      <Plus size={14} /> Add Initial Product
+                    </button>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {initialProduct.status === 'product_approval_form_enabled' && (
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={() => navigate(`/initial-products/${initialProduct._id}/approval-form`)}
+                          style={{
+                            background: '#7e22ce',
+                            borderColor: '#7e22ce',
+                            fontWeight: 800,
+                            fontSize: 12,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5
+                          }}
+                        >
+                          <FileText size={13} /> Complete Form
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={() => navigate(`/initial-products/${initialProduct._id}/track`)}
+                        style={{
+                          borderColor: '#059669',
+                          color: '#059669',
+                          fontWeight: 700,
+                          fontSize: 12,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4
+                        }}
+                      >
+                        Track Progress <ChevronRight size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ padding: '16px 24px' }}>
+                {!initialProduct ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+                    <div style={{ fontSize: 13, color: '#334155', lineHeight: 1.5, maxWidth: 520 }}>
+                      Your Initial Certification Invoice is confirmed. You can now register your <strong>1 primary Initial Product</strong> to begin Halal technical assessment.
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => navigate('/initial-products')}
+                      style={{
+                        background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                        borderColor: '#059669',
+                        fontWeight: 800,
+                        fontSize: 13,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6
+                      }}
+                    >
+                      <Plus size={15} /> Add Initial Product &rarr;
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>
+                        {initialProduct.product?.name}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 2, display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {initialProduct.product?.code && <span>Code: <code>{initialProduct.product.code}</code></span>}
+                        {initialProduct.product?.category && <span>Category: <strong>{initialProduct.product.category}</strong></span>}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        padding: '3px 10px',
+                        borderRadius: 20,
+                        background: initialProduct.status === 'initial_product_approved' ? '#dcfce7' : '#ecfdf5',
+                        color: initialProduct.status === 'initial_product_approved' ? '#166534' : '#065f46',
+                        border: `1px solid ${initialProduct.status === 'initial_product_approved' ? '#bbf7d0' : '#a7f3d0'}`
+                      }}>
+                        {initialProduct.status === 'initial_product_approved' ? '✓ Initial Product Approved' : `Status: ${initialProduct.status}`}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {/* Audit Card */}
