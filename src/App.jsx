@@ -15,6 +15,10 @@ import AddOnApplicationPage from './pages/AddOnApplicationPage';
 import ClientAddOnTrack from './pages/ClientAddOnTrack';
 import ClientAddOnApprovalForm from './pages/ClientAddOnApprovalForm';
 import ClientProductApprovalResponse from './pages/ClientProductApprovalResponse';
+import InitialProductPage from './pages/InitialProductPage';
+import ClientInitialProductsInProgress from './pages/ClientInitialProductsInProgress';
+import ClientInitialProductTrack from './pages/ClientInitialProductTrack';
+import ClientInitialProductApprovalForm from './pages/ClientInitialProductApprovalForm';
 import ApplicationsPage from './pages/ApplicationsPage';
 import CertificatesPage from './pages/CertificatesPage';
 import ProductsPage from './pages/ProductsPage';
@@ -50,6 +54,11 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/new" element={<ApplicationsPage openNew />} />
+            <Route path="/initial-products" element={<InitialProductPage />} />
+            <Route path="/initial-products/new" element={<InitialProductPage />} />
+            <Route path="/initial-products/in-progress" element={<ClientInitialProductsInProgress />} />
+            <Route path="/initial-products/:id/track" element={<ClientInitialProductTrack />} />
+            <Route path="/initial-products/:id/approval-form" element={<ClientInitialProductApprovalForm />} />
             <Route path="/addon-applications" element={<AddOnApplicationPage />} />
             <Route path="/addon-applications/:addonId/track" element={<ClientAddOnTrack />} />
             <Route path="/addon-applications/:addonId/approval-form" element={<ClientAddOnApprovalForm />} />

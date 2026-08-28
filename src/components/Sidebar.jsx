@@ -29,8 +29,9 @@ const NAV_SECTIONS = [
         icon: Package, label: 'Manage Products', path: '/products',
         children: [
           { label: 'Product List', path: '/products' },
-          { label: 'Add Product', path: '/products/new' },
-          { label: 'Add-on Products Application', path: '/addon-applications/new' },
+          { label: 'Initial Product', path: '/initial-products' },
+          { label: 'In-Progress Initial Products', path: '/initial-products/in-progress' },
+          { label: 'Add-on Products Application', path: '/addon-applications' },
         ]
       },
       {
