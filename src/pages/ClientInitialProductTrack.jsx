@@ -30,8 +30,8 @@ const STATUS_LABELS = {
   ft_assigned: 'Assign FT',
   product_approval_form_enabled: 'Product Form Enabled',
   all_forms_received: 'Product Form Received',
-  logsheet_created: 'Create Logsheet',
-  waiting_sharia_signature: 'Committee Signature',
+  logsheet_created: 'Awaiting Committee Review',
+  waiting_sharia_signature: 'Awaiting Committee Review',
   initial_product_approved: 'Initial Product Approved'
 };
 

@@ -5,8 +5,6 @@ export const INITIAL_PRODUCT_STAGES = [
   { id: 'ft_assigned', label: 'Assign FT' },
   { id: 'product_approval_form_enabled', label: 'Product Form Enabled' },
   { id: 'all_forms_received', label: 'Product Form Received' },
-  { id: 'logsheet_created', label: 'Create Logsheet' },
-  { id: 'waiting_sharia_signature', label: 'Committee Signature' },
   { id: 'initial_product_approved', label: 'Initial Product Approved' }
 ];
 
@@ -47,13 +45,8 @@ export default function InitialProductTimeline({ status = 'submitted', statusHis
     }
   });
 
-  // Calculate current stage index in INITIAL_PRODUCT_ORDER
-  const currentOrderIdx = INITIAL_PRODUCT_ORDER.indexOf(normStatus);
-
-  // Helper to check if a stage is complete, current, or pending
+  // Helper to check if a stage is complete, current, or pending for client
   const getStageState = (stageId) => {
-    const stageOrderIdx = INITIAL_PRODUCT_ORDER.indexOf(stageId);
-
     if (isApproved) {
       return { isComplete: true, isCurrent: false, isPending: false };
     }
@@ -65,12 +58,29 @@ export default function InitialProductTimeline({ status = 'submitted', statusHis
       return { isComplete: false, isCurrent: false, isPending: true };
     }
 
-    if (stageOrderIdx < currentOrderIdx) {
-      return { isComplete: true, isCurrent: false, isPending: false };
+    if (stageId === 'ft_assigned') {
+      const isPast = ['product_approval_form_enabled', 'all_forms_received', 'logsheet_created', 'waiting_sharia_signature', 'initial_product_approved'].includes(normStatus);
+      const isCur = normStatus === 'ft_assigned';
+      return { isComplete: isPast, isCurrent: isCur, isPending: !isPast && !isCur };
     }
-    if (stageOrderIdx === currentOrderIdx) {
-      return { isComplete: false, isCurrent: true, isPending: false };
+
+    if (stageId === 'product_approval_form_enabled') {
+      const isPast = ['all_forms_received', 'logsheet_created', 'waiting_sharia_signature', 'initial_product_approved'].includes(normStatus);
+      const isCur = normStatus === 'product_approval_form_enabled';
+      return { isComplete: isPast, isCurrent: isCur, isPending: !isPast && !isCur };
     }
+
+    if (stageId === 'all_forms_received') {
+      const isPast = ['logsheet_created', 'waiting_sharia_signature', 'initial_product_approved'].includes(normStatus);
+      const isCur = normStatus === 'all_forms_received';
+      return { isComplete: isPast, isCurrent: isCur, isPending: !isPast && !isCur };
+    }
+
+    if (stageId === 'initial_product_approved') {
+      const isCur = ['logsheet_created', 'waiting_sharia_signature'].includes(normStatus);
+      return { isComplete: isApproved, isCurrent: isCur, isPending: !isApproved && !isCur };
+    }
+
     return { isComplete: false, isCurrent: false, isPending: true };
   };
 
@@ -90,9 +100,6 @@ export default function InitialProductTimeline({ status = 'submitted', statusHis
     if (stageId === 'all_forms_received') {
       if (app?.product_approval_form?.submitted_at) return formatDate(app.product_approval_form.submitted_at);
     }
-    if (stageId === 'logsheet_created') {
-      if (app?.logsheet_id?.created_at) return formatDate(app.logsheet_id.created_at);
-    }
     if (stageId === 'initial_product_approved' && isApproved) {
       return formatDate(app?.updatedAt || new Date());
     }
@@ -102,7 +109,7 @@ export default function InitialProductTimeline({ status = 'submitted', statusHis
   // Helper to retrieve note text for a stage
   const getStageNote = (stageId, isComplete, isCurrent) => {
     const histEntry = historyMap[stageId];
-    if (histEntry?.note) return histEntry.note;
+    if (histEntry?.note && !histEntry.note.toLowerCase().includes('logsheet')) return histEntry.note;
 
     if (!isComplete && !isCurrent) return null;
 
@@ -120,19 +127,15 @@ export default function InitialProductTimeline({ status = 'submitted', statusHis
     }
 
     if (stageId === 'all_forms_received' && (isComplete || isCurrent)) {
-      return 'Product Approval Form responses confirmed and marked as received by HFA admin.';
-    }
-
-    if (stageId === 'logsheet_created' && (isComplete || isCurrent)) {
-      return 'Logsheet created. Awaiting Shari\'a Board signatures.';
-    }
-
-    if (stageId === 'waiting_sharia_signature') {
-      return null;
+      return 'Product Approval Form responses confirmed and received.';
     }
 
     if (stageId === 'initial_product_approved' && isComplete) {
-      return 'Committee signatures verified (4/4). 1 product(s) approved.';
+      return 'Initial Product approved by Committee.';
+    }
+
+    if (stageId === 'initial_product_approved' && isCurrent) {
+      return 'Awaiting final committee review and approval.';
     }
 
     return null;
