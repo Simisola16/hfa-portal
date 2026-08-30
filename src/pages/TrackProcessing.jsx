@@ -235,6 +235,7 @@ export default function TrackProcessing() {
   }
 
   const status = app.status || 'submitted';
+  const normStatus = (status || 'submitted').toLowerCase().replace(/ /g, '_');
   const isRejected = status === 'rejected';
   const isApproved = status === 'approved' || status === 'certificate_issued';
   const rejectionEntry = (app.status_history || app.statusHistory || []).find(e => e.status === 'rejected');
