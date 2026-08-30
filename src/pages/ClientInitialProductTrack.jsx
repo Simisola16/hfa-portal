@@ -100,7 +100,6 @@ export default function ClientInitialProductTrack() {
     );
   }
 
-  const currentStepIdx = getClientStepIdx(app.status);
   const isApproved = app.status === 'initial_product_approved';
   const siteName = app.site_id?.name || app.application_id?.site_name || app.application_id?.establishment_name || 'Main Facility';
   const ftNames = [
