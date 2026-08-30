@@ -9,6 +9,7 @@ import {
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { getSocket } from '../lib/socket';
+import InitialProductTimeline, { INITIAL_PRODUCT_STAGES, INITIAL_PRODUCT_ORDER } from '../components/InitialProductTimeline';
 
 const getPdfUrl = (url) => {
   if (!url) return '#';
@@ -25,36 +26,13 @@ const getPdfUrl = (url) => {
 };
 
 const STATUS_LABELS = {
-  submitted: 'Submit Initial Product',
-  ft_assigned: 'Assign FT Food Technologies',
+  submitted: 'Initial Product Submitted',
+  ft_assigned: 'Assign FT',
   product_approval_form_enabled: 'Product Form Enabled',
   all_forms_received: 'Product Form Received',
-  logsheet_created: 'Under Committee Review',
-  waiting_sharia_signature: 'Under Committee Review',
+  logsheet_created: 'Create Logsheet',
+  waiting_sharia_signature: 'Committee Signature',
   initial_product_approved: 'Initial Product Approved'
-};
-
-const FLOW_STEPS = [
-  { id: 'submitted', label: 'Submit Initial Product' },
-  { id: 'ft_assigned', label: 'Assign FT' },
-  { id: 'product_approval_form_enabled', label: 'Product Form Enabled' },
-  { id: 'all_forms_received', label: 'Product Form Received' },
-  { id: 'initial_product_approved', label: 'Initial Product Approved' }
-];
-
-const ORDER = [
-  'submitted',
-  'ft_assigned',
-  'product_approval_form_enabled',
-  'all_forms_received',
-  'initial_product_approved'
-];
-
-const getClientStepIdx = (status) => {
-  if (['logsheet_created', 'waiting_sharia_signature'].includes(status)) {
-    return ORDER.indexOf('all_forms_received');
-  }
-  return ORDER.indexOf(status);
 };
 
 export default function ClientInitialProductTrack() {
@@ -220,163 +198,154 @@ export default function ClientInitialProductTrack() {
         </div>
       )}
 
-      {/* Realtime 5-Step Milestone Timeline */}
-      <div style={{ background: '#fff', borderRadius: 20, border: '1px solid #e2e8f0', padding: '28px 28px', marginBottom: 24 }}>
-        <div style={{ fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#475569', marginBottom: 24 }}>
-          Initial Product Approval Milestones
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14, position: 'relative' }}>
-          {FLOW_STEPS.map((step, idx) => {
-            const isCompleted = currentStepIdx > idx || (currentStepIdx === idx && isApproved);
-            const isCurrent = currentStepIdx === idx && !isApproved;
-
-            return (
-              <div
-                key={step.id}
-                style={{
-                  background: isCompleted ? '#f0fdf4' : isCurrent ? '#f8fafc' : '#ffffff',
-                  border: isCompleted ? '1.5px solid #86efac' : isCurrent ? '2px solid #059669' : '1px solid #e2e8f0',
-                  borderRadius: 14,
-                  padding: '16px 14px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8,
-                  position: 'relative',
-                  boxShadow: isCurrent ? '0 4px 14px rgba(5,150,105,0.12)' : 'none'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    background: isCompleted ? '#16a34a' : isCurrent ? '#059669' : '#e2e8f0',
-                    color: isCompleted || isCurrent ? '#fff' : '#64748b',
-                    fontSize: 12,
-                    fontWeight: 900,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    {isCompleted ? <Check size={16} strokeWidth={3} /> : idx + 1}
-                  </span>
-                  <span style={{ fontSize: 10.5, fontWeight: 800, color: isCompleted ? '#16a34a' : isCurrent ? '#059669' : '#94a3b8', textTransform: 'uppercase' }}>
-                    {isCompleted ? 'Done' : isCurrent ? 'In Progress' : 'Upcoming'}
-                  </span>
-                </div>
-
-                <div style={{ fontSize: 13, fontWeight: 800, color: isCompleted ? '#14532d' : isCurrent ? '#0f172a' : '#64748b', lineHeight: 1.3 }}>
-                  {step.label}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Product & Form Details Card */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
-        {/* Product Summary */}
-        <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #e2e8f0', padding: '22px 24px' }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Package size={18} style={{ color: '#059669' }} /> Product Specifications
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Product Name</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>{app.product?.name}</div>
+      {/* ─── Main 2-Column Grid Layout (1fr 360px) ─── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'start' }}>
+        
+        {/* ── LEFT COLUMN: Product & Technical Evaluation Cards ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Product Specifications */}
+          <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #e2e8f0', padding: '22px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Package size={18} style={{ color: '#059669' }} /> Product Specifications
             </div>
 
-            {app.product?.code && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Product Code</div>
-                <div style={{ fontSize: 13, color: '#334155', marginTop: 2 }}><code>{app.product.code}</code></div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Product Name</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>{app.product?.name}</div>
               </div>
-            )}
 
-            {app.product?.category && (
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Category / Line</div>
-                <div style={{ fontSize: 13, color: '#334155', marginTop: 2 }}>{app.product.category}</div>
-              </div>
-            )}
-
-            {app.product?.ingredients && (
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Key Ingredients</div>
-                <div style={{ fontSize: 12.5, color: '#334155', marginTop: 2, background: '#f8fafc', padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', lineHeight: 1.4 }}>
-                  {app.product.ingredients}
+              {app.product?.code && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Product Code</div>
+                  <div style={{ fontSize: 13, color: '#334155', marginTop: 2 }}><code>{app.product.code}</code></div>
                 </div>
-              </div>
-            )}
-
-            {app.product?.description && (
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Description &amp; Processing</div>
-                <div style={{ fontSize: 12.5, color: '#334155', marginTop: 2, lineHeight: 1.4 }}>
-                  {app.product.description}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Assigned Staff & Technical Evaluation */}
-        <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #e2e8f0', padding: '22px 24px' }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <User size={18} style={{ color: '#0284c7' }} /> Technical Evaluation &amp; Staff
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ padding: '12px 16px', background: '#f0f9ff', borderRadius: 12, border: '1px solid #bae6fd' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#0369a1' }}>
-                Assigned Food Technologists (Direct Assignment)
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#0c4a6e', marginTop: 4 }}>
-                {ftNames.length > 0 ? ftNames.join(', ') : 'Direct FT assignment in progress...'}
-              </div>
-            </div>
-
-            {/* Product Approval Form Status */}
-            <div style={{ padding: '14px 16px', background: '#fafafa', borderRadius: 12, border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#64748b' }}>
-                Product Approval Form
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: isFormEnabled ? '#166534' : '#64748b', marginTop: 4 }}>
-                {formResp?.is_saved
-                  ? '✓ Form completed and submitted for committee evaluation'
-                  : app.status === 'product_approval_form_enabled'
-                  ? '⚠️ Form enabled — Awaiting your submission'
-                  : 'Pending FT preparation...'}
-              </div>
-
-              {app.product_approval_form?.form_file_url && (
-                <a
-                  href={getPdfUrl(app.product_approval_form.form_file_url)}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#0284c7', marginTop: 8 }}
-                >
-                  <Download size={13} /> Download Admin Reference PDF
-                </a>
               )}
 
-              {isFormEnabled && (
-                <div style={{ marginTop: 10 }}>
-                  <button
-                    className="btn btn-outline btn-sm"
-                    onClick={() => navigate(`/initial-products/${app._id}/approval-form`)}
-                    style={{ fontSize: 12, fontWeight: 700 }}
+              {app.product?.category && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Category / Line</div>
+                  <div style={{ fontSize: 13, color: '#334155', marginTop: 2 }}>{app.product.category}</div>
+                </div>
+              )}
+
+              {app.product?.ingredients && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Key Ingredients</div>
+                  <div style={{ fontSize: 12.5, color: '#334155', marginTop: 2, background: '#f8fafc', padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', lineHeight: 1.4 }}>
+                    {app.product.ingredients}
+                  </div>
+                </div>
+              )}
+
+              {app.product?.description && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Description &amp; Processing</div>
+                  <div style={{ fontSize: 12.5, color: '#334155', marginTop: 2, lineHeight: 1.4 }}>
+                    {app.product.description}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Assigned Staff & Technical Evaluation */}
+          <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #e2e8f0', padding: '22px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <User size={18} style={{ color: '#0284c7' }} /> Technical Evaluation &amp; Staff
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ padding: '12px 16px', background: '#f0f9ff', borderRadius: 12, border: '1px solid #bae6fd' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#0369a1' }}>
+                  Assigned Food Technologists
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#0c4a6e', marginTop: 4 }}>
+                  {ftNames.length > 0 ? ftNames.join(', ') : 'Direct FT assignment in progress...'}
+                </div>
+              </div>
+
+              {/* Product Approval Form Status */}
+              <div style={{ padding: '14px 16px', background: '#fafafa', borderRadius: 12, border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#64748b' }}>
+                  Product Approval Form
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: isFormEnabled ? '#166534' : '#64748b', marginTop: 4 }}>
+                  {formResp?.is_saved
+                    ? '✓ Form completed and submitted for committee evaluation'
+                    : app.status === 'product_approval_form_enabled'
+                    ? '⚠️ Form enabled — Awaiting your submission'
+                    : 'Pending FT preparation...'}
+                </div>
+
+                {app.product_approval_form?.form_file_url && (
+                  <a
+                    href={getPdfUrl(app.product_approval_form.form_file_url)}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#0284c7', marginTop: 8 }}
                   >
-                    {formResp?.is_saved ? 'View Submitted Form' : 'Complete Form Now →'}
-                  </button>
+                    <Download size={13} /> Download Admin Reference PDF
+                  </a>
+                )}
+
+                {isFormEnabled && (
+                  <div style={{ marginTop: 10 }}>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={() => navigate(`/initial-products/${app._id}/approval-form`)}
+                      style={{ fontSize: 12, fontWeight: 700 }}
+                    >
+                      {formResp?.is_saved ? 'View Submitted Form' : 'Complete Form Now →'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── RIGHT COLUMN: Sidebar (Initial Product Lifecycle Stages Timeline) ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          
+          {/* Card: Initial Product Lifecycle Stages */}
+          <div style={{ background: '#fff', borderRadius: 20, border: '1px solid #e2e8f0', padding: '24px 22px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)' }}>
+            <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', marginBottom: 18, borderBottom: '1px solid #f1f5f9', paddingBottom: 12 }}>
+              Initial Product Lifecycle Stages
+            </div>
+
+            <InitialProductTimeline
+              status={app.status}
+              statusHistory={app.statusHistory}
+              app={app}
+            />
+          </div>
+
+          {/* Card: Facility Information */}
+          <div style={{ background: '#fff', borderRadius: 20, border: '1px solid #e2e8f0', padding: '20px 22px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)' }}>
+            <div style={{ fontSize: 12.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', marginBottom: 12 }}>
+              Facility &amp; Application
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12.5 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Facility</div>
+                <div style={{ fontWeight: 700, color: '#0f172a', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Building2 size={13} style={{ color: '#059669' }} /> {siteName}
+                </div>
+              </div>
+
+              {app.application_id?.application_number && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Application Reference</div>
+                  <div style={{ fontWeight: 700, color: '#0f172a', marginTop: 2 }}>#{app.application_id.application_number}</div>
                 </div>
               )}
             </div>
           </div>
+
         </div>
+
       </div>
     </div>
   );
