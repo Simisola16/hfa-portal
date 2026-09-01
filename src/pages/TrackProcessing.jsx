@@ -88,12 +88,29 @@ export default function TrackProcessing() {
       setAgreement(agreementRes.data?.data || agreementRes.data || null);
       setSignatures(sigRes.data || sigRes.data?.data || []);
 
+      const loadedApp = appRes.data?.data || appRes.data || null;
       let matchingInitProd = null;
-      if (initProdRes.data && !Array.isArray(initProdRes.data) && initProdRes.data._id) {
+      if (initProdRes.data && !Array.isArray(initProdRes.data) && (initProdRes.data._id || initProdRes.data.id)) {
         matchingInitProd = initProdRes.data;
       } else {
         const initProds = initProdRes.data?.data || (Array.isArray(initProdRes.data) ? initProdRes.data : []) || [];
-        matchingInitProd = initProds.find(p => String(p.application_id?._id || p.application_id) === String(appId));
+        matchingInitProd = initProds.find(p => String(p.application_id?._id || p.application_id?.id || p.application_id) === String(appId));
+      }
+
+      if (!matchingInitProd && loadedApp) {
+        if (Array.isArray(loadedApp.products) && loadedApp.products.length > 0) {
+          matchingInitProd = {
+            application_id: loadedApp._id,
+            product: loadedApp.products[0],
+            status: 'submitted'
+          };
+        } else if (loadedApp.scope) {
+          matchingInitProd = {
+            application_id: loadedApp._id,
+            product: { name: loadedApp.scope, category: loadedApp.category },
+            status: 'submitted'
+          };
+        }
       }
       setInitialProduct(matchingInitProd || null);
 
