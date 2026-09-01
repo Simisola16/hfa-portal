@@ -35,12 +35,12 @@ export default function CertificatesPage() {
     setLoading(true);
     try {
       const [certsRes, survRes] = await Promise.all([
-        api.get('/api/certificates'),
+        api.get('/api/certificates').catch(() => ({ data: [] })),
         api.get('/api/surveillance/my').catch(() => ({ data: [] }))
       ]);
-      const loadedCerts = certsRes.data || [];
+      const loadedCerts = Array.isArray(certsRes) ? certsRes : (certsRes?.data || []);
       setCerts(loadedCerts);
-      setSurvRequests(survRes.data?.data || survRes.data || []);
+      setSurvRequests(Array.isArray(survRes) ? survRes : (survRes?.data?.data || survRes?.data || []));
 
       const renewId = searchParams.get('renewCertId');
       if (renewId) {
@@ -50,6 +50,7 @@ export default function CertificatesPage() {
         }
       }
     } catch (err) {
+      console.error('CertificatesPage fetchData error:', err);
       toast.error('Failed to load certificates data.');
     } finally {
       setLoading(false);

@@ -187,11 +187,16 @@ export default function ApplicationsPage({ openNew }) {
       setCerts(loadedCerts);
       setClientProducts(loadedProds);
 
-      const active = loadedCerts.some(c =>
-        c && c.status === 'active' && (!c.expiry_date || new Date(c.expiry_date) >= new Date())
-      );
+      const now = Date.now();
+      const active = loadedCerts.some(c => {
+        if (!c || c.status !== 'active') return false;
+        if (!c.expiry_date) return true;
+        const expTime = new Date(c.expiry_date).getTime();
+        return isNaN(expTime) || expTime >= now;
+      });
       setHasActiveCert(active);
     } catch (err) {
+      console.error('ApplicationsPage fetchData error:', err);
       toast.error('Failed to load data');
     } finally {
       setLoading(false);
@@ -215,7 +220,7 @@ export default function ApplicationsPage({ openNew }) {
       if (c.status === 'expired') return true;
       if (!c.expiry_date) return false;
       const expiryTime = new Date(c.expiry_date).getTime();
-      return (expiryTime - now) <= threeMonthsInMs;
+      return !isNaN(expiryTime) && (expiryTime - now) <= threeMonthsInMs;
     });
 
     if (certEligible) return true;
@@ -232,7 +237,7 @@ export default function ApplicationsPage({ openNew }) {
       if (a.status === 'expired') return true;
       if (a.certificate_expiry) {
         const expiryTime = new Date(a.certificate_expiry).getTime();
-        return (expiryTime - now) <= threeMonthsInMs;
+        return !isNaN(expiryTime) && (expiryTime - now) <= threeMonthsInMs;
       }
       return false;
     });
@@ -311,7 +316,7 @@ export default function ApplicationsPage({ openNew }) {
         existing.issue_date = c.issue_date;
         existing.expiry_date = c.expiry_date;
       } else {
-        const matchingSite = sites.find(s => String(s._id) === key);
+        const matchingSite = sites.find(s => String(s._id || s.id) === key);
         gsoSiteMap.set(key, {
           site_id: key,
           site_name: matchingSite?.name || c.site_name || 'Manufacturing Site',
@@ -347,7 +352,9 @@ export default function ApplicationsPage({ openNew }) {
       const year = item.surveillanceCount >= 1 ? 2 : 1;
       item.cycle_year = year;
       
-      const startDate = item.issue_date ? new Date(item.issue_date).getTime() : (item.created_at ? new Date(item.created_at).getTime() : now);
+      const rawDate = item.issue_date || item.created_at;
+      const parsedTime = rawDate ? new Date(rawDate).getTime() : NaN;
+      const startDate = !isNaN(parsedTime) ? parsedTime : now;
       const elapsedMs = now - startDate;
       const elapsedYears = elapsedMs / oneYearInMs;
 
@@ -372,21 +379,39 @@ export default function ApplicationsPage({ openNew }) {
     if (gsoList.length > 0) {
       const firstEligible = gsoList.find(g => g.isEligible) || gsoList[0];
       if (firstEligible) {
-        setSurveillanceForm({
+        setSurveillanceForm(f => ({
+          ...f,
           site_id: firstEligible.site_id,
           site_name: firstEligible.site_name,
           establishment_name: firstEligible.establishment_name,
-          primary_contact_name: firstEligible.managing_director || '',
-          primary_email: firstEligible.primary_email || '',
-          primary_work_tel: firstEligible.primary_work_tel || '',
-          surveillance_year: firstEligible.cycle_year || 1,
-          notes: '',
-          declared_true: false
-        });
+          primary_contact_name: firstEligible.managing_director || f.primary_contact_name || '',
+          primary_email: firstEligible.primary_email || f.primary_email || '',
+          primary_work_tel: firstEligible.primary_work_tel || f.primary_work_tel || '',
+          surveillance_year: firstEligible.cycle_year || 1
+        }));
       }
     }
     setShowSurveillanceModal(true);
   };
+
+  useEffect(() => {
+    if (showSurveillanceModal && !surveillanceForm.site_id && (apps.length > 0 || certs.length > 0)) {
+      const gsoList = getGSOSurveillanceEligibleList();
+      const firstEligible = gsoList.find(g => g.isEligible) || gsoList[0];
+      if (firstEligible) {
+        setSurveillanceForm(f => ({
+          ...f,
+          site_id: firstEligible.site_id,
+          site_name: firstEligible.site_name,
+          establishment_name: firstEligible.establishment_name,
+          primary_contact_name: firstEligible.managing_director || f.primary_contact_name || '',
+          primary_email: firstEligible.primary_email || f.primary_email || '',
+          primary_work_tel: firstEligible.primary_work_tel || f.primary_work_tel || '',
+          surveillance_year: firstEligible.cycle_year || 1
+        }));
+      }
+    }
+  }, [showSurveillanceModal, apps, certs, sites]);
 
   const handleSurveillanceSiteChange = (siteId) => {
     const gsoList = getGSOSurveillanceEligibleList();

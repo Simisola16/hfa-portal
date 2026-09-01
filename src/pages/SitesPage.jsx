@@ -20,7 +20,16 @@ export default function SitesPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdSiteName, setCreatedSiteName] = useState('');
 
-  const fetch = () => { setLoading(true); api.get('/api/sites').then(d => setSites(d.data || [])).catch(() => toast.error('Failed to fetch sites')).finally(() => setLoading(false)); };
+  const fetch = () => {
+    setLoading(true);
+    api.get('/api/sites')
+      .then(d => setSites(Array.isArray(d) ? d : (d?.data || [])))
+      .catch(err => {
+        console.error('SitesPage fetch error:', err);
+        toast.error('Failed to fetch sites');
+      })
+      .finally(() => setLoading(false));
+  };
   useEffect(() => { fetch(); }, []);
 
   const set = (k) => (e) => setForm(f => ({...f, [k]: e.target.value}));

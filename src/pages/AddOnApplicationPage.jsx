@@ -118,28 +118,39 @@ export default function AddOnApplicationPage() {
         api.get('/api/add-on-applications').catch(() => ({ data: [] })),
         api.get('/api/products').catch(() => ({ data: [] }))
       ]);
-      const active = (certsRes.data || []).filter(c =>
-        c.status === 'active' && new Date(c.expiry_date) >= new Date()
-      );
-      const userSites = sitesRes.data || [];
+
+      const loadedCerts = Array.isArray(certsRes) ? certsRes : (Array.isArray(certsRes?.data) ? certsRes.data : []);
+      const loadedSites = Array.isArray(sitesRes) ? sitesRes : (Array.isArray(sitesRes?.data) ? sitesRes.data : []);
+      const loadedApps = Array.isArray(appsRes) ? appsRes : (Array.isArray(appsRes?.data) ? appsRes.data : (Array.isArray(appsRes?.data?.data) ? appsRes.data.data : []));
+      const loadedProds = Array.isArray(prodsRes) ? prodsRes : (Array.isArray(prodsRes?.data) ? prodsRes.data : (Array.isArray(prodsRes?.data?.data) ? prodsRes.data.data : []));
+
+      const now = Date.now();
+      const active = loadedCerts.filter(c => {
+        if (!c || c.status !== 'active') return false;
+        if (!c.expiry_date) return true;
+        const exp = new Date(c.expiry_date).getTime();
+        return isNaN(exp) || exp >= now;
+      });
+
       setCerts(active);
-      setSites(userSites);
-      setMyApps(appsRes.data?.data || appsRes.data || []);
-      setClientProducts(prodsRes.data?.data || prodsRes.data || []);
+      setSites(loadedSites);
+      setMyApps(loadedApps);
+      setClientProducts(loadedProds);
 
       // Auto-preselect primary site if only 1 site exists
-      if (userSites.length === 1) {
-        const singleSite = userSites[0];
+      if (loadedSites.length === 1) {
+        const singleSite = loadedSites[0];
         const linkedCert = active.find(c => String(c.site_id?._id || c.site_id?.id || c.site_id) === String(singleSite.id || singleSite._id));
         setForm(f => ({
           ...f,
           site_id: singleSite.id || singleSite._id,
           certificate_id: linkedCert ? (linkedCert._id || linkedCert.id) : (active[0]?._id || active[0]?.id || '')
         }));
-      } else if (active.length === 1 && userSites.length === 0) {
+      } else if (active.length === 1 && loadedSites.length === 0) {
         setForm(f => ({ ...f, certificate_id: active[0]._id || active[0].id }));
       }
-    } catch {
+    } catch (err) {
+      console.error('AddOnApplicationPage fetchData error:', err);
       toast.error('Failed to load data.');
     } finally {
       setLoading(false);

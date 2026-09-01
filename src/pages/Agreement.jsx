@@ -29,8 +29,9 @@ export default function AgreementPage() {
     setLoading(true);
     try {
       const agRes = await api.get('/api/agreements');
-      setAgreements(agRes.data || agRes.data?.data || []);
+      setAgreements(Array.isArray(agRes) ? agRes : (agRes?.data || agRes?.data?.data || []));
     } catch (err) {
+      console.error('Agreement fetch error:', err);
       toast.error('Failed to load agreement data');
     } finally {
       setLoading(false);
