@@ -1,5 +1,9 @@
 import React from 'react';
-import { CheckCircle, Circle, XCircle, Clock, ChevronRight } from 'lucide-react';
+import {
+  CheckCircle, Circle, XCircle, Clock, ChevronRight,
+  Plus, ArrowRight, Package, FileText, AlertTriangle
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { STATUS_ORDER, STATUS_LABELS } from '../lib/applicationStatuses';
 
 /**
@@ -8,15 +12,25 @@ import { STATUS_ORDER, STATUS_LABELS } from '../lib/applicationStatuses';
  * Props:
  *   status        (string)  — current application status
  *   statusHistory (array)   — [{ status, changedAt, changedBy, note }]
- *
- * Phases 5–9 automatically get new stages by extending STATUS_ORDER in applicationStatuses.js.
- * No changes to this component needed.
+ *   category      (string)  — application category
+ *   applicationType (string) — standard / renewal / surveillance
+ *   initialProduct (object) — initial product record if loaded
+ *   appId         (string)  — application _id
  */
-export default function ProcessingTimeline({ status, statusHistory = [], category = '', applicationType = '' }) {
+export default function ProcessingTimeline({
+  status,
+  statusHistory = [],
+  category = '',
+  applicationType = '',
+  initialProduct = null,
+  appId = null
+}) {
+  const navigate = useNavigate();
   const isRejected = status === 'rejected';
   const isSurveillance = (applicationType || '').toLowerCase() === 'surveillance';
   const isRenewal = (applicationType || '').toLowerCase() === 'renewal' || isSurveillance;
   const isGSO = category === 'UAE/GSO Approved Halal Certification For Exporters To UAE' || isSurveillance;
+  const isInitialProductApproved = Boolean(initialProduct && (initialProduct.status === 'initial_product_approved' || initialProduct.status === 'approved'));
 
   // Build a lookup from statusHistory entries for quick timestamp/note access
   const historyMap = {};
@@ -78,7 +92,6 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
       // Non-Renewal (Initial) flow:
       stepsToShow.push('proposal_sent');
 
-      const proposalRejectedInHistory = status === 'proposal_rejected' || statusHistory.some(h => h.status === 'proposal_rejected');
       const proposalApprovedInHistory = status === 'proposal_approved' || STATUS_ORDER.indexOf(status) > STATUS_ORDER.indexOf('proposal_approved');
 
       if (status === 'proposal_rejected') {
@@ -86,14 +99,14 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
       } else if (proposalApprovedInHistory) {
         stepsToShow.push('proposal_approved');
       } else {
-        // If proposal is sent but not decided, show proposal_approved as target
         stepsToShow.push('proposal_approved');
       }
 
-      // Rest of the flow
+      // Rest of the flow with Initial Product Step
       const restFlow = [
         'invoice_sent',
         'payment_received',
+        'initial_product',
         'dates_proposed',
         'dates_accepted',
         'date_finalized',
@@ -149,6 +162,9 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
       if (stepKey === 'ready_for_certificate' || stepKey === 'application_successful') return 'Application Successful';
       if (stepKey === 'certificate_issued') return 'Certificate Issued';
     }
+    if (stepKey === 'initial_product') {
+      return isInitialProductApproved ? 'Initial Product Approved' : 'Initial Product In Progress';
+    }
     return STATUS_LABELS[stepKey] || stepKey.replace(/_/g, ' ');
   };
 
@@ -157,6 +173,16 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
   if (normStatus === 'audit_completed') effectiveStatus = 'audit_successful';
   if (normStatus === 'dates_rejected') effectiveStatus = 'dates_proposed';
   if (normStatus === 'audit_report_submitted') effectiveStatus = 'nc_closed';
+
+  // When status is payment_received in standard flow:
+  // If initial product is not yet approved, advance the active timeline step to 'initial_product'
+  if (!isRenewal && normStatus === 'payment_received') {
+    if (!isInitialProductApproved) {
+      effectiveStatus = 'initial_product';
+    } else {
+      effectiveStatus = 'dates_proposed';
+    }
+  }
 
   // Helper to map status to step index in stepsToShow
   const getStepIndex = (st) => {
@@ -202,11 +228,11 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
   return (
     <div style={{ padding: '8px 0' }}>
       {stepsToShow.map((s, idx) => {
-        const histEntry = historyMap[s] || 
+        let histEntry = historyMap[s] ||
           (s === 'dates_proposed' ? (historyMap['dates_rejected'] || historyMap['dates_proposed']) : null) ||
           (s === 'audit_successful' ? (historyMap['audit_completed'] || historyMap['audit_successful']) : null) ||
           (s === 'nc_closed' ? (historyMap['nc_closed'] || historyMap['audit_report_submitted']) : null);
-        
+
         let isComplete = false;
         let isCurrent = false;
         let isPending = false;
@@ -215,6 +241,42 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
           isComplete = true;
           isCurrent = false;
           isPending = false;
+        } else if (s === 'payment_received' && !isRenewal) {
+          // In standard flow: Initial Payment Received is marked complete once admin confirms payment
+          const hasPaymentReceived = normStatus === 'payment_received' || Boolean(historyMap['payment_received']) || (currentOrderIdx >= STATUS_ORDER.indexOf('payment_received'));
+          if (hasPaymentReceived) {
+            isComplete = true;
+            isCurrent = false;
+            isPending = false;
+          } else if (currentIndex === idx) {
+            isCurrent = true;
+          } else if (currentIndex < idx) {
+            isPending = true;
+          }
+        } else if (s === 'initial_product') {
+          const hasPassedPayment = normStatus === 'payment_received' || Boolean(historyMap['payment_received']) || (currentOrderIdx >= STATUS_ORDER.indexOf('payment_received'));
+          const hasPassedInitialProduct = currentOrderIdx > STATUS_ORDER.indexOf('initial_product') && normStatus !== 'payment_received';
+
+          if (hasPassedInitialProduct || isInitialProductApproved) {
+            isComplete = true;
+            isCurrent = false;
+            isPending = false;
+          } else if (hasPassedPayment) {
+            isCurrent = true;
+            isComplete = false;
+            isPending = false;
+          } else {
+            isPending = true;
+            isComplete = false;
+            isCurrent = false;
+          }
+
+          if (initialProduct) {
+            histEntry = {
+              changedAt: initialProduct.updated_at || initialProduct.created_at,
+              note: isComplete ? 'Initial product evaluation completed and approved.' : (initialProduct.status === 'product_approval_form_enabled' ? 'Product Approval Form enabled. Awaiting client submission.' : `Initial Product "${initialProduct.product?.name}" submitted.`)
+            };
+          }
         } else if (currentIndex !== -1) {
           isComplete = currentIndex > idx;
           isCurrent = currentIndex === idx;
@@ -248,7 +310,7 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
           circleColor = '#dc2626'; lineColor = '#fecaca';
           labelColor = '#991b1b'; bgColor = '#fef2f2'; borderColor = '#fecaca';
         } else if (isHoldStep && status === 'on_hold') {
-          circleColor = '#64748b'; lineColor = '#e2e8f0'; // Muted slate/grey
+          circleColor = '#64748b'; lineColor = '#e2e8f0';
           labelColor = '#334155'; bgColor = '#f8fafc'; borderColor = '#cbd5e1';
         } else if (isComplete) {
           circleColor = '#15803d'; lineColor = '#86efac';
@@ -320,7 +382,6 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
                   fontWeight: isCurrent ? 800 : isComplete ? 700 : 500,
                   color: labelColor,
                 }}>
-                  {/* GSO-specific label: logsheet_created maps to Shari'a Board Approval */}
                   {isDatesRejectedStep
                     ? 'Audit Dates Rejected'
                     : (s === 'logsheet_created' && isGSO
@@ -330,10 +391,10 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
                 {isCurrent && (
                   <span style={{
                     fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                    letterSpacing: '0.06em', 
+                    letterSpacing: '0.06em',
                     color: isDatesRejectedStep ? '#dc2626' : '#1d4ed8',
-                    background: isDatesRejectedStep ? '#fef2f2' : '#eff6ff', 
-                    border: `1px solid ${isDatesRejectedStep ? '#fca5a5' : '#bfdbfe'}`, 
+                    background: isDatesRejectedStep ? '#fef2f2' : '#eff6ff',
+                    border: `1px solid ${isDatesRejectedStep ? '#fca5a5' : '#bfdbfe'}`,
                     padding: '2px 8px', borderRadius: 20,
                   }}>
                     {isDatesRejectedStep ? 'Dates Rejected' : 'Current'}
@@ -358,6 +419,120 @@ export default function ProcessingTimeline({ status, statusHistory = [], categor
                       borderLeft: `3px solid ${isRejectedStep && isRejected ? '#fca5a5' : '#cbd5e1'}`,
                     }}>
                       {histEntry.note}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Initial Product Interactive Action in Client Timeline ── */}
+              {s === 'initial_product' && (isCurrent || isComplete) && (
+                <div style={{ marginTop: 8 }}>
+                  {!initialProduct ? (
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 12px' }}>
+                      <div style={{ fontSize: 12, color: '#166534', lineHeight: 1.4, marginBottom: 8 }}>
+                        Initial payment confirmed. Please register your <strong>1 primary Initial Product</strong> to proceed with Halal technical evaluation.
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => navigate(appId ? `/initial-products?application_id=${appId}` : '/initial-products/new')}
+                        style={{
+                          background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                          borderColor: '#059669',
+                          fontWeight: 800,
+                          fontSize: 12,
+                          padding: '6px 14px',
+                          borderRadius: 8,
+                          boxShadow: '0 2px 8px rgba(5,150,105,0.25)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        <Plus size={14} /> Add Initial Product <ArrowRight size={13} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{
+                        fontSize: 12,
+                        color: '#334155',
+                        background: isComplete ? '#f0fdf4' : '#f8fafc',
+                        border: `1px solid ${isComplete ? '#bbf7d0' : '#e2e8f0'}`,
+                        borderRadius: 8,
+                        padding: '8px 12px',
+                        marginBottom: 6
+                      }}>
+                        <div style={{ fontWeight: 700, color: isComplete ? '#15803d' : '#0f172a' }}>
+                          {isComplete ? '✓ Initial Product Approved' : `Product: "${initialProduct.product?.name || 'Initial Product'}"`}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, textTransform: 'capitalize' }}>
+                          Status: {(initialProduct.status || '').replace(/_/g, ' ')}
+                        </div>
+                      </div>
+
+                      {!isComplete && (
+                        <div>
+                          {initialProduct.status === 'product_approval_form_enabled' ? (
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              onClick={() => navigate(`/initial-products/${initialProduct._id || initialProduct.id}/approval-form`)}
+                              style={{
+                                background: '#7e22ce',
+                                borderColor: '#7e22ce',
+                                fontWeight: 800,
+                                fontSize: 12,
+                                padding: '6px 12px',
+                                borderRadius: 8,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5
+                              }}
+                            >
+                              <FileText size={13} /> Complete Approval Form <ArrowRight size={13} />
+                            </button>
+                          ) : initialProduct.product_approval_form?.more_info_requested ? (
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              onClick={() => navigate(`/initial-products/${initialProduct._id || initialProduct.id}/track`)}
+                              style={{
+                                background: '#d97706',
+                                borderColor: '#d97706',
+                                fontWeight: 800,
+                                fontSize: 12,
+                                padding: '6px 12px',
+                                borderRadius: 8,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5
+                              }}
+                            >
+                              <AlertTriangle size={13} /> Reply to Questions <ArrowRight size={13} />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm"
+                              onClick={() => navigate(`/initial-products/${initialProduct._id || initialProduct.id}/track`)}
+                              style={{
+                                borderColor: '#059669',
+                                color: '#059669',
+                                fontWeight: 700,
+                                fontSize: 12,
+                                padding: '5px 12px',
+                                borderRadius: 8,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5
+                              }}
+                            >
+                              <Package size={13} /> Track Initial Product <ArrowRight size={13} />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

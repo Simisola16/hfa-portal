@@ -76,7 +76,7 @@ export default function TrackProcessing() {
         api.get(`/api/audits/application/${appId}`).catch(() => ({ data: null })),
         api.get(`/api/agreements/application/${appId}`).catch(() => ({ data: null })),
         api.get('/api/signatures').catch(() => ({ data: [] })),
-        api.get('/api/initial-products').catch(() => ({ data: { data: [] } }))
+        api.get(`/api/initial-products/by-application/${appId}`).catch(() => api.get('/api/initial-products')).catch(() => ({ data: { data: [] } }))
       ]);
 
       setApp(appRes.data);
@@ -88,8 +88,13 @@ export default function TrackProcessing() {
       setAgreement(agreementRes.data?.data || agreementRes.data || null);
       setSignatures(sigRes.data || sigRes.data?.data || []);
 
-      const initProds = initProdRes.data?.data || (Array.isArray(initProdRes.data) ? initProdRes.data : []) || [];
-      const matchingInitProd = initProds.find(p => String(p.application_id?._id || p.application_id) === String(appId));
+      let matchingInitProd = null;
+      if (initProdRes.data && !Array.isArray(initProdRes.data) && initProdRes.data._id) {
+        matchingInitProd = initProdRes.data;
+      } else {
+        const initProds = initProdRes.data?.data || (Array.isArray(initProdRes.data) ? initProdRes.data : []) || [];
+        matchingInitProd = initProds.find(p => String(p.application_id?._id || p.application_id) === String(appId));
+      }
       setInitialProduct(matchingInitProd || null);
 
       setLastUpdated(new Date());
@@ -1043,7 +1048,14 @@ export default function TrackProcessing() {
               <div className="card-title">Processing Status</div>
             </div>
             <div className="card-body" style={{ padding: '20px 24px' }}>
-              <ProcessingTimeline status={status} statusHistory={app.status_history || app.statusHistory} category={app.category || ''} applicationType={app.application_type || ''} />
+              <ProcessingTimeline
+                status={status}
+                statusHistory={app.status_history || app.statusHistory}
+                category={app.category || ''}
+                applicationType={app.application_type || ''}
+                initialProduct={initialProduct}
+                appId={appId}
+              />
             </div>
           </div>
 
