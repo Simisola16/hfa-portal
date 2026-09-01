@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Calendar, Search, RefreshCw, AlertTriangle, CheckCircle2, Clock, 
   FileText, Download, ChevronRight, ChevronDown, User, MapPin, 
-  ExternalLink, MessageSquare, AlertCircle, Eye, ShieldCheck
+  ExternalLink, MessageSquare, AlertCircle, Eye, ShieldCheck, Mail, Phone
 } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
@@ -336,10 +336,54 @@ export default function AuditsPage() {
                         </td>
 
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#334155' }}>
-                            <User size={14} style={{ color: '#64748b' }} />
-                            <span>{auditorsList}</span>
-                          </div>
+                          {audit.auditors && audit.auditors.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              {audit.auditors.map((aud, idx) => (
+                                <div key={idx} style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+                                    <User size={14} style={{ color: '#0284c7', flexShrink: 0 }} />
+                                    <span>{aud.name || 'Auditor'}</span>
+                                  </div>
+                                  {aud.email && (
+                                    <div style={{ fontSize: 11.5, color: '#64748b', marginLeft: 20, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      <Mail size={11} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                                      <a 
+                                        href={`mailto:${aud.email}`} 
+                                        style={{ color: '#0284c7', textDecoration: 'none' }}
+                                        onClick={e => e.stopPropagation()}
+                                      >
+                                        {aud.email}
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (audit.inspector_id?.full_name || audit.inspectors?.full_name) ? (
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+                                <User size={14} style={{ color: '#0284c7', flexShrink: 0 }} />
+                                <span>{audit.inspector_id?.full_name || audit.inspectors?.full_name}</span>
+                              </div>
+                              {(audit.inspector_id?.email || audit.inspectors?.email) && (
+                                <div style={{ fontSize: 11.5, color: '#64748b', marginLeft: 20, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <Mail size={11} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                                  <a 
+                                    href={`mailto:${audit.inspector_id?.email || audit.inspectors?.email}`} 
+                                    style={{ color: '#0284c7', textDecoration: 'none' }}
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    {audit.inspector_id?.email || audit.inspectors?.email}
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#64748b' }}>
+                              <User size={14} style={{ color: '#94a3b8' }} />
+                              <span>{auditorsList}</span>
+                            </div>
+                          )}
                         </td>
 
                         <td>
@@ -441,8 +485,55 @@ export default function AuditsPage() {
 
                                   <div>
                                     <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Assigned Auditor(s)</div>
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>
-                                      {auditorsList}
+                                    <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                      {audit.auditors && audit.auditors.length > 0 ? (
+                                        audit.auditors.map((aud, idx) => (
+                                          <div key={idx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                              <User size={14} style={{ color: '#0284c7' }} />
+                                              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{aud.name || 'Auditor'}</span>
+                                              {aud.role && (
+                                                <span style={{ fontSize: 10.5, textTransform: 'capitalize', background: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+                                                  {aud.role.replace(/_/g, ' ')}
+                                                </span>
+                                              )}
+                                            </div>
+                                            {aud.email && (
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                                                <Mail size={12} style={{ color: '#64748b' }} />
+                                                <a href={`mailto:${aud.email}`} style={{ color: '#0284c7', textDecoration: 'none', fontWeight: 600 }}>
+                                                  {aud.email}
+                                                </a>
+                                              </div>
+                                            )}
+                                            {aud.contact_number && (
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#64748b' }}>
+                                                <Phone size={12} />
+                                                <span>{aud.contact_number}</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))
+                                      ) : (audit.inspector_id?.full_name || audit.inspectors?.full_name) ? (
+                                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <User size={14} style={{ color: '#0284c7' }} />
+                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+                                              {audit.inspector_id?.full_name || audit.inspectors?.full_name}
+                                            </span>
+                                          </div>
+                                          {(audit.inspector_id?.email || audit.inspectors?.email) && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                                              <Mail size={12} style={{ color: '#64748b' }} />
+                                              <a href={`mailto:${audit.inspector_id?.email || audit.inspectors?.email}`} style={{ color: '#0284c7', textDecoration: 'none', fontWeight: 600 }}>
+                                                {audit.inspector_id?.email || audit.inspectors?.email}
+                                              </a>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <span style={{ fontSize: 13, color: '#64748b', fontStyle: 'italic' }}>Assigned by HFA</span>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
