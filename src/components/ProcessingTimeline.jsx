@@ -428,29 +428,13 @@ export default function ProcessingTimeline({
               {s === 'initial_product' && (isCurrent || isComplete) && (
                 <div style={{ marginTop: 8 }}>
                   {!initialProduct ? (
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 12px' }}>
-                      <div style={{ fontSize: 12, color: '#166534', lineHeight: 1.4, marginBottom: 8 }}>
-                        Initial payment confirmed. Please register your <strong>1 primary Initial Product</strong> to proceed with Halal technical evaluation.
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 12px' }}>
+                      <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.4, marginBottom: 4, fontWeight: 600 }}>
+                        Initial payment confirmed. Initial Product specifications from your application are queued for Food Tech evaluation.
                       </div>
-                      <button
-                        type="button"
-                        className="btn btn-primary btn-sm"
-                        onClick={() => navigate(appId ? `/initial-products?application_id=${appId}` : '/initial-products/new')}
-                        style={{
-                          background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                          borderColor: '#059669',
-                          fontWeight: 800,
-                          fontSize: 12,
-                          padding: '6px 14px',
-                          borderRadius: 8,
-                          boxShadow: '0 2px 8px rgba(5,150,105,0.25)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 6
-                        }}
-                      >
-                        <Plus size={14} /> Add Initial Product <ArrowRight size={13} />
-                      </button>
+                      <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                        You will receive an update once the Product Approval Form is enabled by our Food Technologies team.
+                      </div>
                     </div>
                   ) : (
                     <div>

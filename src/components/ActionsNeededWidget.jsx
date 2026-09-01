@@ -304,25 +304,6 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
         }
       }
 
-      // Check if client is eligible to register their 1st Initial Product
-      const eligibleForInitial = eligibleInitApps.filter(e => e.isEligible);
-      for (const elApp of eligibleForInitial) {
-        actionList.push({
-          id: `initprod-eligible-${elApp._id || elApp.id}`,
-          category: 'initial_products',
-          app: elApp,
-          type: 'navigate',
-          title: 'Initial Product: Register Your 1st Product',
-          tag: 'Product Setup',
-          desc: `Initial fee confirmed for #${elApp.application_number} (${elApp.establishment_name || elApp.site_name || 'Site'}). Register your initial product.`,
-          buttonText: 'Register Product',
-          buttonBg: '#16a34a',
-          isLink: true,
-          link: `/initial-products?application_id=${elApp._id || elApp.id}`,
-          icon: <Package size={16} />
-        });
-      }
-
       // ─────────────────────────────────────────────────────────────
       // 3. ADD-ON APPLICATIONS: Actions
       // ─────────────────────────────────────────────────────────────
