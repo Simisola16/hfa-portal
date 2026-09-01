@@ -135,12 +135,7 @@ export default function ApplicationsPage({ openNew }) {
     intoxicants_details: '',
     declared_true: false,
     notes: '',
-    products: [],
-    initial_product_name: '',
-    initial_product_code: '',
-    initial_product_category: '',
-    initial_product_ingredients: '',
-    initial_product_description: ''
+    products: []
   };
 
   const [form, setForm] = useState(initialFormState);
@@ -713,12 +708,8 @@ export default function ApplicationsPage({ openNew }) {
         toast.error('Section E: Please indicate if certification was previously refused.');
         return false;
       }
-      if (!form.scope?.trim() && !form.initial_product_name?.trim()) {
-        toast.error('Section E: Please enter your Initial Product Name or Product Scope.');
-        return false;
-      }
-      if (form.application_type === 'new' && !form.initial_product_name?.trim() && !form.scope?.trim()) {
-        toast.error('Section E: Please enter the name of your Initial Product to be certified.');
+      if (!form.scope?.trim()) {
+        toast.error('Section E: Please enter the product description / scope.');
         return false;
       }
       if (!form.products_on_site_count || Number(form.products_on_site_count) <= 0) {
@@ -804,19 +795,7 @@ export default function ApplicationsPage({ openNew }) {
     try {
       const fd = new FormData();
       const submissionData = { ...form };
-
-      // Initial Product payload strictly linked with application submission
-      const prodName = (form.initial_product_name || form.scope || 'Primary Halal Product').trim();
-      const initialProductObj = {
-        name: prodName,
-        code: (form.initial_product_code || '').trim(),
-        category: (form.initial_product_category || form.category || '').trim(),
-        ingredients: (form.initial_product_ingredients || '').trim(),
-        description: (form.initial_product_description || form.scope || '').trim()
-      };
-
-      submissionData.products = JSON.stringify([initialProductObj]);
-      submissionData.initial_product = JSON.stringify(initialProductObj);
+      submissionData.products = JSON.stringify([]);
 
       Object.entries(submissionData).forEach(([k, v]) => fd.append(k, v));
       if (form.application_type === 'renewal' && renewalFiles.length > 0) {
@@ -1576,98 +1555,6 @@ export default function ApplicationsPage({ openNew }) {
                               </div>
                             </div>
                           </div>
-
-                          {/* Initial Product Registration Card (For New Standard Applications) */}
-                          {form.application_type === 'new' && (
-                            <div style={{
-                              background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)',
-                              border: '1.5px solid #86efac',
-                              borderRadius: 14,
-                              padding: '22px 24px',
-                              display: 'grid',
-                              gap: 16,
-                              boxShadow: '0 2px 8px rgba(22,163,74,0.06)'
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{
-                                  width: 34, height: 34, borderRadius: 10,
-                                  background: '#16a34a', color: 'white',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 2px 4px rgba(22,163,74,0.2)'
-                                }}>
-                                  <Package size={18} />
-                                </div>
-                                <div>
-                                  <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#14532d' }}>
-                                    Initial Product Registration (Primary Certified Product)
-                                  </h4>
-                                  <div style={{ fontSize: 12, color: '#166534', marginTop: 2 }}>
-                                    Your application includes 1 primary product evaluated directly by HFA Food Technologies. Additional products can be added later via Add-On Applications.
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16 }}>
-                                <div className="form-group" style={{ margin: 0 }}>
-                                  <label className="form-label">Initial Product Name <span>*</span></label>
-                                  <input
-                                    type="text"
-                                    className="form-control"
-                                    placeholder="e.g. Classic Beef Sausages / Chocolate Wafer"
-                                    value={form.initial_product_name}
-                                    onChange={e => setForm(f => ({ ...f, initial_product_name: e.target.value }))}
-                                    required={form.application_type === 'new'}
-                                  />
-                                </div>
-
-                                <div className="form-group" style={{ margin: 0 }}>
-                                  <label className="form-label">Product Code / SKU</label>
-                                  <input
-                                    type="text"
-                                    className="form-control"
-                                    placeholder="e.g. SKU-8842 / HFA-01"
-                                    value={form.initial_product_code}
-                                    onChange={e => setForm(f => ({ ...f, initial_product_code: e.target.value }))}
-                                  />
-                                </div>
-                              </div>
-
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                <div className="form-group" style={{ margin: 0 }}>
-                                  <label className="form-label">Product Category</label>
-                                  <input
-                                    type="text"
-                                    className="form-control"
-                                    placeholder={form.category || 'Product Category'}
-                                    value={form.initial_product_category || form.category || ''}
-                                    onChange={e => setForm(f => ({ ...f, initial_product_category: e.target.value }))}
-                                  />
-                                </div>
-
-                                <div className="form-group" style={{ margin: 0 }}>
-                                  <label className="form-label">Key Ingredients / Raw Materials</label>
-                                  <input
-                                    type="text"
-                                    className="form-control"
-                                    placeholder="e.g. Wheat flour, sugar, palm oil, cocoa"
-                                    value={form.initial_product_ingredients}
-                                    onChange={e => setForm(f => ({ ...f, initial_product_ingredients: e.target.value }))}
-                                  />
-                                </div>
-                              </div>
-
-                              <div className="form-group" style={{ margin: 0 }}>
-                                <label className="form-label">Brief Product Description &amp; Usage</label>
-                                <textarea
-                                  className="form-control"
-                                  rows={2}
-                                  placeholder="Short description of this product, packaging, and intended market..."
-                                  value={form.initial_product_description}
-                                  onChange={e => setForm(f => ({ ...f, initial_product_description: e.target.value }))}
-                                />
-                              </div>
-                            </div>
-                          )}
 
                           {/* Declarations */}
                           <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
