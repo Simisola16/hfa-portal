@@ -22,13 +22,14 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
   const [activeCategory, setActiveCategory] = useState('all');
 
   // Active inline modal target
-  const [activeModal, setActiveModal] = useState(null); // { type, app, invoice, agreement, audit }
+  const [activeModal, setActiveModal] = useState(null); // { type, app, invoice, agreement, audit, proposal }
   const [signatures, setSignatures] = useState([]);
 
   const fetchClientActions = useCallback(async () => {
     try {
       const [
         appRes,
+        propRes,
         invRes,
         agRes,
         audRes,
@@ -40,6 +41,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
         siteRes
       ] = await Promise.all([
         api.get('/api/applications').catch(() => ({ data: [] })),
+        api.get('/api/proposals').catch(() => ({ data: [] })),
         api.get('/api/invoices').catch(() => ({ data: [] })),
         api.get('/api/agreements').catch(() => ({ data: [] })),
         api.get('/api/audits').catch(() => ({ data: [] })),
@@ -52,6 +54,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
       ]);
 
       const allApps = Array.isArray(appRes) ? appRes : (appRes?.data?.data || appRes?.data || []);
+      const allProps = Array.isArray(propRes) ? propRes : (propRes?.data?.data || propRes?.data || []);
       const allInvoices = Array.isArray(invRes) ? invRes : (invRes?.data?.data || invRes?.data || []);
       const allAgreements = Array.isArray(agRes) ? agRes : (agRes?.data?.data || agRes?.data || []);
       const allAudits = Array.isArray(audRes) ? audRes : (audRes?.data?.data || audRes?.data || []);
@@ -68,6 +71,10 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
       const now = Date.now();
       const oneYearInMs = 365 * 24 * 60 * 60 * 1000;
       const threeMonthsInMs = 90 * 24 * 60 * 60 * 1000;
+
+      // Track processed IDs to prevent duplicates
+      const processedProposalAppIds = new Set();
+      const processedInvoiceIds = new Set();
 
       // ─────────────────────────────────────────────────────────────
       // 0. SITES: Check if client has 0 sites
@@ -92,8 +99,6 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
       // ─────────────────────────────────────────────────────────────
       // 1. APPLICATIONS: Client Actionable Stages
       // ─────────────────────────────────────────────────────────────
-      const processedInvoiceAppIds = new Set();
-
       for (const app of allApps) {
         if (!app || !app.status) continue;
         const appId = String(app._id || app.id);
@@ -101,6 +106,11 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
         const facilityName = app.site_name || app.establishment_name || 'your site';
         const isRenewal = (app.application_type || '').toLowerCase() === 'renewal';
         const appNum = app.application_number || 'N/A';
+
+        const linkedProposal = allProps.find(p => {
+          const pAppId = String(p.application_id?._id || p.application_id || '');
+          return pAppId === appId;
+        });
 
         const linkedInvoice = allInvoices.find(inv => {
           const invAppId = String(inv.application_id?._id || inv.application_id || '');
@@ -119,14 +129,16 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
 
         switch (normStatus) {
           case 'proposal_sent':
+            processedProposalAppIds.add(appId);
             actionList.push({
               id: `app-prop-${appId}`,
-              category: 'applications',
+              category: 'proposals',
               app,
+              proposal: linkedProposal,
               type: 'proposal',
-              title: 'Certification Proposal Received',
+              title: `Certification Proposal Received (v${linkedProposal?.version || 1})`,
               tag: 'Proposal',
-              desc: `Review and accept or reject the certification proposal for ${facilityName}`,
+              desc: `Review and approve or reject the certification proposal for ${facilityName} (Estimated: £${Number(linkedProposal?.estimated_cost || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })})`,
               buttonText: 'Review Proposal',
               buttonBg: '#854d0e',
               icon: <FileText size={16} />
@@ -134,16 +146,16 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
             break;
 
           case 'invoice_sent':
-            if (linkedInvoice) processedInvoiceAppIds.add(String(linkedInvoice._id || linkedInvoice.id));
+            if (linkedInvoice) processedInvoiceIds.add(String(linkedInvoice._id || linkedInvoice.id));
             actionList.push({
               id: `app-inv-${appId}`,
               category: 'invoices',
               app,
               invoice: linkedInvoice,
               type: 'payment',
-              title: isRenewal ? 'Renewal Invoice Payment Required' : 'Initial Invoice Payment Required',
-              tag: 'Invoice Payment',
-              desc: `Pay certification fee (£${Number(linkedInvoice?.amount || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })}) for ${facilityName}`,
+              title: isRenewal ? 'Renewal Invoice Payment Required' : 'Initial Invoice Sent: Payment Required',
+              tag: isRenewal ? 'Renewal Invoice' : 'Initial Invoice',
+              desc: `Pay initial certification fee (£${Number(linkedInvoice?.amount || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })}) for ${facilityName}`,
               buttonText: 'Pay Invoice',
               buttonBg: '#ea580c',
               icon: <Receipt size={16} />
@@ -153,12 +165,12 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           case 'dates_proposed':
             actionList.push({
               id: `app-audit-${appId}`,
-              category: 'applications',
+              category: 'audits',
               app,
               audit: linkedAudit,
               type: 'audit',
               title: 'Select Preferred Audit Dates',
-              tag: 'Audit Schedule',
+              tag: 'Audit Dates',
               desc: `Select 2 preferred audit visit dates for ${facilityName}`,
               buttonText: 'Select Dates',
               buttonBg: '#0284c7',
@@ -170,7 +182,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           case 'nc_flagged':
             actionList.push({
               id: `app-nc-${appId}`,
-              category: 'applications',
+              category: 'audits',
               app,
               audit: linkedAudit,
               type: 'audit',
@@ -186,7 +198,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           case 'agreement_sent':
             actionList.push({
               id: `app-ag-${appId}`,
-              category: 'applications',
+              category: 'agreements',
               app,
               agreement: linkedAgreement,
               type: 'agreement',
@@ -200,7 +212,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
             break;
 
           case 'final_invoice_sent':
-            if (linkedInvoice) processedInvoiceAppIds.add(String(linkedInvoice._id || linkedInvoice.id));
+            if (linkedInvoice) processedInvoiceIds.add(String(linkedInvoice._id || linkedInvoice.id));
             actionList.push({
               id: `app-finalinv-${appId}`,
               category: 'invoices',
@@ -219,6 +231,35 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           default:
             break;
         }
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // 1B. PROPOSALS: Pending Proposals from /api/proposals
+      // ─────────────────────────────────────────────────────────────
+      const pendingProposals = allProps.filter(p => {
+        const isPendingStatus = (p.status === 'pending' || p.status === 'sent');
+        const pAppId = String(p.application_id?._id || p.application_id || '');
+        return isPendingStatus && !processedProposalAppIds.has(pAppId);
+      });
+
+      for (const prop of pendingProposals) {
+        const pAppId = String(prop.application_id?._id || prop.application_id || '');
+        const linkedApp = allApps.find(a => String(a._id || a.id) === pAppId);
+        const estName = linkedApp?.establishment_name || linkedApp?.site_name || prop.title || 'Certification Facility';
+
+        actionList.push({
+          id: `prop-pending-${prop._id || prop.id}`,
+          category: 'proposals',
+          app: linkedApp || { application_number: `PROP-v${prop.version || 1}`, establishment_name: estName },
+          proposal: prop,
+          type: 'proposal',
+          title: `Certification Proposal: ${prop.title || 'Halal Certification'} (v${prop.version || 1})`,
+          tag: 'Proposal',
+          desc: `Estimated cost: £${Number(prop.estimated_cost || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })}. Review and respond to proposal for ${estName}.`,
+          buttonText: 'Review Proposal',
+          buttonBg: '#854d0e',
+          icon: <FileText size={16} />
+        });
       }
 
       // ─────────────────────────────────────────────────────────────
@@ -277,7 +318,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           buttonText: 'Register Product',
           buttonBg: '#16a34a',
           isLink: true,
-          link: '/initial-products/new',
+          link: `/initial-products?application_id=${elApp._id || elApp.id}`,
           icon: <Package size={16} />
         });
       }
@@ -327,7 +368,6 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
       // ─────────────────────────────────────────────────────────────
       // 4. CERTIFICATES & SURVEILLANCE: Renewals & Annual Reviews
       // ─────────────────────────────────────────────────────────────
-      // A. Check for expiring / expired certificates that have NOT been renewed
       for (const cert of allCerts) {
         if (!cert || cert.is_renewed || cert.status === 'renewed') continue;
         const siteName = cert.site_id?.name || cert.site_name || 'Manufacturing Site';
@@ -337,7 +377,6 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
         const isExpired = cert.status === 'expired' || expTime < now;
         const isExpiringSoon = !isExpired && (expTime - now) <= threeMonthsInMs && cert.status === 'active';
 
-        // Check if there is an active renewal application in progress
         const hasRenewalApp = allApps.some(app => {
           const sId = typeof app.site_id === 'object' ? app.site_id?._id || app.site_id?.id : app.site_id;
           const certSiteId = typeof cert.site_id === 'object' ? cert.site_id?._id || cert.site_id?.id : cert.site_id;
@@ -383,7 +422,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
         }
       }
 
-      // B. UAE/GSO Annual Surveillance Checks
+      // GSO Surveillance Checks
       const gsoApps = allApps.filter(a => {
         if (!a) return false;
         const cat = (a.category || '').toLowerCase();
@@ -482,25 +521,30 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
       });
 
       // ─────────────────────────────────────────────────────────────
-      // 5. STANDALONE UNPAID INVOICES (Not already covered in Apps)
+      // 5. STANDALONE UNPAID INVOICES
       // ─────────────────────────────────────────────────────────────
       const standaloneUnpaidInvoices = allInvoices.filter(inv => {
-        const isUnpaid = ['pending', 'issued', 'unpaid'].includes((inv.status || '').toLowerCase());
-        const isNotClientPaid = inv.status !== 'client_paid';
-        const notHandled = !processedInvoiceAppIds.has(String(inv._id || inv.id));
+        const isUnpaid = ['pending', 'issued', 'unpaid', 'invoice_sent'].includes((inv.status || '').toLowerCase());
+        const isNotClientPaid = inv.status !== 'client_paid' && inv.status !== 'paid' && inv.status !== 'settled';
+        const notHandled = !processedInvoiceIds.has(String(inv._id || inv.id));
         return isUnpaid && isNotClientPaid && notHandled;
       });
 
       for (const inv of standaloneUnpaidInvoices) {
+        const isInit = inv.invoice_type === 'initial' || (inv.title && inv.title.toLowerCase().includes('initial'));
+        const isFin = inv.invoice_type === 'final' || (inv.title && inv.title.toLowerCase().includes('final'));
+        const invTitle = isInit ? 'Initial Invoice Sent: Payment Required' : (isFin ? 'Final Certification Invoice Due' : 'Outstanding Invoice Payment');
+        const invTag = isInit ? 'Initial Invoice' : (isFin ? 'Final Invoice' : 'Payment Due');
+
         actionList.push({
           id: `inv-standalone-${inv._id || inv.id}`,
           category: 'invoices',
-          app: { application_number: inv.invoice_number ? `INV-${inv.invoice_number}` : 'INVOICE', establishment_name: 'HFA Invoice' },
+          app: { application_number: inv.invoice_number ? `INV-${inv.invoice_number}` : 'INVOICE', establishment_name: inv.title || 'Certification Invoice' },
           invoice: inv,
           type: 'payment',
-          title: `Outstanding Invoice Payment (£${Number(inv.amount || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })})`,
-          tag: 'Payment Due',
-          desc: `Invoice #${inv.invoice_number || 'N/A'} for £${Number(inv.amount || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })} is awaiting settlement.`,
+          title: `${invTitle} (£${Number(inv.amount || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })})`,
+          tag: invTag,
+          desc: `Invoice #${inv.invoice_number || 'N/A'} for £${Number(inv.amount || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })} is awaiting payment.`,
           buttonText: 'Pay Invoice',
           buttonBg: '#ea580c',
           icon: <Receipt size={16} />
@@ -544,7 +588,10 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
   // Filtered action items
   const filteredItems = useMemo(() => {
     return items.filter(item => {
-      const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
+      let matchesCategory = activeCategory === 'all' || item.category === activeCategory;
+      if (activeCategory === 'audits' && (item.category === 'applications' || item.category === 'audits')) {
+        matchesCategory = true;
+      }
       if (!matchesCategory) return false;
 
       if (!searchQuery.trim()) return true;
@@ -560,10 +607,12 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
   const categoryCounts = useMemo(() => {
     return {
       all: items.length,
-      applications: items.filter(i => i.category === 'applications').length,
+      proposals: items.filter(i => i.category === 'proposals').length,
       invoices: items.filter(i => i.category === 'invoices').length,
       initial_products: items.filter(i => i.category === 'initial_products').length,
       addons: items.filter(i => i.category === 'addons').length,
+      audits: items.filter(i => i.category === 'audits' || i.category === 'applications').length,
+      agreements: items.filter(i => i.category === 'agreements').length,
       certificates: items.filter(i => i.category === 'certificates').length,
     };
   }, [items]);
@@ -638,7 +687,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           <div
             className="modal"
             style={{
-              maxWidth: 820, width: '94%', borderRadius: 16,
+              maxWidth: 860, width: '95%', borderRadius: 16,
               padding: 0, overflow: 'hidden', maxHeight: '88vh',
               display: 'flex', flexDirection: 'column'
             }}
@@ -658,7 +707,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
                     </span>
                   </div>
                   <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
-                    Complete pending proposals, payments, product forms, agreements, and renewals
+                    Review and complete pending proposals, invoices, products, agreements, and audits
                   </div>
                 </div>
               </div>
@@ -690,12 +739,14 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {[
                   { id: 'all', label: 'All Tasks', count: categoryCounts.all },
-                  { id: 'applications', label: 'Applications', count: categoryCounts.applications },
-                  { id: 'invoices', label: 'Payments / Invoices', count: categoryCounts.invoices },
+                  { id: 'proposals', label: 'Proposals', count: categoryCounts.proposals },
+                  { id: 'invoices', label: 'Invoices & Payments', count: categoryCounts.invoices },
                   { id: 'initial_products', label: 'Initial Products', count: categoryCounts.initial_products },
                   { id: 'addons', label: 'Add-Ons', count: categoryCounts.addons },
-                  { id: 'certificates', label: 'Certificates & Audits', count: categoryCounts.certificates },
-                ].map(cat => (
+                  { id: 'audits', label: 'Audits & NCs', count: categoryCounts.audits },
+                  { id: 'agreements', label: 'Agreements', count: categoryCounts.agreements },
+                  { id: 'certificates', label: 'Certificates & Renewals', count: categoryCounts.certificates },
+                ].filter(cat => cat.id === 'all' || cat.count > 0 || ['proposals', 'invoices', 'initial_products', 'addons'].includes(cat.id)).map(cat => (
                   <button
                     key={cat.id}
                     type="button"
@@ -846,7 +897,8 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
                                 app: item.app,
                                 invoice: item.invoice,
                                 agreement: item.agreement,
-                                audit: item.audit
+                                audit: item.audit,
+                                proposal: item.proposal
                               });
                             }}
                           >
@@ -892,6 +944,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           isOpen={true}
           onClose={() => setActiveModal(null)}
           app={activeModal.app}
+          proposal={activeModal.proposal}
           onSuccess={handleRefresh}
         />
       )}
