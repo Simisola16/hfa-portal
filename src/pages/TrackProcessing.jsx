@@ -98,16 +98,10 @@ export default function TrackProcessing() {
       }
 
       if (!matchingInitProd && loadedApp) {
-        if (Array.isArray(loadedApp.products) && loadedApp.products.length > 0) {
+        if (Array.isArray(loadedApp.products) && loadedApp.products.length > 0 && loadedApp.products[0]?.name) {
           matchingInitProd = {
             application_id: loadedApp._id,
             product: loadedApp.products[0],
-            status: 'submitted'
-          };
-        } else if (loadedApp.scope) {
-          matchingInitProd = {
-            application_id: loadedApp._id,
-            product: { name: loadedApp.scope, category: loadedApp.category },
             status: 'submitted'
           };
         }
