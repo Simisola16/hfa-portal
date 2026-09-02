@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '../lib/api';
 import {
   Package, ShieldCheck, CheckCircle, AlertTriangle, ArrowRight,
@@ -8,14 +8,18 @@ import {
   FilePlus, ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import ClientAddInitialProductModal from '../components/ClientAddInitialProductModal';
 
 export default function InitialProductPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [initialProducts, setInitialProducts] = useState([]);
   const [apps, setApps] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedAppForModal, setSelectedAppForModal] = useState(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -44,6 +48,39 @@ export default function InitialProductPage() {
   const inProgressCount = initialProducts.filter(p => p.status !== 'initial_product_approved').length;
   const approvedCount = initialProducts.filter(p => p.status === 'initial_product_approved').length;
 
+  const eligibleApps = apps.filter(app => {
+    const isRenewal = (app.application_type || '').toLowerCase() === 'renewal';
+    if (isRenewal) return false;
+    const isPaymentPassed = [
+      'payment_received', 'initial_payment_received',
+      'dates_proposed', 'dates_rejected', 'dates_accepted', 'date_finalized',
+      'audit_assigned', 'audit_scheduled', 'auditor_assigned', 'audit_in_progress',
+      'audit_successful', 'audit_completed', 'audit_report_submitted',
+      'nc_raised', 'nc_closed', 'final_invoice_sent', 'final_invoice_paid',
+      'logsheet_created', 'logsheet_signed', 'application_successful',
+      'agreement_sent', 'agreement_signed', 'agreement_finalised',
+      'ready_for_certificate', 'certificate_issued', 'approved'
+    ].includes((app.status || '').toLowerCase().trim());
+    const appId = String(app._id || app.id);
+    const hasIp = initialProducts.some(ip => {
+      const ipAppId = String(ip.application_id?._id || ip.application_id?.id || ip.application_id || '');
+      return ipAppId === appId;
+    });
+    return isPaymentPassed && !hasIp;
+  });
+
+  // Auto-open modal if application_id is provided in URL query
+  useEffect(() => {
+    const targetAppId = searchParams.get('application_id');
+    if (targetAppId && apps.length > 0) {
+      const targetApp = apps.find(a => String(a._id || a.id) === targetAppId);
+      if (targetApp) {
+        setSelectedAppForModal(targetApp);
+        setShowAddModal(true);
+      }
+    }
+  }, [searchParams, apps]);
+
   return (
     <div>
       {/* ── Header ── */}
@@ -59,6 +96,24 @@ export default function InitialProductPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 10 }}>
+            {eligibleApps.length > 0 && (
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setSelectedAppForModal(eligibleApps[0]);
+                  setShowAddModal(true);
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                  borderColor: '#059669',
+                  gap: 8,
+                  fontWeight: 800,
+                  boxShadow: '0 4px 12px rgba(5,150,105,0.25)'
+                }}
+              >
+                <Plus size={16} /> Add Initial Product ({eligibleApps.length})
+              </button>
+            )}
             <button
               className="btn btn-outline"
               onClick={() => navigate('/initial-products/in-progress')}
@@ -81,6 +136,62 @@ export default function InitialProductPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Eligible Application Action Banner ── */}
+      {eligibleApps.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)',
+          border: '1.5px solid #86efac',
+          borderRadius: 16,
+          padding: '18px 24px',
+          marginBottom: 24,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
+          boxShadow: '0 3px 12px rgba(16, 185, 129, 0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12,
+              background: '#10b981', color: 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)'
+            }}>
+              <Package size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#065f46', display: 'flex', alignItems: 'center', gap: 8 }}>
+                Action Required: Add Initial Product
+                <span style={{ background: '#d1fae5', color: '#047857', padding: '1px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 800 }}>
+                  {eligibleApps.length} {eligibleApps.length === 1 ? 'Application' : 'Applications'} Ready
+                </span>
+              </div>
+              <div style={{ fontSize: 13, color: '#047857', marginTop: 2 }}>
+                Payment confirmed for <strong>{eligibleApps.map(a => a.establishment_name || a.site_name).join(', ')}</strong>. Register your Initial Product to begin technical evaluation.
+              </div>
+            </div>
+          </div>
+
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setSelectedAppForModal(eligibleApps[0]);
+              setShowAddModal(true);
+            }}
+            style={{
+              background: '#059669',
+              borderColor: '#059669',
+              fontWeight: 800,
+              gap: 6,
+              padding: '9px 18px'
+            }}
+          >
+            <Plus size={15} /> Add Initial Product Now &rarr;
+          </button>
+        </div>
+      )}
 
       {/* ── Guidance Banner ── */}
       <div style={{
@@ -310,6 +421,18 @@ export default function InitialProductPage() {
           </button>
         </div>
       </div>
+
+      <ClientAddInitialProductModal
+        isOpen={showAddModal}
+        onClose={() => {
+          setShowAddModal(false);
+          setSelectedAppForModal(null);
+        }}
+        application={selectedAppForModal}
+        onSuccess={() => {
+          fetchData();
+        }}
+      />
     </div>
   );
 }

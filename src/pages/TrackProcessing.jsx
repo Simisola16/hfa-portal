@@ -23,6 +23,7 @@ import PaymentModal from '../components/PaymentModal';
 import ClientAuditModal from '../components/ClientAuditModal';
 import ClientAgreementModal from '../components/ClientAgreementModal';
 import ClientProposalModal from '../components/ClientProposalModal';
+import ClientAddInitialProductModal from '../components/ClientAddInitialProductModal';
 
 const getPdfUrl = (url) => {
   if (!url) return '#';
@@ -59,6 +60,7 @@ export default function TrackProcessing() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [showAgreementModal, setShowAgreementModal] = useState(false);
+  const [showAddInitialProductModal, setShowAddInitialProductModal] = useState(false);
 
   // Inline forms/submission states
   const [rejectReason, setRejectReason] = useState('');
@@ -508,7 +510,7 @@ export default function TrackProcessing() {
             {!initialProduct ? (
               <button
                 className="btn btn-primary"
-                onClick={() => navigate('/initial-products')}
+                onClick={() => setShowAddInitialProductModal(true)}
                 style={{
                   background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                   borderColor: '#059669',
@@ -891,7 +893,7 @@ export default function TrackProcessing() {
                     <button
                       type="button"
                       className="btn btn-primary btn-sm"
-                      onClick={() => navigate('/initial-products')}
+                      onClick={() => setShowAddInitialProductModal(true)}
                       style={{
                         background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                         borderColor: '#059669',
@@ -955,7 +957,7 @@ export default function TrackProcessing() {
                     <button
                       type="button"
                       className="btn btn-primary"
-                      onClick={() => navigate('/initial-products')}
+                      onClick={() => setShowAddInitialProductModal(true)}
                       style={{
                         background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                         borderColor: '#059669',
@@ -1274,6 +1276,16 @@ export default function TrackProcessing() {
         agreement={agreement}
         signatures={signatures}
         onSuccess={() => fetchApp(true)}
+      />
+
+      <ClientAddInitialProductModal
+        isOpen={showAddInitialProductModal}
+        onClose={() => setShowAddInitialProductModal(false)}
+        application={app}
+        onSuccess={(createdProduct) => {
+          setInitialProduct(createdProduct);
+          fetchApp(true);
+        }}
       />
     </div>
   );

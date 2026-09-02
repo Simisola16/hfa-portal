@@ -11,6 +11,7 @@ import ClientProposalModal from './ClientProposalModal';
 import PaymentModal from './PaymentModal';
 import ClientAuditModal from './ClientAuditModal';
 import ClientAgreementModal from './ClientAgreementModal';
+import ClientAddInitialProductModal from './ClientAddInitialProductModal';
 
 export default function ActionsNeededWidget({ onActionCompleted }) {
   const navigate = useNavigate();
@@ -265,6 +266,56 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
       // ─────────────────────────────────────────────────────────────
       // 2. INITIAL PRODUCTS: Actions & Eligible Invitations
       // ─────────────────────────────────────────────────────────────
+      // 2A. Eligible paid applications awaiting Initial Product submission
+      for (const app of allApps) {
+        if (!app) continue;
+        const appId = String(app._id || app.id);
+        const normStatus = (app.status || '').toLowerCase().trim();
+        const isRenewal = (app.application_type || '').toLowerCase() === 'renewal';
+        if (isRenewal) continue;
+
+        const linkedInvoice = allInvoices.find(inv => {
+          const invAppId = String(inv.application_id?._id || inv.application_id || '');
+          return invAppId === appId;
+        });
+
+        const isInvoicePaid = Boolean(linkedInvoice && ['paid', 'client_paid', 'settled'].includes(linkedInvoice.status));
+        const isPaymentPassed = [
+          'payment_received', 'initial_payment_received',
+          'dates_proposed', 'dates_rejected', 'dates_accepted', 'date_finalized',
+          'audit_assigned', 'audit_scheduled', 'auditor_assigned', 'audit_in_progress',
+          'audit_successful', 'audit_completed', 'audit_report_submitted',
+          'nc_raised', 'nc_closed', 'final_invoice_sent', 'final_invoice_paid',
+          'logsheet_created', 'logsheet_signed', 'application_successful',
+          'agreement_sent', 'agreement_signed', 'agreement_finalised',
+          'ready_for_certificate', 'certificate_issued', 'approved'
+        ].includes(normStatus) || isInvoicePaid;
+
+        const hasInitialProduct = allInitProds.some(ip => {
+          const ipAppId = String(ip.application_id?._id || ip.application_id?.id || ip.application_id || '');
+          return ipAppId === appId;
+        });
+
+        if (isPaymentPassed && !hasInitialProduct) {
+          const facilityName = app.site_name || app.establishment_name || 'your site';
+          const appNum = app.application_number || `APP-${appId.slice(-6).toUpperCase()}`;
+
+          actionList.push({
+            id: `initprod-add-${appId}`,
+            category: 'initial_products',
+            app,
+            type: 'add_initial_product',
+            title: 'Add Initial Product',
+            tag: 'Initial Product',
+            desc: `Payment confirmed for ${facilityName}. Submit your 1 primary Initial Product specifications to begin Halal technical assessment.`,
+            buttonText: 'Add Initial Product',
+            buttonBg: '#059669',
+            icon: <Package size={16} />
+          });
+        }
+      }
+
+      // 2B. In-progress initial products requiring specs or clarification
       for (const ip of allInitProds) {
         if (!ip) continue;
         const ipId = ip._id || ip.id;
@@ -958,6 +1009,21 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           agreement={activeModal.agreement}
           signatures={signatures}
           onSuccess={handleRefresh}
+        />
+      )}
+
+      {activeModal?.type === 'add_initial_product' && (
+        <ClientAddInitialProductModal
+          isOpen={true}
+          onClose={() => setActiveModal(null)}
+          application={activeModal.app}
+          onSuccess={(createdProduct) => {
+            setActiveModal(null);
+            handleRefresh();
+            if (createdProduct?._id || createdProduct?.id) {
+              navigate(`/initial-products/${createdProduct._id || createdProduct.id}/track`);
+            }
+          }}
         />
       )}
     </div>
