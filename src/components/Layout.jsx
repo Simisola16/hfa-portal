@@ -147,6 +147,8 @@ export default function Layout() {
       return null;
     };
     const targetAppId = extractAppId(notif);
+    const hasViewAndRespond = Boolean(modalType);
+    const toastDuration = hasViewAndRespond ? 10000 : 5000;
 
     toast.custom((t) => (
       <div
@@ -203,7 +205,7 @@ export default function Layout() {
           </div>
         )}
       </div>
-    ), { id: notif._id || notif.id, duration: 60000 });
+    ), { id: notif._id || notif.id, duration: toastDuration });
   };
 
   const fetchNotifs = async () => {
