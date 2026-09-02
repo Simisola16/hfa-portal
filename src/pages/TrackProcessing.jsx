@@ -76,7 +76,7 @@ export default function TrackProcessing() {
         api.get(`/api/audits/application/${appId}`).catch(() => ({ data: null })),
         api.get(`/api/agreements/application/${appId}`).catch(() => ({ data: null })),
         api.get('/api/signatures').catch(() => ({ data: [] })),
-        api.get(`/api/initial-products/by-application/${appId}`).catch(() => api.get('/api/initial-products')).catch(() => ({ data: { data: [] } }))
+        api.get(`/api/initial-products/by-application/${appId}`).catch(() => ({ data: { data: null } }))
       ]);
 
       setApp(appRes.data);
@@ -88,24 +88,20 @@ export default function TrackProcessing() {
       setAgreement(agreementRes.data?.data || agreementRes.data || null);
       setSignatures(sigRes.data || sigRes.data?.data || []);
 
-      const loadedApp = appRes.data?.data || appRes.data || null;
+      const rawIp = initProdRes?.data?.data !== undefined ? initProdRes.data.data : (initProdRes?.data || null);
       let matchingInitProd = null;
-      if (initProdRes.data && !Array.isArray(initProdRes.data) && (initProdRes.data._id || initProdRes.data.id)) {
-        matchingInitProd = initProdRes.data;
-      } else {
-        const initProds = initProdRes.data?.data || (Array.isArray(initProdRes.data) ? initProdRes.data : []) || [];
-        matchingInitProd = initProds.find(p => String(p.application_id?._id || p.application_id?.id || p.application_id) === String(appId));
+      if (rawIp && !Array.isArray(rawIp) && (rawIp._id || rawIp.id)) {
+        const linkedAppId = rawIp.application_id?._id || rawIp.application_id?.id || rawIp.application_id;
+        if (String(linkedAppId) === String(appId)) {
+          matchingInitProd = rawIp;
+        }
+      } else if (Array.isArray(rawIp)) {
+        matchingInitProd = rawIp.find(p => {
+          const linkedAppId = p.application_id?._id || p.application_id?.id || p.application_id;
+          return String(linkedAppId) === String(appId);
+        }) || null;
       }
 
-      if (!matchingInitProd && loadedApp) {
-        if (Array.isArray(loadedApp.products) && loadedApp.products.length > 0 && loadedApp.products[0]?.name) {
-          matchingInitProd = {
-            application_id: loadedApp._id,
-            product: loadedApp.products[0],
-            status: 'submitted'
-          };
-        }
-      }
       setInitialProduct(matchingInitProd || null);
 
       setLastUpdated(new Date());

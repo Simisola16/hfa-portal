@@ -169,13 +169,19 @@ export default function ClientInitialProductTrack() {
 
           {/* Action prompt if form is enabled */}
           {app.status === 'product_approval_form_enabled' && (
-            <button
-              className="btn btn-primary"
-              onClick={() => navigate(`/initial-products/${app._id}/approval-form`)}
-              style={{ background: 'linear-gradient(135deg, #7e22ce 0%, #9333ea 100%)', borderColor: '#7e22ce', fontWeight: 800, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 8 }}
-            >
-              <FileText size={16} /> Complete Product Approval Form &rarr;
-            </button>
+            !app.product_approval_form?.submitted_at ? (
+              <button
+                className="btn btn-primary"
+                onClick={() => navigate(`/initial-products/${app._id}/approval-form`)}
+                style={{ background: 'linear-gradient(135deg, #7e22ce 0%, #9333ea 100%)', borderColor: '#7e22ce', fontWeight: 800, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <FileText size={16} /> Complete Product Approval Form &rarr;
+              </button>
+            ) : (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', padding: '9px 16px', borderRadius: 12, fontWeight: 700, fontSize: 13 }}>
+                <CheckCircle size={16} color="#16a34a" /> Form Submitted &bull; Awaiting HFA Confirmation
+              </div>
+            )
           )}
         </div>
       </div>

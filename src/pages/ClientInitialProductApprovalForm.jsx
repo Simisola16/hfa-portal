@@ -115,7 +115,7 @@ export default function ClientInitialProductApprovalForm() {
 
       // 2. Submit response to change status to all_forms_received
       await api.put(`/api/initial-products/${id}/submit-response`);
-      toast.success('🎉 Product Approval Form submitted for committee evaluation!');
+      toast.success('🎉 Product Approval Form submitted! Awaiting HFA receipt confirmation.');
       navigate(`/initial-products/${id}/track`);
     } catch (err) {
       toast.error(err.response?.data?.error || err.message || 'Failed to submit form.');
@@ -167,7 +167,7 @@ export default function ClientInitialProductApprovalForm() {
     );
   }
 
-  const isFormSubmitted = ['all_forms_received', 'logsheet_created', 'waiting_sharia_signature', 'initial_product_approved'].includes(app.status);
+  const isFormSubmitted = ['all_forms_received', 'logsheet_created', 'waiting_sharia_signature', 'initial_product_approved'].includes(app.status) || Boolean(app.product_approval_form?.submitted_at);
   const isApproved = app.status === 'initial_product_approved';
   const moreInfo = app.product_approval_form?.more_info_requested;
 
