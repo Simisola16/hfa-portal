@@ -1014,11 +1014,14 @@ export default function TrackProcessing() {
             onNcResolve={handleNcResolve}
           />
 
-          {/* Post-Audit Invoice Card (Renewal / Surveillance) */}
-          {isFastTrack && invoice && (
+          {/* Post-Application Successful Invoice Card (Renewal / Surveillance) */}
+          {isFastTrack && (invoice || ['logsheet_signed', 'application_successful', 'ready_for_certificate', 'invoice_sent', 'payment_received', 'certificate_issued'].includes(status)) && (
             <InvoiceCard
+              app={app}
               invoice={invoice}
               status={status}
+              isRenewal={isRenewal}
+              isSurveillance={isSurveillance}
               onPayClick={() => {
                 setSelectedPaymentInvoice(invoice);
                 setShowPaymentModal(true);
