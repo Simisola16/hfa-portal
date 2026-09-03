@@ -170,6 +170,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
               app,
               audit: linkedAudit,
               type: 'audit',
+              mode: 'select_dates',
               title: 'Select Preferred Audit Dates',
               tag: 'Audit Dates',
               desc: `Select 2 preferred audit visit dates for ${facilityName}`,
@@ -181,12 +182,15 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
 
           case 'on_hold':
           case 'nc_flagged':
+          case 'nc_raised':
+          case 'nc_report_flagged':
             actionList.push({
               id: `app-nc-${appId}`,
               category: 'audits',
               app,
               audit: linkedAudit,
-              type: 'audit',
+              type: 'nc_upload',
+              mode: 'nc_upload',
               title: 'Action Needed: Non-Conformity (NC) Flagged',
               tag: 'NC Action',
               desc: `Submit your corrective action plan for audit findings at ${facilityName}`,
@@ -926,6 +930,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
                             onClick={() => {
                               setActiveModal({
                                 type: item.type,
+                                mode: item.mode,
                                 app: item.app,
                                 invoice: item.invoice,
                                 agreement: item.agreement,
@@ -991,12 +996,13 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
         />
       )}
 
-      {activeModal?.type === 'audit' && (
+      {(activeModal?.type === 'audit' || activeModal?.type === 'nc_upload') && (
         <ClientAuditModal
           isOpen={true}
           onClose={() => setActiveModal(null)}
           app={activeModal.app}
           audit={activeModal.audit}
+          mode={activeModal.type === 'nc_upload' || activeModal.mode === 'nc_upload' ? 'nc_upload' : 'select_dates'}
           onSuccess={handleRefresh}
         />
       )}

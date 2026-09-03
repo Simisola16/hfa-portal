@@ -86,9 +86,13 @@ export default function ClientAuditModal({
 
   if (!isOpen) return null;
 
-  const activeNcReport = audit?.nc_reports?.find(r => r._id === propReportId || r.id === propReportId) ||
-    audit?.nc_reports?.find(r => r.status === 'flagged') ||
-    audit?.nc_reports?.[0];
+  const combinedNcReports = [
+    ...(audit?.nc_reports || []),
+    ...(propApp?.nc_reports || [])
+  ];
+  const activeNcReport = combinedNcReports.find(r => r._id === propReportId || r.id === propReportId) ||
+    combinedNcReports.find(r => r.status === 'flagged' || r.status === 'active' || r.status === 'open') ||
+    combinedNcReports[0];
 
   const handleSubmitDates = async () => {
     if (!audit) return;
@@ -115,18 +119,18 @@ export default function ClientAuditModal({
   };
 
   const handleSubmitNc = async () => {
-    if (!audit) return;
     if (!responseText.trim() && !ncFile) {
       toast.error('Please provide a corrective action explanation or upload a supporting document.');
       return;
     }
     setSubmitting(true);
     try {
-      const auditId = getCleanId(audit._id || audit.id || audit);
+      const auditId = getCleanId(audit?._id || audit?.id || audit);
       const repId = activeNcReport ? getCleanId(activeNcReport._id || activeNcReport.id) : '';
 
       const formData = new FormData();
-      formData.append('audit_id', auditId);
+      if (auditId) formData.append('audit_id', auditId);
+      if (targetAppId) formData.append('application_id', targetAppId);
       if (repId) formData.append('report_id', repId);
       if (responseText.trim()) formData.append('response_text', responseText.trim());
       if (ncFile) formData.append('correction_document', ncFile);
@@ -136,13 +140,13 @@ export default function ClientAuditModal({
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      toast.error(err.message || 'Failed to submit NC correction.');
+      toast.error(err.response?.data?.error || err.message || 'Failed to submit NC correction.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const isNcMode = mode === 'nc_upload';
+  const isNcMode = mode === 'nc_upload' || propMode === 'nc_upload';
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1200 }} onClick={onClose}>
