@@ -163,10 +163,24 @@ export default function ClientInitialProductsInProgress() {
             const isApproved = item.status === 'initial_product_approved';
             const isActionNeeded = item.status === 'product_approval_form_enabled';
             const siteName = item.site_id?.name || item.application_id?.site_name || item.application_id?.establishment_name || 'Main Facility';
-            const ftNames = [
-              ...(item.assigned_food_techs || []).map(ft => ft.full_name || ft.email),
-              item.assigned_ft_custom?.name || item.assigned_ft_details
-            ].filter(Boolean);
+            const ftItems = [
+              ...(item.assigned_food_techs || []).map(ft => ({
+                name: ft.full_name || ft.name || (typeof ft === 'string' ? ft : 'Food Technologist'),
+                email: ft.email || null
+              })),
+              ...(item.assigned_food_tech ? [{
+                name: item.assigned_food_tech.full_name || item.assigned_food_tech.name || 'Food Technologist',
+                email: item.assigned_food_tech.email || null
+              }] : []),
+              ...(item.assigned_ft_custom?.name ? [{
+                name: item.assigned_ft_custom.name,
+                email: item.assigned_ft_custom.email || null
+              }] : []),
+              ...(item.assigned_ft_details && !item.assigned_ft_custom?.name ? [{
+                name: item.assigned_ft_details,
+                email: null
+              }] : [])
+            ].filter((ft, idx, arr) => arr.findIndex(o => o.name === ft.name && o.email === ft.email) === idx);
 
             return (
               <div
@@ -224,10 +238,10 @@ export default function ClientInitialProductsInProgress() {
                         {item.application_id?.application_number && (
                           <span>App: <strong>#{item.application_id.application_number}</strong></span>
                         )}
-                        {ftNames.length > 0 && (
+                        {ftItems.length > 0 && (
                           <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#0284c7' }}>
                             <User size={13} />
-                            FT: <strong>{ftNames.join(', ')}</strong>
+                            FT: <strong>{ftItems.map(f => f.email ? `${f.name} (${f.email})` : f.name).join(', ')}</strong>
                           </span>
                         )}
                       </div>

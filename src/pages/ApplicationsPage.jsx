@@ -143,6 +143,7 @@ export default function ApplicationsPage({ openNew }) {
   const [newProduct, setNewProduct] = useState({ name: '', brand: '', category: '' });
   const [hasActiveCert, setHasActiveCert] = useState(false);
   const [certs, setCerts] = useState([]);
+  const [clientProducts, setClientProducts] = useState([]);
   const [renewalFiles, setRenewalFiles] = useState([]);
 
   // Surveillance Modal State (UAE/GSO 3-Year Cycle)

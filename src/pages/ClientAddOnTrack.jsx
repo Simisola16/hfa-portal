@@ -158,8 +158,16 @@ export default function ClientAddOnTrack() {
 
   const ftNames = (() => {
     const arr = app.assigned_food_techs || [];
-    if (arr.length > 0) return arr.map(ft => ft.full_name || ft).join(', ');
-    if (app.assigned_food_tech?.full_name) return app.assigned_food_tech.full_name;
+    if (arr.length > 0) {
+      return arr.map(ft => {
+        const name = ft.full_name || ft.name || (typeof ft === 'string' ? ft : 'Food Technologist');
+        return ft.email ? `${name} (${ft.email})` : name;
+      }).join(', ');
+    }
+    if (app.assigned_food_tech?.full_name) {
+      const name = app.assigned_food_tech.full_name;
+      return app.assigned_food_tech.email ? `${name} (${app.assigned_food_tech.email})` : name;
+    }
     return null;
   })();
 

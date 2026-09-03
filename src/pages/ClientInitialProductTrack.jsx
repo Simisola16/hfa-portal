@@ -102,10 +102,28 @@ export default function ClientInitialProductTrack() {
 
   const isApproved = app.status === 'initial_product_approved';
   const siteName = app.site_id?.name || app.application_id?.site_name || app.application_id?.establishment_name || 'Main Facility';
-  const ftNames = [
-    ...(app.assigned_food_techs || []).map(ft => ft.full_name || ft.email),
-    app.assigned_ft_custom?.name || app.assigned_ft_details
-  ].filter(Boolean);
+  const ftList = [
+    ...(app.assigned_food_techs || []).map(ft => ({
+      name: ft.full_name || ft.name || (typeof ft === 'string' ? ft : 'Food Technologist'),
+      email: ft.email || null,
+      phone: ft.phone || null
+    })),
+    ...(app.assigned_food_tech ? [{
+      name: app.assigned_food_tech.full_name || app.assigned_food_tech.name || 'Food Technologist',
+      email: app.assigned_food_tech.email || null,
+      phone: app.assigned_food_tech.phone || null
+    }] : []),
+    ...(app.assigned_ft_custom?.name ? [{
+      name: app.assigned_ft_custom.name,
+      email: app.assigned_ft_custom.email || null,
+      phone: null
+    }] : []),
+    ...(app.assigned_ft_details && !app.assigned_ft_custom?.name ? [{
+      name: app.assigned_ft_details,
+      email: null,
+      phone: null
+    }] : [])
+  ].filter((ft, idx, arr) => arr.findIndex(o => o.name === ft.name && o.email === ft.email) === idx);
 
   const formResp = app.product_approval_form?.product_response;
   const isFormEnabled = ['product_approval_form_enabled', 'all_forms_received', 'logsheet_created', 'waiting_sharia_signature', 'initial_product_approved'].includes(app.status);
@@ -261,13 +279,31 @@ export default function ClientInitialProductTrack() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ padding: '12px 16px', background: '#f0f9ff', borderRadius: 12, border: '1px solid #bae6fd' }}>
-                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#0369a1' }}>
+              <div style={{ padding: '14px 16px', background: '#f0f9ff', borderRadius: 12, border: '1px solid #bae6fd' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#0369a1', marginBottom: 6 }}>
                   Assigned Food Technologists
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#0c4a6e', marginTop: 4 }}>
-                  {ftNames.length > 0 ? ftNames.join(', ') : 'Direct FT assignment in progress...'}
-                </div>
+                {ftList.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {ftList.map((ft, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 800, color: '#0c4a6e' }}>
+                          {ft.name}
+                        </div>
+                        {ft.email && (
+                          <a
+                            href={`mailto:${ft.email}`}
+                            style={{ fontSize: 12, fontWeight: 700, color: '#0284c7', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, background: '#e0f2fe', padding: '3px 8px', borderRadius: 6 }}
+                          >
+                            <span style={{ textDecoration: 'underline' }}>{ft.email}</span>
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: '#64748b' }}>Direct FT assignment in progress...</div>
+                )}
               </div>
 
               {/* Product Approval Form Status */}
