@@ -777,7 +777,7 @@ export default function TrackProcessing() {
                 : 'Your application was not approved. Please contact us for more information.'}
             </div>
             <div style={{ marginTop: 12 }}>
-              <Link to="/applications/new" className="btn btn-primary" style={{ fontSize: 12 }}>
+              <Link to="/applications?type=new" className="btn btn-primary" style={{ fontSize: 12 }}>
                 Submit New Application
               </Link>
             </div>

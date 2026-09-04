@@ -53,7 +53,7 @@ export default function App() {
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/applications" element={<ApplicationsPage />} />
-            <Route path="/applications/new" element={<ApplicationsPage openNew />} />
+            <Route path="/applications/new" element={<Navigate to="/applications?type=new" replace />} />
             <Route path="/initial-products" element={<InitialProductPage />} />
             <Route path="/initial-products/new" element={<InitialProductPage />} />
             <Route path="/initial-products/in-progress" element={<ClientInitialProductsInProgress />} />

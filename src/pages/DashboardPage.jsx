@@ -159,7 +159,7 @@ export default function DashboardPage() {
             {profile?.company_name} — Here's your certification overview
           </p>
         </div>
-        <Link to="/applications/new" className="btn" style={{ background: 'white', color: 'var(--primary)', fontWeight: 700, padding: '10px 20px' }}>
+        <Link to="/applications?type=new" className="btn" style={{ background: 'white', color: 'var(--primary)', fontWeight: 700, padding: '10px 20px' }}>
           <Plus size={16} /> New Application
         </Link>
       </div>
@@ -265,7 +265,7 @@ export default function DashboardPage() {
                   <div className="empty-state-icon"><FileText /></div>
                   <div className="empty-state-title">No Applications Yet</div>
                   <div className="empty-state-text">Start by submitting a new application</div>
-                  <Link to="/applications/new" className="btn btn-primary btn-sm" style={{ marginTop: 12 }}>
+                  <Link to="/applications?type=new" className="btn btn-primary btn-sm" style={{ marginTop: 12 }}>
                     <Plus size={14} /> New Application
                   </Link>
                 </div>
@@ -416,7 +416,7 @@ export default function DashboardPage() {
         <div className="card-body">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
             {[
-              { label: 'New Application', icon: <FileText size={20} />, path: '/applications/new', color: '#15803d', bg: '#dcfce7' },
+              { label: 'New Application', icon: <FileText size={20} />, path: '/applications?type=new', color: '#15803d', bg: '#dcfce7' },
               { label: 'View Certificates', icon: <Award size={20} />, path: '/certificates', color: '#7c3aed', bg: '#f3e8ff' },
               { label: 'Add Product', icon: <Package size={20} />, path: '/products/new', color: '#d97706', bg: '#fef3c7' },
               { label: 'Export Certificate', icon: <Ship size={20} />, path: '/export/new', color: '#0891b2', bg: '#e0f2fe' },

@@ -56,6 +56,8 @@ export default function ApplicationsPage({ openNew }) {
       setFilterType(typeParam);
       if (typeParam === 'renewal') {
         setForm(f => ({ ...f, application_type: 'renewal' }));
+      } else if (typeParam === 'new') {
+        setForm(f => ({ ...f, application_type: 'new' }));
       }
     } else {
       setFilterType('');
@@ -66,7 +68,7 @@ export default function ApplicationsPage({ openNew }) {
     } else {
       setFilterStatus('');
     }
-  }, [searchParams, openNew]);
+  }, [searchParams]);
 
   const pendingApp = apps.find(app => {
     const s = app.status?.toLowerCase();
@@ -553,14 +555,6 @@ export default function ApplicationsPage({ openNew }) {
 
   useEffect(() => { fetchData(); }, []);
 
-  useEffect(() => {
-    if (openNew && sites.length > 0) {
-      setShowModal(true);
-    } else if (openNew && sites.length === 0 && !loading) {
-      toast.error('You must add a business site before submitting an application.');
-      navigate('/applications', { replace: true });
-    }
-  }, [openNew, sites, loading, navigate]);
 
   const handleSiteChange = (siteId) => {
     const selected = sites.find(s => s._id === siteId);
@@ -833,8 +827,9 @@ export default function ApplicationsPage({ openNew }) {
   const handleCloseModal = () => {
     setShowModal(false);
     resetForm();
-    if (openNew || searchParams.get('action') || searchParams.get('create')) {
-      navigate('/applications', { replace: true });
+    if (searchParams.get('action') || searchParams.get('create')) {
+      const currentType = searchParams.get('type');
+      navigate(currentType ? `/applications?type=${currentType}` : '/applications', { replace: true });
     }
   };
 
@@ -878,7 +873,41 @@ export default function ApplicationsPage({ openNew }) {
           <Search size={15} className="search-icon" />
           <input placeholder="Search applications..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <select className="form-control w-auto" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+        <select
+          className="form-control w-auto"
+          value={filterType}
+          onChange={e => {
+            const val = e.target.value;
+            setFilterType(val);
+            const params = new URLSearchParams(searchParams);
+            if (val) {
+              params.set('type', val);
+            } else {
+              params.delete('type');
+            }
+            navigate(`/applications${params.toString() ? '?' + params.toString() : ''}`);
+          }}
+        >
+          <option value="">All Types</option>
+          <option value="new">New Applications</option>
+          <option value="renewal">Renewal Applications</option>
+          <option value="surveillance">Surveillance Applications</option>
+        </select>
+        <select
+          className="form-control w-auto"
+          value={filterStatus}
+          onChange={e => {
+            const val = e.target.value;
+            setFilterStatus(val);
+            const params = new URLSearchParams(searchParams);
+            if (val) {
+              params.set('status', val);
+            } else {
+              params.delete('status');
+            }
+            navigate(`/applications${params.toString() ? '?' + params.toString() : ''}`);
+          }}
+        >
           <option value="">All Statuses</option>
           {Object.keys(STATUS_BADGE).map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
         </select>
@@ -903,6 +932,10 @@ export default function ApplicationsPage({ openNew }) {
                 toast.error(`You already have a pending application in progress (${pendingApp.application_number}).`);
                 return;
               }
+              setForm(f => ({
+                ...f,
+                application_type: filterType === 'renewal' ? 'renewal' : (filterType === 'surveillance' ? 'surveillance' : 'new')
+              }));
               setShowModal(true);
             }}
           >
@@ -976,7 +1009,8 @@ export default function ApplicationsPage({ openNew }) {
         <div style={{ padding: '24px 32px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fafaf9' }}>
           <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
             <FileText size={20} style={{ color: 'var(--primary)' }} />
-            My Applications <span style={{ background: '#e2e8f0', color: '#475569', fontSize: 12, padding: '2px 10px', borderRadius: 30 }}>{filtered.length}</span>
+            {filterType === 'new' ? 'New Applications' : filterType === 'renewal' ? 'Renewal Applications' : filterType === 'surveillance' ? 'Surveillance Applications' : 'My Applications'}{' '}
+            <span style={{ background: '#e2e8f0', color: '#475569', fontSize: 12, padding: '2px 10px', borderRadius: 30 }}>{filtered.length}</span>
           </h3>
         </div>
 
@@ -986,8 +1020,34 @@ export default function ApplicationsPage({ openNew }) {
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', background: '#f8fafc', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
               <FileText size={48} color="#94a3b8" style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-              <h4 style={{ fontSize: 18, fontWeight: 700, color: '#334155', marginBottom: 8 }}>No Applications Found</h4>
-              <p style={{ fontSize: 14, color: '#64748b', maxWidth: 400, margin: '0 auto' }}>Start your certification process by creating a new application.</p>
+              <h4 style={{ fontSize: 18, fontWeight: 700, color: '#334155', marginBottom: 8 }}>
+                {filterType === 'new' ? 'No New Applications Found' : filterType === 'renewal' ? 'No Renewal Applications Found' : filterType === 'surveillance' ? 'No Surveillance Applications Found' : 'No Applications Found'}
+              </h4>
+              <p style={{ fontSize: 14, color: '#64748b', maxWidth: 400, margin: '0 auto 16px' }}>
+                {filterType === 'new'
+                  ? 'Get started by creating a new halal certification application.'
+                  : 'Start your certification process by creating a new application.'}
+              </p>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  if (sites.length === 0) {
+                    toast.error('Please add a site in "Manage Sites" first.');
+                    return;
+                  }
+                  if (pendingApp) {
+                    toast.error(`You already have a pending application in progress (${pendingApp.application_number}).`);
+                    return;
+                  }
+                  setForm(f => ({
+                    ...f,
+                    application_type: filterType === 'renewal' ? 'renewal' : (filterType === 'surveillance' ? 'surveillance' : 'new')
+                  }));
+                  setShowModal(true);
+                }}
+              >
+                <Plus size={15} /> Create Application
+              </button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

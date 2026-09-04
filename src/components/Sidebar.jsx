@@ -18,7 +18,7 @@ const NAV_SECTIONS = [
         icon: FileText, label: 'Applications', path: '/applications',
         children: [
           { label: 'All Applications', path: '/applications' },
-          { label: 'New Application', path: '/applications/new' },
+          { label: 'New Application', path: '/applications?type=new' },
           { label: 'Renewal Application', path: '/applications?type=renewal' },
           { label: 'Surveillance Application', path: '/applications?type=surveillance' },
           { label: 'In Progress', path: '/applications?status=in_progress' },
