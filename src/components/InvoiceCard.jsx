@@ -36,7 +36,7 @@ export default function InvoiceCard({ app, invoice, status, isInitial, isFinal, 
         <Lock size={20} style={{ color: '#94a3b8', margin: '0 auto 8px' }} />
         <div style={{ fontWeight: 700, fontSize: 13, color: '#64748b' }}>{cardTitle} (Locked)</div>
         <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-          {isFastTrack ? 'Available once application is successful & logsheet is completed' : isFinal ? 'Available once final agreement is signed' : 'Available once proposal is accepted'}
+          {isFastTrack ? 'Available once application is successful & committee review is completed' : isFinal ? 'Available once final agreement is signed' : 'Available once proposal is accepted'}
         </div>
       </div>
     );

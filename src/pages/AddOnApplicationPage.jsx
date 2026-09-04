@@ -284,7 +284,7 @@ export default function AddOnApplicationPage() {
           <div>
             <div style={{ fontSize: 14, fontWeight: 800, color: '#0c4a6e', marginBottom: 4 }}>Products Submitted Successfully</div>
             <div style={{ fontSize: 13, color: '#0369a1', lineHeight: 1.6 }}>
-              Your product request has been submitted and is now in the <strong>Add-on Review Queue</strong>. HFA will review and accept or reject the request, assign a Food Tech specialist, issue you a product approval form to complete, create a Halal Logsheet, and then update your certificate when approved.
+              Your product request has been submitted and is now in the <strong>Add-on Review Queue</strong>. HFA will review and accept or reject the request, assign a Food Tech specialist, issue you a product approval form to complete, conduct Committee Review, and then update your certificate when approved.
             </div>
           </div>
         </div>

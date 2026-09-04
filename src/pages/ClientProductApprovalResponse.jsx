@@ -69,8 +69,10 @@ export default function ClientProductApprovalResponse() {
       toast.success(`Form saved for product ${idx + 1}!`);
       setIsSaved(true);
       setSavedBefore(true);
+      return true;
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to save product form.');
+      return false;
     } finally {
       setSaving(false);
     }
@@ -79,6 +81,20 @@ export default function ClientProductApprovalResponse() {
   const goBack = () => navigate(`/addon-applications/${addonId}/approval-form`);
   const goPrev = () => navigate(`/addon-applications/${addonId}/approval-form/${idx - 1}`);
   const goNext = () => navigate(`/addon-applications/${addonId}/approval-form/${idx + 1}`);
+
+  const handleSaveAndNext = async () => {
+    const success = await handleSave();
+    if (success) {
+      goNext();
+    }
+  };
+
+  const handleSaveAndBack = async () => {
+    const success = await handleSave();
+    if (success) {
+      goBack();
+    }
+  };
 
   if (loading) {
     return <div className="loading-overlay"><div className="spinner" /></div>;
@@ -131,6 +147,7 @@ export default function ClientProductApprovalResponse() {
         boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
       }}>
         <button
+          type="button"
           onClick={goBack}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, padding: '6px 10px', borderRadius: 8 }}
         >
@@ -140,6 +157,7 @@ export default function ClientProductApprovalResponse() {
         {/* Product navigation */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
+            type="button"
             onClick={goPrev}
             disabled={isFirst}
             style={{ background: isFirst ? '#f1f5f9' : '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 10px', cursor: isFirst ? 'not-allowed' : 'pointer', color: isFirst ? '#cbd5e1' : '#475569', display: 'flex', alignItems: 'center' }}
@@ -150,6 +168,7 @@ export default function ClientProductApprovalResponse() {
             Product {idx + 1} of {totalProducts}
           </div>
           <button
+            type="button"
             onClick={goNext}
             disabled={isLast}
             style={{ background: isLast ? '#f1f5f9' : '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 10px', cursor: isLast ? 'not-allowed' : 'pointer', color: isLast ? '#cbd5e1' : '#475569', display: 'flex', alignItems: 'center' }}
@@ -171,6 +190,7 @@ export default function ClientProductApprovalResponse() {
 
           {!alreadySubmitted && (
             <button
+              type="button"
               onClick={handleSave}
               disabled={saving}
               style={{
@@ -243,6 +263,7 @@ export default function ClientProductApprovalResponse() {
           alignItems: 'center'
         }}>
           <button
+            type="button"
             onClick={goBack}
             className="btn btn-outline"
             style={{ fontSize: 13 }}
@@ -253,25 +274,23 @@ export default function ClientProductApprovalResponse() {
           <div style={{ display: 'flex', gap: 12 }}>
             {!isLast ? (
               <button
-                onClick={() => {
-                  handleSave();
-                  goNext();
-                }}
+                type="button"
+                onClick={handleSaveAndNext}
+                disabled={saving}
                 className="btn btn-primary"
                 style={{ background: '#164e63', borderColor: '#164e63', fontSize: 13 }}
               >
-                Save &amp; Go to Next Product <ChevronRight size={14} />
+                {saving ? 'Saving...' : 'Save & Go to Next Product'} <ChevronRight size={14} />
               </button>
             ) : (
               <button
-                onClick={() => {
-                  handleSave();
-                  goBack();
-                }}
+                type="button"
+                onClick={handleSaveAndBack}
+                disabled={saving}
                 className="btn btn-primary"
                 style={{ background: '#0284c7', borderColor: '#0284c7', fontSize: 13 }}
               >
-                <Send size={14} /> Save &amp; Review All Products
+                <Send size={14} /> {saving ? 'Saving...' : 'Save & Review All Products'}
               </button>
             )}
           </div>

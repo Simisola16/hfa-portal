@@ -227,7 +227,7 @@ export default function ClientAddOnTrack() {
                 ? 'Action Required: HFA has requested additional information or supporting documents. Please upload your reply and documents.'
                 : 'The Product Approval Form has been enabled! Please complete and submit the specifications for each requested product.'
             )}
-            {app.status === 'all_forms_received' && 'All product forms have been received. The Halal Committee is preparing the evaluation logsheet.'}
+            {app.status === 'all_forms_received' && 'All product forms have been received. The Halal Committee is conducting the evaluation.'}
             {['logsheet_created', 'waiting_sharia_signature'].includes(app.status) && 'Technical & Shariah Committee evaluation is currently underway.'}
             {['product_form_approved', 'ready_for_certificate'].includes(app.status) && 'Product specifications approved by the Shariah Committee! Your updated certificate is being prepared.'}
             {app.status === 'completed' && 'Add-on application complete! Your Halal Certificate products list has been successfully updated.'}
@@ -508,7 +508,7 @@ export default function ClientAddOnTrack() {
                     Committee Review In Progress
                   </div>
                   <div style={{ fontSize: 13, color: '#134e4a', marginTop: 4, lineHeight: 1.5 }}>
-                    The Halal Committee and Shariah Board members are reviewing your product specifications and logsheet. You will receive an automated notification once endorsed.
+                    The Halal Committee and Shariah Board members are reviewing your product specifications. You will receive an automated notification once endorsed.
                   </div>
                 </div>
               ) : ['product_form_approved', 'ready_for_certificate', 'completed'].includes(app.status) ? (
@@ -522,7 +522,7 @@ export default function ClientAddOnTrack() {
                 </div>
               ) : (
                 <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', padding: '20px', borderRadius: 12, textAlign: 'center', color: '#64748b', fontSize: 13 }}>
-                  Committee evaluation and logsheet endorsement will commence once product specifications are received.
+                  Committee evaluation and endorsement will commence once product specifications are received.
                 </div>
               )}
             </div>
