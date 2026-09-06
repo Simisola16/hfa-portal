@@ -18,22 +18,26 @@ export default function InitialProductPage() {
   const [loading, setLoading] = useState(true);
   const [initialProducts, setInitialProducts] = useState([]);
   const [apps, setApps] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedAppForModal, setSelectedAppForModal] = useState(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [initProdsRes, appsRes] = await Promise.all([
+      const [initProdsRes, appsRes, invsRes] = await Promise.all([
         api.get('/api/initial-products').catch(() => ({ data: { data: [] } })),
-        api.get('/api/applications').catch(() => ({ data: [] }))
+        api.get('/api/applications').catch(() => ({ data: [] })),
+        api.get('/api/invoices').catch(() => ({ data: [] }))
       ]);
 
       const loadedInitProds = initProdsRes.data?.data || (Array.isArray(initProdsRes.data) ? initProdsRes.data : []);
       const loadedApps = Array.isArray(appsRes) ? appsRes : (Array.isArray(appsRes?.data) ? appsRes.data : (Array.isArray(appsRes?.data?.data) ? appsRes.data.data : []));
+      const loadedInvs = Array.isArray(invsRes) ? invsRes : (Array.isArray(invsRes?.data) ? invsRes.data : (Array.isArray(invsRes?.data?.data) ? invsRes.data.data : []));
 
       setInitialProducts(loadedInitProds);
       setApps(loadedApps);
+      setInvoices(loadedInvs);
     } catch (err) {
       console.error('Failed to load initial products:', err);
     } finally {
@@ -48,10 +52,32 @@ export default function InitialProductPage() {
   const inProgressCount = initialProducts.filter(p => p.status !== 'initial_product_approved').length;
   const approvedCount = initialProducts.filter(p => p.status === 'initial_product_approved').length;
 
+  const paidInvoiceAppIds = new Set(
+    invoices
+      .filter(inv => ['paid', 'client_paid', 'settled'].includes((inv.status || '').toLowerCase()))
+      .map(inv => String(inv.application_id?._id || inv.application_id))
+      .filter(Boolean)
+  );
+
   const eligibleApps = apps.filter(app => {
-    const isRenewal = (app.application_type || '').toLowerCase() === 'renewal';
-    if (isRenewal) return false;
-    const isPaymentPassed = [
+    // Strictly NEW certification applications
+    const appType = (app.application_type || 'new').toLowerCase().trim();
+    if (appType === 'renewal' || appType === 'surveillance') return false;
+
+    // Must NOT be already certified, rejected, or on hold
+    const normStatus = (app.status || '').toLowerCase().trim();
+    if (['certificate_issued', 'rejected', 'on_hold'].includes(normStatus)) return false;
+
+    // Must NOT already have an Initial Product registered
+    const appId = String(app._id || app.id);
+    const hasIp = initialProducts.some(ip => {
+      const ipAppId = String(ip.application_id?._id || ip.application_id?.id || ip.application_id || '');
+      return ipAppId === appId;
+    });
+    if (hasIp) return false;
+
+    // Initial payment must be confirmed (either via application lifecycle status or confirmed paid invoice)
+    const isPaymentConfirmed = [
       'payment_received', 'initial_payment_received',
       'dates_proposed', 'dates_rejected', 'dates_accepted', 'date_finalized',
       'audit_assigned', 'audit_scheduled', 'auditor_assigned', 'audit_in_progress',
@@ -59,14 +85,10 @@ export default function InitialProductPage() {
       'nc_raised', 'nc_closed', 'final_invoice_sent', 'final_invoice_paid',
       'logsheet_created', 'logsheet_signed', 'application_successful',
       'agreement_sent', 'agreement_signed', 'agreement_finalised',
-      'ready_for_certificate', 'certificate_issued', 'approved'
-    ].includes((app.status || '').toLowerCase().trim());
-    const appId = String(app._id || app.id);
-    const hasIp = initialProducts.some(ip => {
-      const ipAppId = String(ip.application_id?._id || ip.application_id?.id || ip.application_id || '');
-      return ipAppId === appId;
-    });
-    return isPaymentPassed && !hasIp;
+      'ready_for_certificate'
+    ].includes(normStatus) || paidInvoiceAppIds.has(appId);
+
+    return isPaymentConfirmed;
   });
 
   // Auto-open modal if application_id is provided in URL query
@@ -429,6 +451,8 @@ export default function InitialProductPage() {
           setSelectedAppForModal(null);
         }}
         application={selectedAppForModal}
+        eligibleApplications={eligibleApps}
+        onSelectApplication={(app) => setSelectedAppForModal(app)}
         onSuccess={() => {
           fetchData();
         }}

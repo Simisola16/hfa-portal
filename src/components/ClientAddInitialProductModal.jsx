@@ -11,6 +11,8 @@ export default function ClientAddInitialProductModal({
   isOpen,
   onClose,
   application,
+  eligibleApplications = [],
+  onSelectApplication,
   onSuccess
 }) {
   const { user } = useAuth();
@@ -231,6 +233,35 @@ export default function ClientAddInitialProductModal({
             }}>
               <AlertCircle size={16} style={{ flexShrink: 0 }} />
               <div>{error}</div>
+            </div>
+          )}
+
+          {/* Section: Select Application (if multiple eligible apps available) */}
+          {eligibleApplications && eligibleApplications.length > 1 && (
+            <div style={{ marginBottom: 20, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '14px 16px' }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
+                Select New Certification Application <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <select
+                className="input"
+                value={appId || ''}
+                onChange={(e) => {
+                  const selected = eligibleApplications.find(a => String(a._id || a.id) === e.target.value);
+                  if (selected && onSelectApplication) {
+                    onSelectApplication(selected);
+                  }
+                }}
+                style={{ width: '100%', fontSize: 13, padding: '9px 12px', borderRadius: 8, background: '#ffffff', border: '1.5px solid #cbd5e1' }}
+              >
+                {eligibleApplications.map(a => (
+                  <option key={a._id || a.id} value={a._id || a.id}>
+                    {a.establishment_name || a.site_name || 'Facility'} (#{a.application_number || String(a._id || a.id).slice(-6).toUpperCase()}) — Payment Confirmed
+                  </option>
+                ))}
+              </select>
+              <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 5 }}>
+                Only new certification applications with confirmed initial payment are eligible for Initial Product technical evaluation.
+              </div>
             </div>
           )}
 
