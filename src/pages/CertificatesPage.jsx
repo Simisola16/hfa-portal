@@ -270,6 +270,8 @@ export default function CertificatesPage() {
                     const is3Yr = isThreeYearCert(cert);
                     const dates = getSurveillanceDates(cert);
                     const certReqs = survRequests.filter(r => (r.certificate_id?._id || r.certificate_id) === (cert.id || cert._id));
+                    const fulfilledReqs = certReqs.filter(r => r.status === 'fulfilled');
+                    const pendingReq = certReqs.find(r => r.status === 'pending');
                     const effectiveStatus =
                       cert.is_renewed || cert.status === 'renewed'
                         ? 'renewed'
