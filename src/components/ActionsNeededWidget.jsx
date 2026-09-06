@@ -286,6 +286,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
         const isInvoicePaid = Boolean(linkedInvoice && ['paid', 'client_paid', 'settled'].includes(linkedInvoice.status));
         const isPaymentPassed = [
           'payment_received', 'initial_payment_received',
+          'initial_product_approved',
           'dates_proposed', 'dates_rejected', 'dates_accepted', 'date_finalized',
           'audit_assigned', 'audit_scheduled', 'auditor_assigned', 'audit_in_progress',
           'audit_successful', 'audit_completed', 'audit_report_submitted',

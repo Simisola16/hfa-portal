@@ -844,7 +844,7 @@ export default function TrackProcessing() {
           )}
 
           {/* Initial Product Card (Unlocks when Initial Certification Invoice is confirmed) */}
-          {!isFastTrack && (initialInvoice?.status === 'paid' || initialInvoice?.status === 'client_paid' || status === 'payment_received' || showPaymentConfirmed || ['dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'nc_flagged', 'nc_closed', 'audit_report_submitted', 'audit_successful', 'logsheet_created', 'logsheet_signed', 'application_successful', 'agreement_sent', 'agreement_signed', 'agreement_finalised', 'ready_for_certificate', 'certificate_issued'].includes(normStatus)) && (
+          {!isFastTrack && (initialInvoice?.status === 'paid' || initialInvoice?.status === 'client_paid' || status === 'payment_received' || showPaymentConfirmed || ['initial_product_approved', 'dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'nc_flagged', 'nc_closed', 'audit_report_submitted', 'audit_successful', 'logsheet_created', 'logsheet_signed', 'application_successful', 'agreement_sent', 'agreement_signed', 'agreement_finalised', 'ready_for_certificate', 'certificate_issued'].includes(normStatus)) && (
             <div style={{
               background: '#fff',
               borderRadius: 20,
