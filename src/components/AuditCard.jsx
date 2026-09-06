@@ -16,7 +16,9 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
   const hasAudits = audits && audits.length > 0;
   const isAvailable = ['invoice_sent', 'payment_received', 'initial_product_approved', 'dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'audit_report_submitted', 'audit_successful', 'on_hold', 'final_invoice_sent', 'logsheet_created', 'logsheet_signed', 'agreement_sent', 'agreement_signed', 'certificate_issued', 'nc_flagged', 'nc_closed', 'audit_completed'].includes(normStatus) || hasAudits;
 
-  const isDualStage = app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE';
+  const isDualStage = (app?.category || '').toLowerCase().includes('gso') || 
+    (app?.category || '').toLowerCase().includes('uae') || 
+    app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE';
   const stage1 = audits?.find(a => a.stage === 1) || audits?.[0];
   const stage2 = audits?.find(a => a.stage === 2);
 
@@ -105,7 +107,7 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
 
   const renderSingleStageBlock = (auditObj, stageLabel = null) => {
     if (!auditObj) return null;
-    const isProposed = auditObj.status === 'dates_proposed';
+    const isProposed = auditObj.status === 'dates_proposed' || (Array.isArray(auditObj.proposed_dates) && auditObj.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'completed', 'cancelled'].includes(auditObj.status));
     const isAccepted = auditObj.status === 'dates_accepted';
 
     return (
@@ -169,7 +171,7 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
   };
 
   // Check if either stage has dates awaiting selection
-  const hasProposedStage = audits.some(a => a.status === 'dates_proposed');
+  const hasProposedStage = audits.some(a => a.status === 'dates_proposed' || (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'completed', 'cancelled'].includes(a.status)));
 
   return (
     <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>

@@ -57,10 +57,10 @@ export default function ClientAuditModal({
         setLoading(true);
         api.get(`/api/audits/application/${targetAppId}`)
           .then(res => {
-            const raw = res.data;
+            const raw = res.data?.data !== undefined ? res.data.data : res.data;
             if (!raw) { setAudit(null); return; }
             if (Array.isArray(raw)) {
-              const active = raw.find(a => a.status === 'dates_proposed' || a.nc_reports?.some(n => n.status === 'flagged')) || raw[0] || null;
+              const active = raw.find(a => a.status === 'dates_proposed' || (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'completed', 'cancelled'].includes(a.status)) || a.nc_reports?.some(n => n.status === 'flagged')) || raw[0] || null;
               setAudit(active);
             } else {
               setAudit(raw);
@@ -72,8 +72,8 @@ export default function ClientAuditModal({
         setLoading(true);
         api.get('/api/audits')
           .then(res => {
-            const list = res.data?.data || res.data || [];
-            const active = list.find(a => a.status === 'dates_proposed' || a.nc_reports?.some(n => n.status === 'flagged')) || list[0] || null;
+            const list = res.data?.data !== undefined ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+            const active = list.find(a => a.status === 'dates_proposed' || (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'completed', 'cancelled'].includes(a.status)) || a.nc_reports?.some(n => n.status === 'flagged')) || list[0] || null;
             setAudit(active);
           })
           .catch(() => setAudit(null))

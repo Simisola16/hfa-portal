@@ -123,10 +123,46 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           return agAppId === appId;
         });
 
-        const linkedAudit = allAudits.find(aud => {
+        // Helper to check if an audit is awaiting client date selection
+        const isAuditAwaitingDateSelection = (a) => {
+          if (!a) return false;
+          if (a.status === 'dates_proposed') return true;
+          if (Array.isArray(a.proposed_dates) && a.proposed_dates.length === 3 && (!a.selected_dates || a.selected_dates.length === 0) && !a.finalized_date) {
+            return true;
+          }
+          return false;
+        };
+
+        const appAudits = allAudits.filter(aud => {
           const audAppId = String(aud.application_id?._id || aud.application_id || '');
           return audAppId === appId;
         });
+
+        const linkedAudit = appAudits.find(isAuditAwaitingDateSelection) || appAudits[0] || null;
+        const isDualStageApp = (app.category || '').toLowerCase().includes('gso') || (app.category || '').toLowerCase().includes('uae');
+
+        // Check if this application or any linked audit needs date selection (including Stage 1 and Stage 2 GSO)
+        const auditNeedingDates = appAudits.find(isAuditAwaitingDateSelection);
+        if (auditNeedingDates || normStatus === 'dates_proposed') {
+          const targetAudit = auditNeedingDates || linkedAudit;
+          const stageNum = targetAudit?.stage || 1;
+          const stageBadge = isDualStageApp ? ` (Stage ${stageNum})` : '';
+
+          actionList.push({
+            id: `app-audit-${appId}-${stageNum}`,
+            category: 'audits',
+            app,
+            audit: targetAudit,
+            type: 'audit',
+            mode: 'select_dates',
+            title: `Select Preferred Audit Dates${stageBadge}`,
+            tag: isDualStageApp ? `Stage ${stageNum} Dates` : 'Audit Dates',
+            desc: `Select 2 preferred audit visit dates for ${facilityName}${stageBadge}`,
+            buttonText: 'Select Dates',
+            buttonBg: '#0284c7',
+            icon: <Calendar size={16} />
+          });
+        }
 
         switch (normStatus) {
           case 'proposal_sent':
@@ -164,20 +200,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
             break;
 
           case 'dates_proposed':
-            actionList.push({
-              id: `app-audit-${appId}`,
-              category: 'audits',
-              app,
-              audit: linkedAudit,
-              type: 'audit',
-              mode: 'select_dates',
-              title: 'Select Preferred Audit Dates',
-              tag: 'Audit Dates',
-              desc: `Select 2 preferred audit visit dates for ${facilityName}`,
-              buttonText: 'Select Dates',
-              buttonBg: '#0284c7',
-              icon: <Calendar size={16} />
-            });
+            // Already handled above by auditNeedingDates / normStatus check
             break;
 
           case 'on_hold':
@@ -264,6 +287,47 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           buttonText: 'Review Proposal',
           buttonBg: '#854d0e',
           icon: <FileText size={16} />
+        });
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // 1C. AUDITS: Standalone Audit Date Selections (e.g. Stage 2 GSO)
+      // ─────────────────────────────────────────────────────────────
+      const isAuditAwaitingDateSelection = (a) => {
+        if (!a) return false;
+        if (a.status === 'dates_proposed') return true;
+        if (Array.isArray(a.proposed_dates) && a.proposed_dates.length === 3 && (!a.selected_dates || a.selected_dates.length === 0) && !a.finalized_date) {
+          return true;
+        }
+        return false;
+      };
+
+      const pendingDateAudits = allAudits.filter(isAuditAwaitingDateSelection);
+      for (const aud of pendingDateAudits) {
+        const audAppId = String(aud.application_id?._id || aud.application_id || '');
+        const actionId = `app-audit-${audAppId}-${aud.stage || 1}`;
+        if (actionList.some(item => item.id === actionId)) continue;
+
+        const linkedApp = allApps.find(a => String(a._id || a.id) === audAppId);
+        const facilityName = linkedApp?.site_name || linkedApp?.establishment_name || aud.application_id?.site_name || aud.application_id?.establishment_name || 'your site';
+        const isGso = (linkedApp?.category || aud.application_id?.category || '').toLowerCase().includes('gso') ||
+                      (linkedApp?.category || aud.application_id?.category || '').toLowerCase().includes('uae');
+        const stageNum = aud.stage || 1;
+        const stageBadge = isGso ? ` (Stage ${stageNum})` : '';
+
+        actionList.push({
+          id: actionId,
+          category: 'audits',
+          app: linkedApp || aud.application_id || { application_number: 'AUDIT', establishment_name: facilityName },
+          audit: aud,
+          type: 'audit',
+          mode: 'select_dates',
+          title: `Select Preferred Audit Dates${stageBadge}`,
+          tag: isGso ? `Stage ${stageNum} Dates` : 'Audit Dates',
+          desc: `Select 2 preferred audit visit dates for ${facilityName}${stageBadge}`,
+          buttonText: 'Select Dates',
+          buttonBg: '#0284c7',
+          icon: <Calendar size={16} />
         });
       }
 

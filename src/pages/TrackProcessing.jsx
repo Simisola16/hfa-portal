@@ -256,10 +256,13 @@ export default function TrackProcessing() {
 
   // Helper flags for action stepper
   const auditsArr = audit?.data || (Array.isArray(audit) ? audit : [audit]).filter(Boolean);
-  const isDualStage = app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE';
+  const isDualStage = (app?.category || '').toLowerCase().includes('gso') || 
+    (app?.category || '').toLowerCase().includes('uae') || 
+    app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE';
   const stage1 = auditsArr?.find(a => a.stage === 1) || auditsArr?.[0];
   const stage2 = auditsArr?.find(a => a.stage === 2);
-  const activeAudit = auditsArr?.find(a => a.status === 'dates_proposed') || (isDualStage ? (stage2 || stage1) : stage1);
+  const auditWithDates = auditsArr?.find(a => a.status === 'dates_proposed' || (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'completed', 'cancelled'].includes(a.status)));
+  const activeAudit = auditWithDates || (isDualStage ? (stage2 || stage1) : stage1);
 
   // NC state
   const isNcFlagged = status === 'nc_flagged';
@@ -296,10 +299,10 @@ export default function TrackProcessing() {
   const showPaymentAction = (status === 'invoice_sent' || status === 'final_invoice_sent') && activeInvoiceForBanner && activeInvoiceForBanner.status !== 'client_paid' && activeInvoiceForBanner.status !== 'paid';
   const showPaymentPending = ((status === 'invoice_sent' || status === 'final_invoice_sent') && activeInvoiceForBanner && activeInvoiceForBanner.status === 'client_paid') || ((status === 'payment_received' || status === 'final_invoice_paid') && activeInvoiceForBanner && activeInvoiceForBanner.status !== 'paid');
   const showPaymentConfirmed = (status === 'payment_received' || (activeInvoiceForBanner && activeInvoiceForBanner.status === 'paid' && status === 'invoice_sent')) && (!activeAudit || activeAudit.status === 'pending' || activeAudit.status === 'scheduled');
-  const showAuditAction = status === 'dates_proposed' || activeAudit?.status === 'dates_proposed';
+  const showAuditAction = status === 'dates_proposed' || activeAudit?.status === 'dates_proposed' || (Array.isArray(activeAudit?.proposed_dates) && activeAudit.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'completed', 'cancelled'].includes(activeAudit.status));
   const showAuditDatesRejected = status === 'dates_rejected' || activeAudit?.status === 'dates_rejected';
   const showAuditDatesAccepted = status === 'dates_accepted' || activeAudit?.status === 'dates_accepted';
-  const showAuditScheduled = status === 'date_finalized' || status === 'audit_assigned' || activeAudit?.status === 'date_finalized' || activeAudit?.status === 'auditors_assigned';
+  const showAuditScheduled = (status === 'date_finalized' || status === 'audit_assigned' || activeAudit?.status === 'date_finalized' || activeAudit?.status === 'auditors_assigned') && !showAuditAction;
   const showAuditComplete = ['audit_successful', 'audit_completed', 'logsheet_created', 'logsheet_signed', 'application_successful'].includes(status) && status !== 'agreement_sent';
   const showAgreementAction = !isFastTrack && status === 'agreement_sent';
 
@@ -602,13 +605,13 @@ export default function TrackProcessing() {
           <div>
             <div style={{ fontWeight: 800, fontSize: 15, color: '#065f46', marginBottom: 4 }}>Audit Scheduled</div>
             <div style={{ fontSize: 13, color: '#047857', lineHeight: 1.6 }}>
-              Your audit has been finalized and scheduled for: <strong>{audit.finalized_date || audit.scheduled_date ? new Date(audit.finalized_date || audit.scheduled_date).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Pending final date'}</strong>. Please ensure all relevant documentation and staff are prepared for this date.
+              Your audit has been finalized and scheduled for: <strong>{activeAudit?.finalized_date || activeAudit?.scheduled_date || audit?.finalized_date || audit?.scheduled_date ? new Date(activeAudit?.finalized_date || activeAudit?.scheduled_date || audit?.finalized_date || audit?.scheduled_date).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Pending final date'}</strong>. Please ensure all relevant documentation and staff are prepared for this date.
             </div>
           </div>
         </div>
       )}
 
-      {showAuditAction && audit && (
+      {showAuditAction && (activeAudit || audit) && (
         <div style={{
           background: 'linear-gradient(135deg, #e0f2fe, #f0f9ff)',
           border: '1.5px solid #bae6fd', borderRadius: 16,

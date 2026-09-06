@@ -7,7 +7,10 @@ import ActionsNeededWidget from '../components/ActionsNeededWidget';
 import FirstSiteCreatedModal from '../components/FirstSiteCreatedModal';
 import NewUserSitePromptModal from '../components/NewUserSitePromptModal';
 
+import { STATUS_LABELS, STATUS_BADGE as BASE_STATUS_BADGE } from '../lib/applicationStatuses';
+
 const STATUS_BADGE = {
+  ...BASE_STATUS_BADGE,
   submitted: 'badge-blue',
   under_review: 'badge-yellow',
   approved: 'badge-green',
@@ -16,6 +19,7 @@ const STATUS_BADGE = {
   audit_scheduled: 'badge-purple',
   audit_completed: 'badge-green',
   certificate_issued: 'badge-green',
+  logsheet_created: 'badge-yellow',
 };
 
 const OFFICIAL_FORMS = [
@@ -312,7 +316,7 @@ export default function DashboardPage() {
                       <tr key={app.id || app._id}>
                         <td><Link to={`/applications?appId=${app.id || app._id}`} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', fontSize: 12 }}>{app.site_name || app.establishment_name || 'Site'}</Link></td>
                         <td style={{ fontSize: 12, maxWidth: 150 }}><span className="truncate" style={{ display: 'block' }}>{app.category}</span></td>
-                        <td><span className={`badge ${STATUS_BADGE[app.status] || 'badge-gray'}`}>{app.status?.replace(/_/g, ' ')}</span></td>
+                        <td><span className={`badge ${STATUS_BADGE[app.status] || 'badge-gray'}`}>{STATUS_LABELS[app.status] || app.status?.replace(/_/g, ' ')}</span></td>
                       </tr>
                     ))}
                   </tbody>
