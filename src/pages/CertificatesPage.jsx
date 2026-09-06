@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
-import { Award, Download, Search, RefreshCw, Eye, EyeOff, Calendar, AlertCircle, FileText, RotateCcw, Upload, X, CheckCircle, ShieldCheck, Lock } from 'lucide-react';
+import { Award, Download, Search, RefreshCw, Eye, EyeOff, Calendar, AlertCircle, FileText, RotateCcw, Upload, X, CheckCircle, ShieldCheck, Lock, Clock } from 'lucide-react';
 
 const getPdfUrl = (url) => {
   if (!url) return '#';
@@ -19,6 +19,7 @@ export default function CertificatesPage() {
   const [searchParams] = useSearchParams();
   const [certs, setCerts] = useState([]);
   const [survRequests, setSurvRequests] = useState([]);
+  const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -34,19 +35,35 @@ export default function CertificatesPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [certsRes, survRes] = await Promise.all([
+      const [certsRes, survRes, appsRes] = await Promise.all([
         api.get('/api/certificates').catch(() => ({ data: [] })),
-        api.get('/api/surveillance/my').catch(() => ({ data: [] }))
+        api.get('/api/surveillance/my').catch(() => ({ data: [] })),
+        api.get('/api/applications').catch(() => ({ data: [] }))
       ]);
       const loadedCerts = Array.isArray(certsRes) ? certsRes : (certsRes?.data || []);
+      const loadedApps = Array.isArray(appsRes) ? appsRes : (appsRes?.data || []);
       setCerts(loadedCerts);
       setSurvRequests(Array.isArray(survRes) ? survRes : (survRes?.data?.data || survRes?.data || []));
+      setApplications(loadedApps);
 
       const renewId = searchParams.get('renewCertId');
       if (renewId) {
         const target = loadedCerts.find(c => String(c._id || c.id) === String(renewId));
         if (target) {
-          openRenewModal(target);
+          const isOngoing = target.has_ongoing_renewal || loadedApps.some(a => {
+            if (a.application_type !== 'renewal') return false;
+            if (['rejected', 'certificate_issued'].includes(a.status?.toLowerCase())) return false;
+            const refCertId = String(a.renewed_certificate_id?._id || a.renewed_certificate_id || '');
+            if (refCertId && refCertId === String(target._id || target.id)) return true;
+            const appSiteId = String(a.site_id?._id || a.site_id || '');
+            const certSiteId = String(target.site_id?._id || target.site_id || '');
+            return appSiteId && certSiteId && appSiteId === certSiteId;
+          });
+          if (isOngoing) {
+            toast.error('A renewal application is already in progress for this certificate.');
+          } else {
+            openRenewModal(target);
+          }
         }
       }
     } catch (err) {
@@ -121,7 +138,43 @@ export default function CertificatesPage() {
     return { y1: d1, y2: d2 };
   };
 
+  const getOngoingRenewalApp = (cert) => {
+    if (!cert) return null;
+    const certId = String(cert._id || cert.id || '');
+
+    if (cert.has_ongoing_renewal) {
+      const matched = applications.find(a => 
+        String(a._id || a.id || '') === String(cert.ongoing_renewal_id || '') ||
+        (a.application_type === 'renewal' && String(a.renewed_certificate_id?._id || a.renewed_certificate_id || '') === certId)
+      );
+      if (matched) return matched;
+      return {
+        _id: cert.ongoing_renewal_id,
+        id: cert.ongoing_renewal_id,
+        application_number: cert.ongoing_renewal_number,
+        status: cert.ongoing_renewal_status || 'in_progress'
+      };
+    }
+
+    const activeRenewal = applications.find(a => {
+      if (a.application_type !== 'renewal') return false;
+      if (['rejected', 'certificate_issued'].includes(a.status?.toLowerCase())) return false;
+      const refCertId = String(a.renewed_certificate_id?._id || a.renewed_certificate_id || '');
+      if (refCertId && refCertId === certId) return true;
+      const appSiteId = String(a.site_id?._id || a.site_id || '');
+      const certSiteId = String(cert.site_id?._id || cert.site_id || '');
+      if (appSiteId && certSiteId && appSiteId === certSiteId) return true;
+      return false;
+    });
+
+    return activeRenewal || null;
+  };
+
   const openRenewModal = (cert) => {
+    if (getOngoingRenewalApp(cert)) {
+      toast.error('A renewal application is already in progress for this certificate.');
+      return;
+    }
     setRenewModal(cert);
     setRenewForm({
       contact_person: cert.primary_contact_name || cert.contact_person || '',
@@ -160,6 +213,7 @@ export default function CertificatesPage() {
         contact_phone: renewForm.contact_phone.trim()
       });
       setRenewSuccess(true);
+      fetchData();
     } catch (err) {
       toast.error(err.response?.data?.error || err.message || 'Failed to submit renewal.');
     } finally {
@@ -272,22 +326,54 @@ export default function CertificatesPage() {
                                 <Download size={13} /> Download
                               </a>
                             )}
-                            {(effectiveStatus === 'expired' || isExpiringSoon(cert.expiry_date)) && (
-                              <button
-                                className="btn btn-sm"
-                                style={{
-                                  background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
-                                  color: '#fff', border: 'none', fontWeight: 700,
-                                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                                  padding: '6px 14px', borderRadius: 8, fontSize: 12,
-                                  boxShadow: '0 2px 8px rgba(220,38,38,0.25)',
-                                  cursor: 'pointer',
-                                }}
-                                onClick={e => { e.stopPropagation(); openRenewModal(cert); }}
-                              >
-                                <RotateCcw size={12} /> Renew
-                              </button>
-                            )}
+                            {(() => {
+                              const ongoingRenewal = getOngoingRenewalApp(cert);
+                              if (ongoingRenewal) {
+                                return (
+                                  <button
+                                    type="button"
+                                    className="badge badge-purple"
+                                    style={{
+                                      border: 'none',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 5,
+                                      padding: '6px 12px',
+                                      borderRadius: 8,
+                                      fontSize: 12,
+                                      fontWeight: 700,
+                                      cursor: 'pointer'
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/applications/${ongoingRenewal._id || ongoingRenewal.id || ''}/track`);
+                                    }}
+                                    title="Renewal is already in progress. Click to view tracking."
+                                  >
+                                    <Clock size={12} /> Renewal in Progress
+                                  </button>
+                                );
+                              }
+                              if (effectiveStatus === 'expired' || isExpiringSoon(cert.expiry_date)) {
+                                return (
+                                  <button
+                                    className="btn btn-sm"
+                                    style={{
+                                      background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                                      color: '#fff', border: 'none', fontWeight: 700,
+                                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                                      padding: '6px 14px', borderRadius: 8, fontSize: 12,
+                                      boxShadow: '0 2px 8px rgba(220,38,38,0.25)',
+                                      cursor: 'pointer',
+                                    }}
+                                    onClick={e => { e.stopPropagation(); openRenewModal(cert); }}
+                                  >
+                                    <RotateCcw size={12} /> Renew
+                                  </button>
+                                );
+                              }
+                              return null;
+                            })()}
                             <button
                               className="btn btn-ghost btn-sm"
                               onClick={() => setExpandedCertId(isExpanded ? null : (cert.id || cert._id))}

@@ -76,25 +76,58 @@ export default function DashboardPage() {
 
   const now = new Date();
 
+  // Helper: check if a certificate has an active renewal application in progress
+  const getOngoingRenewalApp = (cert) => {
+    if (!cert) return null;
+    const certId = String(cert._id || cert.id || '');
+
+    // 1. If backend attached ongoing renewal information
+    if (cert.has_ongoing_renewal) {
+      const matched = (data.applications || []).find(a => 
+        String(a._id || a.id || '') === String(cert.ongoing_renewal_id || '') ||
+        (a.application_type === 'renewal' && String(a.renewed_certificate_id?._id || a.renewed_certificate_id || '') === certId)
+      );
+      if (matched) return matched;
+      return {
+        _id: cert.ongoing_renewal_id,
+        id: cert.ongoing_renewal_id,
+        application_number: cert.ongoing_renewal_number,
+        status: cert.ongoing_renewal_status || 'in_progress'
+      };
+    }
+
+    // 2. Cross-reference in data.applications
+    const activeRenewal = (data.applications || []).find(app => {
+      const isNotFinished = !['rejected', 'certificate_issued'].includes(app.status?.toLowerCase());
+      const isRenewal = app.application_type === 'renewal';
+      if (!isNotFinished || !isRenewal) return false;
+
+      const refCertId = String(app.renewed_certificate_id?._id || app.renewed_certificate_id || '');
+      if (refCertId && refCertId === certId) return true;
+
+      const appSiteId = String(app.site_id?._id || app.site_id || '');
+      const certSiteId = String(cert.site_id?._id || cert.site_id || '');
+      if (appSiteId && certSiteId && appSiteId === certSiteId) return true;
+
+      return false;
+    });
+
+    return activeRenewal || null;
+  };
+
   // Helper: check if a certificate has already been renewed or has a renewal in-progress
   const isCertRenewed = (cert) => {
     if (!cert) return false;
     if (cert.is_renewed || cert.status === 'renewed') return true;
-
-    // Check if there is an active renewal application in progress for this certificate or site
-    const hasOngoingRenewalApp = data.applications.some(app => {
-      const isNotFinished = !['rejected', 'certificate_issued'].includes(app.status?.toLowerCase());
-      const isRenewal = app.application_type === 'renewal';
-      const matchesCert = app.renewed_certificate_id && String(app.renewed_certificate_id) === String(cert._id || cert.id);
-      const matchesSite = app.site_id && String(app.site_id?._id || app.site_id) === String(cert.site_id?._id || cert.site_id);
-      return isNotFinished && isRenewal && (matchesCert || matchesSite);
-    });
-    if (hasOngoingRenewalApp) return true;
+    if (cert.has_ongoing_renewal) return true;
+    if (getOngoingRenewalApp(cert)) return true;
 
     // Check if there is a newer active certificate for the same site
     const hasNewerActiveCert = data.certificates.some(other => {
       if (String(other._id || other.id) === String(cert._id || cert.id)) return false;
-      const sameSite = cert.site_id && String(other.site_id?._id || other.site_id || '') === String(cert.site_id?._id || cert.site_id || '');
+      const certSiteId = String(cert.site_id?._id || cert.site_id || '');
+      const otherSiteId = String(other.site_id?._id || other.site_id || '');
+      const sameSite = certSiteId && otherSiteId && otherSiteId === certSiteId;
       const isOtherActive = other.status === 'active' && (!other.expiry_date || new Date(other.expiry_date) >= now);
       return sameSite && isOtherActive && (!cert.expiry_date || !other.expiry_date || new Date(other.expiry_date) >= new Date(cert.expiry_date));
     });
@@ -377,24 +410,53 @@ export default function DashboardPage() {
                             )}
                           </td>
                           <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                               <span className={`badge ${isPast ? 'badge-red' : isExpSoon ? 'badge-orange' : 'badge-green'}`}>
                                 {isPast ? 'Expired' : isExpSoon ? 'Expiring Soon' : 'Active'}
                               </span>
-                              {(isPast || isExpSoon) && (
-                                <button
-                                  className="btn btn-sm"
-                                  onClick={() => navigate(`/certificates?renewCertId=${cert._id || cert.id}`)}
-                                  style={{
-                                    padding: '3px 8px', fontSize: 10.5, fontWeight: 700, borderRadius: 6,
-                                    background: '#7c3aed', color: '#fff', border: 'none', cursor: 'pointer',
-                                    display: 'inline-flex', alignItems: 'center', gap: 4
-                                  }}
-                                  title="Renew this certificate"
-                                >
-                                  <RotateCcw size={11} /> Renew
-                                </button>
-                              )}
+                              {(() => {
+                                const ongoingRenewal = getOngoingRenewalApp(cert);
+                                if (ongoingRenewal) {
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() => navigate(`/applications/${ongoingRenewal._id || ongoingRenewal.id || ''}/track`)}
+                                      className="badge badge-purple"
+                                      style={{
+                                        border: 'none',
+                                        padding: '4px 8px',
+                                        fontSize: 10.5,
+                                        fontWeight: 700,
+                                        borderRadius: 6,
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 4
+                                      }}
+                                      title="Renewal application is in progress. Click to view progress."
+                                    >
+                                      <Clock size={11} /> Renewal in Progress
+                                    </button>
+                                  );
+                                }
+                                if (isPast || isExpSoon) {
+                                  return (
+                                    <button
+                                      className="btn btn-sm"
+                                      onClick={() => navigate(`/certificates?renewCertId=${cert._id || cert.id}`)}
+                                      style={{
+                                        padding: '3px 8px', fontSize: 10.5, fontWeight: 700, borderRadius: 6,
+                                        background: '#7c3aed', color: '#fff', border: 'none', cursor: 'pointer',
+                                        display: 'inline-flex', alignItems: 'center', gap: 4
+                                      }}
+                                      title="Renew this certificate"
+                                    >
+                                      <RotateCcw size={11} /> Renew
+                                    </button>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                           </td>
                         </tr>
