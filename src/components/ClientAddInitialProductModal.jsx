@@ -101,9 +101,9 @@ export default function ClientAddInitialProductModal({
         product: {
           name: productName.trim(),
           code: productCode.trim(),
-          category: productCategory.trim(),
-          ingredients: ingredients.trim(),
-          description: description.trim()
+          category: '',
+          ingredients: '',
+          description: ''
         }
       };
 
@@ -308,48 +308,6 @@ export default function ClientAddInitialProductModal({
                   style={{ width: '100%', fontSize: 13, padding: '9px 12px', borderRadius: 8 }}
                 />
               </div>
-            </div>
-
-            <div style={{ marginTop: 12 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
-                Category / Product Type
-              </label>
-              <input
-                type="text"
-                className="input"
-                value={productCategory}
-                onChange={(e) => setProductCategory(e.target.value)}
-                placeholder="e.g. Beverages / Bakery / Meat / Seasonings"
-                style={{ width: '100%', fontSize: 13, padding: '9px 12px', borderRadius: 8 }}
-              />
-            </div>
-
-            <div style={{ marginTop: 12 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
-                Key Ingredients / Formulation Summary
-              </label>
-              <textarea
-                className="input"
-                rows={2}
-                value={ingredients}
-                onChange={(e) => setIngredients(e.target.value)}
-                placeholder="List major ingredients, raw materials, or flavorings used in this product..."
-                style={{ width: '100%', fontSize: 13, padding: '8px 12px', borderRadius: 8, resize: 'vertical' }}
-              />
-            </div>
-
-            <div style={{ marginTop: 12 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
-                Product Description & Packaging
-              </label>
-              <textarea
-                className="input"
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Brief description of the product packaging, shelf life, and intended use..."
-                style={{ width: '100%', fontSize: 13, padding: '8px 12px', borderRadius: 8, resize: 'vertical' }}
-              />
             </div>
           </div>
 

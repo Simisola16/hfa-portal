@@ -914,10 +914,6 @@ export default function ApplicationsPage({ openNew }) {
                 toast.error('Please add a site in "Manage Sites" first.');
                 return;
               }
-              if (pendingApp) {
-                toast.error(`You already have a pending application in progress (${pendingApp.application_number}).`);
-                return;
-              }
               setForm(f => ({
                 ...f,
                 application_type: filterType === 'renewal' ? 'renewal' : (filterType === 'surveillance' ? 'surveillance' : 'new')
@@ -1019,10 +1015,6 @@ export default function ApplicationsPage({ openNew }) {
                 onClick={() => {
                   if (sites.length === 0) {
                     toast.error('Please add a site in "Manage Sites" first.');
-                    return;
-                  }
-                  if (pendingApp) {
-                    toast.error(`You already have a pending application in progress (${pendingApp.application_number}).`);
                     return;
                   }
                   setForm(f => ({
