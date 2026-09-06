@@ -42,6 +42,10 @@ const NAV_SECTIONS = [
           { label: 'Expired Certificates', path: '/certificates?status=expired' },
         ]
       },
+      { icon: FileBarChart, label: 'Invoices', path: '/invoices' },
+      { icon: FileCheck, label: 'Agreements', path: '/agreements' },
+      { icon: FileText, label: 'Proposals', path: '/proposals' },
+      { icon: Calendar, label: 'Audits', path: '/audits' },
       {
         icon: Ship, label: 'Export', path: '/export',
         children: [
@@ -63,12 +67,8 @@ const NAV_SECTIONS = [
           { label: 'Outbox', path: '/messages/outbox' },
         ]
       },
-      { icon: FileText, label: 'Proposals', path: '/proposals' },
-      { icon: Calendar, label: 'Audits', path: '/audits' },
       { icon: Users, label: 'Manage Users', path: '/manage-users' },
       { icon: MapPin, label: 'Manage Sites', path: '/sites' },
-      { icon: FileBarChart, label: 'Invoices', path: '/invoices' },
-      { icon: FileCheck, label: 'Agreements', path: '/agreements' },
     ]
   },
   {
