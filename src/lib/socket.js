@@ -7,6 +7,7 @@ export function getSocket(token) {
     const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     socket = io(backendUrl, {
       auth: { token },
+      transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
