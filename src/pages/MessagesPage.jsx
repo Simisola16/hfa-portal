@@ -36,7 +36,11 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
   const [submittingCompose, setSubmittingCompose] = useState(false);
 
   const threadEndRef = useRef(null);
-  const socketRef = useRef(null);
+  const selectedMessageRef = useRef(selectedMessage);
+
+  useEffect(() => {
+    selectedMessageRef.current = selectedMessage;
+  }, [selectedMessage]);
 
   // Fetch applications for dropdown
   useEffect(() => {
@@ -54,9 +58,10 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
       const data = res.data || [];
       setMessages(data);
       
-      // If we already had a selected message, update it or refresh conversation
-      if (selectedMessage) {
-        const found = data.find(m => m._id === selectedMessage._id || m.id === selectedMessage.id);
+      // If we already had a selected message, update it
+      if (selectedMessageRef.current) {
+        const selId = (selectedMessageRef.current._id || selectedMessageRef.current.id)?.toString();
+        const found = data.find(m => (m._id || m.id)?.toString() === selId);
         if (found) setSelectedMessage(found);
       }
     } catch (err) {
@@ -70,59 +75,87 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
     fetchMessages();
   }, [tab]);
 
-  // Socket.io Real-Time Synchronization
+  // Socket.io Real-Time Synchronization (attached once)
   useEffect(() => {
     const token = localStorage.getItem('hfa_token');
     if (!token) return;
 
     const socket = getSocket(token);
-    socketRef.current = socket;
+    if (!socket) return;
 
-    if (socket) {
-      const handleNewMessage = (newMsg) => {
-        toast.success(`New message from ${newMsg.sender?.full_name || 'HFA Support'}`, {
-          icon: '✉️',
-          duration: 4000
-        });
+    const handleNewMessage = (newMsg) => {
+      const myId = (profile?._id || profile?.id)?.toString();
+      if (myId && (newMsg.sender_id === myId || newMsg.sender_id === profile?._id)) {
+        return;
+      }
 
-        setMessages(prev => [newMsg, ...prev.filter(m => m._id !== newMsg._id)]);
+      toast.success(`New message from ${newMsg.sender?.full_name || 'HFA Support'}`, {
+        icon: '✉️',
+        duration: 4000
+      });
 
-        if (selectedMessage) {
-          const isRelated = 
-            newMsg.sender_id === selectedMessage.sender_id || 
-            newMsg.recipient_id === selectedMessage.sender_id ||
-            newMsg.sender_id === 'admin';
-          if (isRelated) {
-            setConversation(prev => [...prev.filter(m => m._id !== newMsg._id), newMsg]);
-            scrollToBottom();
-          }
-        }
-      };
+      const msgId = (newMsg._id || newMsg.id)?.toString();
 
-      const handleMessageSent = (sentMsg) => {
-        setMessages(prev => [sentMsg, ...prev.filter(m => m._id !== sentMsg._id)]);
-        if (selectedMessage) {
-          setConversation(prev => [...prev.filter(m => m._id !== sentMsg._id), sentMsg]);
+      setMessages(prev => {
+        const filtered = prev.filter(m => (m._id || m.id)?.toString() !== msgId);
+        return [newMsg, ...filtered];
+      });
+
+      const activeMsg = selectedMessageRef.current;
+      if (activeMsg) {
+        const isRelated = 
+          newMsg.sender_id === activeMsg.sender_id || 
+          newMsg.recipient_id === activeMsg.sender_id ||
+          newMsg.sender_id === 'admin' ||
+          newMsg.recipient_id === 'admin';
+        if (isRelated) {
+          setConversation(prev => {
+            if (prev.some(m => (m._id || m.id)?.toString() === msgId)) {
+              return prev.map(m => (m._id || m.id)?.toString() === msgId ? newMsg : m);
+            }
+            return [...prev, newMsg];
+          });
           scrollToBottom();
         }
-      };
+      }
+    };
 
-      const handleMessageRead = ({ messageId, read_at }) => {
-        setMessages(prev => prev.map(m => m._id === messageId ? { ...m, is_read: true, read_at } : m));
-        setConversation(prev => prev.map(m => m._id === messageId ? { ...m, is_read: true, read_at } : m));
-      };
+    const handleMessageSent = (sentMsg) => {
+      const msgId = (sentMsg._id || sentMsg.id)?.toString();
 
-      socket.on('new_message', handleNewMessage);
-      socket.on('message_sent', handleMessageSent);
-      socket.on('message_read', handleMessageRead);
+      setMessages(prev => {
+        const filtered = prev.filter(m => (m._id || m.id)?.toString() !== msgId);
+        return [sentMsg, ...filtered];
+      });
 
-      return () => {
-        socket.off('new_message', handleNewMessage);
-        socket.off('message_sent', handleMessageSent);
-        socket.off('message_read', handleMessageRead);
-      };
-    }
-  }, [selectedMessage]);
+      const activeMsg = selectedMessageRef.current;
+      if (activeMsg) {
+        setConversation(prev => {
+          if (prev.some(m => (m._id || m.id)?.toString() === msgId)) {
+            return prev.map(m => (m._id || m.id)?.toString() === msgId ? sentMsg : m);
+          }
+          return [...prev, sentMsg];
+        });
+        scrollToBottom();
+      }
+    };
+
+    const handleMessageRead = ({ messageId, read_at }) => {
+      const targetId = messageId?.toString();
+      setMessages(prev => prev.map(m => (m._id || m.id)?.toString() === targetId ? { ...m, is_read: true, read_at } : m));
+      setConversation(prev => prev.map(m => (m._id || m.id)?.toString() === targetId ? { ...m, is_read: true, read_at } : m));
+    };
+
+    socket.on('new_message', handleNewMessage);
+    socket.on('message_sent', handleMessageSent);
+    socket.on('message_read', handleMessageRead);
+
+    return () => {
+      socket.off('new_message', handleNewMessage);
+      socket.off('message_sent', handleMessageSent);
+      socket.off('message_read', handleMessageRead);
+    };
+  }, [profile]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -136,7 +169,8 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
     setConvLoading(true);
 
     try {
-      const targetId = msg.sender_id === profile?._id || msg.sender_id === profile?.id ? msg.recipient_id : msg.sender_id;
+      const myId = (profile?._id || profile?.id)?.toString();
+      const targetId = (msg.sender_id === myId) ? msg.recipient_id : msg.sender_id;
       const res = await api.get(`/api/messages/conversation/${targetId || 'admin'}`);
       const threadData = res.data || [msg];
       setConversation(threadData.length > 0 ? threadData : [msg]);
@@ -144,7 +178,7 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
 
       if (!msg.is_read && tab !== 'outbox') {
         await api.put(`/api/messages/${msg._id || msg.id}/read`, {});
-        setMessages(prev => prev.map(m => m._id === msg._id ? { ...m, is_read: true } : m));
+        setMessages(prev => prev.map(m => (m._id || m.id) === (msg._id || msg.id) ? { ...m, is_read: true } : m));
       }
     } catch (err) {
       setConversation([msg]);
@@ -160,7 +194,8 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
 
     setSendingReply(true);
     try {
-      const recipientId = selectedMessage?.sender_id === profile?._id || selectedMessage?.sender_id === profile?.id 
+      const myId = (profile?._id || profile?.id)?.toString();
+      const recipientId = (selectedMessage?.sender_id === myId)
         ? selectedMessage?.recipient_id 
         : (selectedMessage?.sender_id || 'admin');
 
@@ -174,9 +209,21 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
 
       const res = await api.post('/api/messages', payload);
       const newMsg = res.data;
+      const msgId = (newMsg._id || newMsg.id)?.toString();
 
-      setConversation(prev => [...prev, newMsg]);
-      setMessages(prev => [newMsg, ...prev.filter(m => m._id !== newMsg._id)]);
+      // Deduplicated state update
+      setConversation(prev => {
+        if (prev.some(m => (m._id || m.id)?.toString() === msgId)) {
+          return prev;
+        }
+        return [...prev, newMsg];
+      });
+
+      setMessages(prev => {
+        const filtered = prev.filter(m => (m._id || m.id)?.toString() !== msgId);
+        return [newMsg, ...filtered];
+      });
+
       setReplyText('');
       scrollToBottom();
       toast.success('Reply sent');
@@ -400,7 +447,7 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
               </div>
             ) : (
               filteredMessages.map(msg => {
-                const isSelected = selectedMessage?._id === msg._id || selectedMessage?.id === msg.id;
+                const isSelected = (selectedMessage?._id || selectedMessage?.id)?.toString() === (msg._id || msg.id)?.toString();
                 const isUnread = !msg.is_read && tab !== 'outbox';
                 const senderName = msg.sender?.full_name || (msg.sender_id === 'admin' ? 'HFA Support Team' : 'Official HFA Desk');
 
@@ -489,8 +536,8 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
                 padding: '16px 24px', 
                 borderBottom: '1px solid var(--border)', 
                 background: '#fafafa',
-                display: 'flex',
-                alignItems: 'center',
+                display: 'flex', 
+                alignItems: 'center', 
                 justifyContent: 'space-between',
                 flexShrink: 0
               }}>
@@ -550,7 +597,8 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
                   </div>
                 ) : (
                   conversation.map((msg, idx) => {
-                    const isFromClient = msg.sender_id === profile?._id || msg.sender_id === profile?.id;
+                    const myId = (profile?._id || profile?.id)?.toString();
+                    const isFromClient = msg.sender_id === myId;
 
                     return (
                       <div
@@ -680,7 +728,7 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
                 Select a message on the left to read or reply, or compose a new inquiry directly to the HFA Certification & Support team.
               </p>
               <button 
-                className="btn btn-primary"
+                className="btn btn-primary" 
                 onClick={() => setShowCompose(true)}
                 style={{ borderRadius: 10, padding: '9px 18px', fontWeight: 700 }}
               >
@@ -782,4 +830,3 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
     </div>
   );
 }
-
