@@ -498,6 +498,11 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
                         }}>
                           {senderName}
                         </span>
+                        {(msg.recipient_id === 'all_clients' || msg.recipient_id === 'all' || msg.is_broadcast) && (
+                          <span style={{ background: '#dcfce7', color: '#166534', fontSize: 9.5, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>
+                            📢 Announcement
+                          </span>
+                        )}
                       </div>
                       <span style={{ fontSize: 11, color: isUnread ? '#16a34a' : '#94a3b8', fontWeight: isUnread ? 700 : 400 }}>
                         {new Date(msg.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
