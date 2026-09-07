@@ -37,6 +37,7 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
 
   const threadEndRef = useRef(null);
   const selectedMessageRef = useRef(selectedMessage);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     selectedMessageRef.current = selectedMessage;
@@ -189,9 +190,13 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
 
   // Send reply in current thread
   const handleSendReply = async (e) => {
-    e?.preventDefault();
-    if (!replyText.trim() || sendingReply) return;
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (submittingRef.current || !replyText.trim()) return;
 
+    submittingRef.current = true;
     setSendingReply(true);
     try {
       const myId = (profile?._id || profile?.id)?.toString();
@@ -208,7 +213,7 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
       };
 
       const res = await api.post('/api/messages', payload);
-      const newMsg = res.data;
+      const newMsg = res.data || res;
       const msgId = (newMsg._id || newMsg.id)?.toString();
 
       // Deduplicated state update
@@ -230,15 +235,20 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
     } catch (err) {
       toast.error(err.message || 'Failed to send reply');
     } finally {
+      submittingRef.current = false;
       setSendingReply(false);
     }
   };
 
   // Handle compose new message submit
   const handleSendCompose = async (e) => {
-    e.preventDefault();
-    if (!composeForm.body.trim()) return;
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (submittingRef.current || !composeForm.body.trim()) return;
 
+    submittingRef.current = true;
     setSubmittingCompose(true);
     try {
       const payload = {
@@ -267,6 +277,7 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
     } catch (err) {
       toast.error(err.message || 'Failed to send message');
     } finally {
+      submittingRef.current = false;
       setSubmittingCompose(false);
     }
   };
@@ -671,7 +682,8 @@ export default function MessagesPage({ mode: initialMode = 'inbox' }) {
                     onKeyDown={e => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        handleSendReply();
+                        e.stopPropagation();
+                        handleSendReply(e);
                       }
                     }}
                     style={{ 
