@@ -34,6 +34,8 @@ import AddSitePage from './pages/AddSitePage';
 import TrackProcessing from './pages/TrackProcessing';
 import AgreementPage from './pages/Agreement';
 import AuditsPage from './pages/AuditsPage';
+import ExtensionApplicationPage from './pages/ExtensionApplicationPage';
+import ClientExtensionTrack from './pages/ClientExtensionTrack';
 
 export default function App() {
   return (
@@ -64,6 +66,9 @@ export default function App() {
             <Route path="/addon-applications/:addonId/approval-form" element={<ClientAddOnApprovalForm />} />
             <Route path="/addon-applications/:addonId/approval-form/:productIndex" element={<ClientProductApprovalResponse />} />
             <Route path="/addon-applications/new" element={<AddOnApplicationPage />} />
+            <Route path="/extension-applications" element={<ExtensionApplicationPage />} />
+            <Route path="/extension-applications/new" element={<ExtensionApplicationPage />} />
+            <Route path="/extension-applications/:id/track" element={<ClientExtensionTrack />} />
             <Route path="/proposals" element={<ProposalsPage />} />
             <Route path="/proposals/new" element={<ProposalsPage openNew />} />
             <Route path="/certificates" element={<CertificatesPage />} />

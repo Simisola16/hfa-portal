@@ -113,10 +113,14 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           return pAppId === appId;
         });
 
-        const linkedInvoice = allInvoices.find(inv => {
+        const appInvoices = allInvoices.filter(inv => {
           const invAppId = String(inv.application_id?._id || inv.application_id || '');
           return invAppId === appId;
         });
+        const linkedInvoice = appInvoices[0] || null;
+        const hasPaidOrClientPaidInvoice = appInvoices.some(inv => 
+          ['paid', 'client_paid', 'settled'].includes((inv.status || '').toLowerCase())
+        );
 
         const linkedAgreement = allAgreements.find(ag => {
           const agAppId = String(ag.application_id?._id || ag.application_id || '');
@@ -126,6 +130,8 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
         // Helper to check if an audit is awaiting client date selection
         const isAuditAwaitingDateSelection = (a) => {
           if (!a) return false;
+          if (a.finalized_date) return false;
+          if (['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(a.status)) return false;
           if (a.status === 'dates_proposed') return true;
           if (Array.isArray(a.proposed_dates) && a.proposed_dates.length === 3 && (!a.selected_dates || a.selected_dates.length === 0) && !a.finalized_date) {
             return true;
@@ -143,7 +149,9 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
 
         // Check if this application or any linked audit needs date selection (including Stage 1 and Stage 2 GSO)
         const auditNeedingDates = appAudits.find(isAuditAwaitingDateSelection);
-        if (auditNeedingDates || normStatus === 'dates_proposed') {
+        const isAppDateFinalized = Boolean(app.finalized_audit_date || linkedAudit?.finalized_date);
+        const isAwaitingInitialProduct = !isRenewal && ['invoice_sent', 'payment_received'].includes(normStatus);
+        if (!isAwaitingInitialProduct && !isAppDateFinalized && (auditNeedingDates || (normStatus === 'dates_proposed' && !linkedAudit?.finalized_date))) {
           const targetAudit = auditNeedingDates || linkedAudit;
           const stageNum = targetAudit?.stage || 1;
           const stageBadge = isDualStageApp ? ` (Stage ${stageNum})` : '';
@@ -182,8 +190,15 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
             });
             break;
 
-          case 'invoice_sent':
-            if (linkedInvoice) processedInvoiceIds.add(String(linkedInvoice._id || linkedInvoice.id));
+          case 'invoice_sent': {
+            appInvoices.forEach(inv => processedInvoiceIds.add(String(inv._id || inv.id)));
+            const isPaid = hasPaidOrClientPaidInvoice ||
+                           (linkedInvoice && ['paid', 'client_paid', 'settled'].includes((linkedInvoice.status || '').toLowerCase())) ||
+                           app.initial_invoice_paid ||
+                           ['payment_received', 'initial_payment_received', 'initial_product_approved', 'dates_proposed', 'date_finalized', 'audit_assigned', 'auditors_assigned', 'completed'].includes(normStatus);
+            if (isPaid) {
+              break;
+            }
             actionList.push({
               id: `app-inv-${appId}`,
               category: 'invoices',
@@ -198,6 +213,44 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
               icon: <Receipt size={16} />
             });
             break;
+          }
+
+          case 'payment_received': {
+            if (!isRenewal) {
+              const linkedInitProd = allInitProds.find(ip => {
+                const ipAppId = String(ip.application_id?._id || ip.application_id || '');
+                return ipAppId === appId;
+              });
+
+              const isInitialProductApproved = app.status === 'initial_product_approved' ||
+                app.is_initial_product_approved ||
+                (linkedInitProd && ['approved', 'initial_product_approved', 'completed'].includes(linkedInitProd.status));
+
+              if (!isInitialProductApproved) {
+                const processLink = linkedInitProd
+                  ? `/initial-products/${linkedInitProd._id || linkedInitProd.id}/track`
+                  : `/applications/${appId}/track`;
+
+                actionList.push({
+                  id: `app-initprod-progress-${appId}`,
+                  category: 'initial_products',
+                  app,
+                  type: 'navigate',
+                  title: 'Initial Product in-progress',
+                  tag: 'Initial Product',
+                  desc: linkedInitProd
+                    ? `Initial product "${linkedInitProd.product?.name || 'Specification'}" is undergoing Halal technical assessment for ${facilityName}.`
+                    : `Payment confirmed for ${facilityName}. Initial product submission and evaluation in progress.`,
+                  buttonText: 'Go to Process',
+                  buttonBg: '#0284c7',
+                  isLink: true,
+                  link: processLink,
+                  icon: <Layers size={16} />
+                });
+              }
+            }
+            break;
+          }
 
           case 'dates_proposed':
             // Already handled above by auditNeedingDates / normStatus check
@@ -239,8 +292,14 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
             });
             break;
 
-          case 'final_invoice_sent':
+          case 'final_invoice_sent': {
             if (linkedInvoice) processedInvoiceIds.add(String(linkedInvoice._id || linkedInvoice.id));
+            const isPaid = (linkedInvoice && ['paid', 'client_paid', 'settled'].includes((linkedInvoice.status || '').toLowerCase())) ||
+                           app.final_invoice_paid ||
+                           normStatus === 'final_invoice_paid';
+            if (isPaid) {
+              break;
+            }
             actionList.push({
               id: `app-finalinv-${appId}`,
               category: 'invoices',
@@ -255,6 +314,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
               icon: <Receipt size={16} />
             });
             break;
+          }
 
           default:
             break;
@@ -293,16 +353,18 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
       // ─────────────────────────────────────────────────────────────
       // 1C. AUDITS: Standalone Audit Date Selections (e.g. Stage 2 GSO)
       // ─────────────────────────────────────────────────────────────
-      const isAuditAwaitingDateSelection = (a) => {
+      const isAuditAwaitingDateSelectionStandalone = (a) => {
         if (!a) return false;
+        if (a.finalized_date) return false;
+        if (['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(a.status)) return false;
         if (a.status === 'dates_proposed') return true;
-        if (Array.isArray(a.proposed_dates) && a.proposed_dates.length === 3 && (!a.selected_dates || a.selected_dates.length === 0) && !a.finalized_date) {
+        if (Array.isArray(a.proposed_dates) && a.proposed_dates.length === 3 && (!a.selected_dates || a.selected_dates.length === 0)) {
           return true;
         }
         return false;
       };
 
-      const pendingDateAudits = allAudits.filter(isAuditAwaitingDateSelection);
+      const pendingDateAudits = allAudits.filter(isAuditAwaitingDateSelectionStandalone);
       for (const aud of pendingDateAudits) {
         const audAppId = String(aud.application_id?._id || aud.application_id || '');
         const actionId = `app-audit-${audAppId}-${aud.stage || 1}`;
@@ -625,6 +687,14 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
       // 5. STANDALONE UNPAID INVOICES
       // ─────────────────────────────────────────────────────────────
       const standaloneUnpaidInvoices = allInvoices.filter(inv => {
+        const invAppId = String(inv.application_id?._id || inv.application_id || '');
+        const linkedApp = allApps.find(a => String(a._id || a.id) === invAppId);
+        if (linkedApp) {
+          const normAppStatus = (linkedApp.status || '').toLowerCase();
+          const appPaid = linkedApp.initial_invoice_paid || ['payment_received', 'initial_payment_received', 'initial_product_approved', 'dates_proposed', 'date_finalized', 'audit_assigned', 'auditors_assigned', 'completed'].includes(normAppStatus);
+          const isInit = inv.invoice_type === 'initial' || (inv.title && inv.title.toLowerCase().includes('initial'));
+          if (isInit && appPaid) return false;
+        }
         const isUnpaid = ['pending', 'issued', 'unpaid', 'invoice_sent'].includes((inv.status || '').toLowerCase());
         const isNotClientPaid = inv.status !== 'client_paid' && inv.status !== 'paid' && inv.status !== 'settled';
         const notHandled = !processedInvoiceIds.has(String(inv._id || inv.id));

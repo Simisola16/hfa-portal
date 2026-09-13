@@ -541,7 +541,7 @@ export default function ApplicationsPage({ openNew }) {
     if (ongoingApp) {
       return {
         blocked: true,
-        message: `This site already has an application in progress (#${ongoingApp.application_number} - status: ${ongoingApp.status.replace(/_/g, ' ')}). You cannot submit another application for this site until the current one is completed.`
+        message: `This site already has an application in progress (#${ongoingApp.application_number} - status: ${STATUS_LABELS[ongoingApp.status] || ongoingApp.status.replace(/_/g, ' ')}). You cannot submit another application for this site until the current one is completed.`
       };
     }
 
@@ -895,14 +895,14 @@ export default function ApplicationsPage({ openNew }) {
           }}
         >
           <option value="">All Statuses</option>
-          {Object.keys(STATUS_BADGE).map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
+          {Object.keys(STATUS_BADGE).map(s => <option key={s} value={s}>{STATUS_LABELS[s] || s.replace(/_/g, ' ')}</option>)}
         </select>
         <button className="btn btn-ghost btn-sm" onClick={fetchData}><RefreshCw size={14} /></button>
         {pendingApp && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748b', fontWeight: 600 }}>
             <span>Active Application:</span>
             <span className={`badge ${STATUS_BADGE[pendingApp.status] || 'badge-blue'}`} style={{ textTransform: 'uppercase', fontSize: 11, fontWeight: 700 }}>
-              {pendingApp.status.replace(/_/g, ' ')}
+              {STATUS_LABELS[pendingApp.status] || pendingApp.status.replace(/_/g, ' ')}
             </span>
           </div>
         )}
@@ -972,7 +972,7 @@ export default function ApplicationsPage({ openNew }) {
               <div style={{ fontSize: 12, color: '#166534', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>Status:</span>
                 <span className={`badge ${STATUS_BADGE[pendingApp.status] || 'badge-green'}`} style={{ textTransform: 'capitalize', fontSize: 11, fontWeight: 700 }}>
-                  {STATUS_LABELS[pendingApp.status] || pendingApp.status?.replace(/_/g, ' ')}
+                  {pendingApp.status === 'payment_received' && (pendingApp.application_type || '').toLowerCase() === 'renewal' ? 'Renewal Fee Paid' : (STATUS_LABELS[pendingApp.status] || pendingApp.status?.replace(/_/g, ' '))}
                 </span>
               </div>
             </div>
@@ -1090,7 +1090,7 @@ export default function ApplicationsPage({ openNew }) {
                   </div>
                   <div>
                     <span className={`badge ${STATUS_BADGE[app.status] || LEGACY_BADGE[app.status] || 'badge-gray'}`} style={{ fontSize: 11, padding: '6px 12px', borderRadius: 30 }}>
-                      {STATUS_LABELS[app.status] || app.status?.replace(/_/g, ' ')}
+                      {app.status === 'payment_received' && (app.application_type || '').toLowerCase() === 'renewal' ? 'Renewal Fee Paid' : (STATUS_LABELS[app.status] || app.status?.replace(/_/g, ' '))}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

@@ -299,10 +299,17 @@ export default function TrackProcessing() {
   const showPaymentAction = (status === 'invoice_sent' || status === 'final_invoice_sent') && activeInvoiceForBanner && activeInvoiceForBanner.status !== 'client_paid' && activeInvoiceForBanner.status !== 'paid';
   const showPaymentPending = ((status === 'invoice_sent' || status === 'final_invoice_sent') && activeInvoiceForBanner && activeInvoiceForBanner.status === 'client_paid') || ((status === 'payment_received' || status === 'final_invoice_paid') && activeInvoiceForBanner && activeInvoiceForBanner.status !== 'paid');
   const showPaymentConfirmed = (status === 'payment_received' || (activeInvoiceForBanner && activeInvoiceForBanner.status === 'paid' && status === 'invoice_sent')) && (!activeAudit || activeAudit.status === 'pending' || activeAudit.status === 'scheduled');
-  const showAuditAction = status === 'dates_proposed' || activeAudit?.status === 'dates_proposed' || (Array.isArray(activeAudit?.proposed_dates) && activeAudit.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'completed', 'cancelled'].includes(activeAudit.status));
-  const showAuditDatesRejected = status === 'dates_rejected' || activeAudit?.status === 'dates_rejected';
-  const showAuditDatesAccepted = status === 'dates_accepted' || activeAudit?.status === 'dates_accepted';
-  const showAuditScheduled = (status === 'date_finalized' || status === 'audit_assigned' || activeAudit?.status === 'date_finalized' || activeAudit?.status === 'auditors_assigned') && !showAuditAction;
+  const isAuditFinalized = Boolean(
+    activeAudit?.finalized_date ||
+    audit?.finalized_date ||
+    ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(status) ||
+    ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(activeAudit?.status) ||
+    ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(audit?.status)
+  );
+  const showAuditAction = !isAuditFinalized && (status === 'dates_proposed' || activeAudit?.status === 'dates_proposed' || (Array.isArray(activeAudit?.proposed_dates) && activeAudit.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'cancelled'].includes(activeAudit.status)));
+  const showAuditDatesRejected = !isAuditFinalized && (status === 'dates_rejected' || activeAudit?.status === 'dates_rejected');
+  const showAuditDatesAccepted = !isAuditFinalized && (status === 'dates_accepted' || activeAudit?.status === 'dates_accepted');
+  const showAuditScheduled = (status === 'date_finalized' || status === 'audit_assigned' || activeAudit?.status === 'date_finalized' || activeAudit?.status === 'auditors_assigned' || isAuditFinalized) && !showAuditAction;
   const showAuditComplete = ['audit_successful', 'audit_completed', 'logsheet_created', 'logsheet_signed', 'application_successful'].includes(status) && status !== 'agreement_sent';
   const showAgreementAction = !isFastTrack && status === 'agreement_sent';
 
@@ -333,7 +340,7 @@ export default function TrackProcessing() {
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span className={`badge ${STATUS_BADGE[status] || 'badge-blue'}`}>
-                {STATUS_LABELS[status] || status.replace(/_/g, ' ')}
+                {isFastTrack && status === 'payment_received' ? 'Renewal Fee Paid' : (STATUS_LABELS[status] || status.replace(/_/g, ' '))}
               </span>
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                 Submitted {new Date(app.created_at).toLocaleDateString('en-GB')}
@@ -503,9 +510,13 @@ export default function TrackProcessing() {
               <CheckCircle size={22} style={{ color: '#16a34a' }} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>Payment Confirmed</div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>
+                {isFastTrack ? 'Payment Confirmed' : 'Initial Product In-Progress'}
+              </div>
               <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
-                Your payment has been successfully verified by HFA. Our administration team is preparing your audit schedule. We will propose three available audit dates for your selection shortly.
+                {isFastTrack
+                  ? 'Your payment has been successfully verified by HFA. Our administration team is preparing your audit schedule. We will propose three available audit dates for your selection shortly.'
+                  : 'Your payment has been successfully verified by HFA. Initial product submission and evaluation are now in progress.'}
               </div>
             </div>
           </div>

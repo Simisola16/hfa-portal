@@ -107,8 +107,9 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
 
   const renderSingleStageBlock = (auditObj, stageLabel = null) => {
     if (!auditObj) return null;
-    const isProposed = auditObj.status === 'dates_proposed' || (Array.isArray(auditObj.proposed_dates) && auditObj.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'completed', 'cancelled'].includes(auditObj.status));
-    const isAccepted = auditObj.status === 'dates_accepted';
+    const isFinalized = Boolean(auditObj.finalized_date || ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(auditObj.status));
+    const isProposed = !isFinalized && (auditObj.status === 'dates_proposed' || (Array.isArray(auditObj.proposed_dates) && auditObj.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(auditObj.status)));
+    const isAccepted = !isFinalized && auditObj.status === 'dates_accepted';
 
     return (
       <div style={{ marginBottom: isDualStage ? 16 : 0, padding: isDualStage ? '16px' : '0', background: isDualStage ? '#ffffff' : 'transparent', borderRadius: 12, border: isDualStage ? '1px solid #e2e8f0' : 'none' }}>
@@ -171,7 +172,13 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
   };
 
   // Check if either stage has dates awaiting selection
-  const hasProposedStage = audits.some(a => a.status === 'dates_proposed' || (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'completed', 'cancelled'].includes(a.status)));
+  const hasProposedStage = audits.some(a => {
+    if (a.finalized_date) return false;
+    if (['dates_accepted', 'date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(a.status)) return false;
+    return a.status === 'dates_proposed' || (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0 && (!a.selected_dates || a.selected_dates.length === 0));
+  });
+
+  const hasConfirmedDate = audits.some(a => Boolean(a.finalized_date || ['date_finalized', 'audit_assigned', 'auditors_assigned'].includes(a.status)));
 
   return (
     <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
@@ -188,11 +195,26 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
             </div>
           </div>
         </div>
-        {hasProposedStage && onSelectDatesClick && (
+        {hasProposedStage && onSelectDatesClick ? (
           <button className="btn btn-primary btn-sm" onClick={() => onSelectDatesClick()}>
             Select Dates
           </button>
-        )}
+        ) : hasConfirmedDate ? (
+          <span style={{
+            fontSize: 12,
+            background: '#f0fdf4',
+            color: '#15803d',
+            border: '1px solid #bbf7d0',
+            padding: '5px 12px',
+            borderRadius: 20,
+            fontWeight: 700,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5
+          }}>
+            <CheckCircle size={14} style={{ color: '#16a34a' }} /> Date Confirmed
+          </span>
+        ) : null}
       </div>
 
       {/* Card Body */}

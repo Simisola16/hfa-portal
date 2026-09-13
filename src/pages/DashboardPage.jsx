@@ -316,7 +316,7 @@ export default function DashboardPage() {
                       <tr key={app.id || app._id}>
                         <td><Link to={`/applications?appId=${app.id || app._id}`} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', fontSize: 12 }}>{app.site_name || app.establishment_name || 'Site'}</Link></td>
                         <td style={{ fontSize: 12, maxWidth: 150 }}><span className="truncate" style={{ display: 'block' }}>{app.category}</span></td>
-                        <td><span className={`badge ${STATUS_BADGE[app.status] || 'badge-gray'}`}>{STATUS_LABELS[app.status] || app.status?.replace(/_/g, ' ')}</span></td>
+                        <td><span className={`badge ${STATUS_BADGE[app.status] || 'badge-gray'}`}>{app.status === 'payment_received' && (app.application_type || '').toLowerCase() === 'renewal' ? 'Renewal Fee Paid' : (STATUS_LABELS[app.status] || app.status?.replace(/_/g, ' '))}</span></td>
                       </tr>
                     ))}
                   </tbody>
