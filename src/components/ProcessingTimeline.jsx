@@ -177,13 +177,13 @@ export default function ProcessingTimeline({
       if (stepKey === 'certificate_issued') return 'Certificate Issued';
     }
     if (isGSO) {
-      if (isStage1Complete) {
+      if (isStage1Complete && !isStage2Complete) {
         if (stepKey === 'dates_proposed') return 'Stage 2 Audit Dates Proposed';
         if (stepKey === 'dates_accepted') return 'Stage 2 Audit Dates Accepted';
         if (stepKey === 'date_finalized') return 'Stage 2 Audit Date Finalized';
         if (stepKey === 'audit_assigned') return 'Stage 2 Auditor Assigned';
         if (stepKey === 'audit_successful') return 'Stage 2 Audit Complete';
-      } else {
+      } else if (!isStage1Complete) {
         if (stepKey === 'dates_proposed') return 'Stage 1 Audit Dates Proposed';
         if (stepKey === 'dates_accepted') return 'Stage 1 Audit Dates Accepted';
         if (stepKey === 'date_finalized') return 'Stage 1 Audit Date Finalized';
