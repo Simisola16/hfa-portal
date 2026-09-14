@@ -1081,6 +1081,7 @@ export default function TrackProcessing() {
                 applicationType={app.application_type || ''}
                 initialProduct={initialProduct}
                 appId={appId}
+                audits={Array.isArray(audit) ? audit : (Array.isArray(audit?.data) ? audit.data : (audit ? [audit] : []))}
               />
             </div>
           </div>
