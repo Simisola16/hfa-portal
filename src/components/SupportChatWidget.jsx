@@ -208,13 +208,13 @@ export default function SupportChatWidget() {
         priority
       });
 
-      const newTicket = res.data?.data;
+      const newTicket = res.data?.data || res.data;
       setActiveTicket(newTicket);
       toast.success('Support request dispatched to HFA Support Manager!');
       setIssueDescription('');
       setActiveTab('ticket');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to submit support request');
+      toast.error(err.response?.data?.error || err.message || 'Failed to submit support request');
     } finally {
       setSubmittingHandover(false);
     }
@@ -231,10 +231,11 @@ export default function SupportChatWidget() {
       const res = await api.post(`/api/tickets/${targetId}/reply`, {
         message: ticketReply.trim()
       });
-      setActiveTicket(res.data?.data);
+      const updated = res.data?.data || res.data;
+      setActiveTicket(updated);
       setTicketReply('');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to send message');
+      toast.error(err.response?.data?.error || err.message || 'Failed to send message');
     } finally {
       setSendingReply(false);
     }

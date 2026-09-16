@@ -181,8 +181,9 @@ export default function TicketsPage({ openNew }) {
     if (!selectedTicket) return;
     try {
       const res = await api.patch(`/api/tickets/${selectedTicket._id || selectedTicket.id}/status`, { status: newStatus });
-      setSelectedTicket(res.data);
-      setTickets(prev => prev.map(t => (t._id === res.data._id || t.id === res.data._id) ? res.data : t));
+      const updated = res.data?.data || res.data;
+      setSelectedTicket(updated);
+      setTickets(prev => prev.map(t => ((t._id || t.id)?.toString() === (updated._id || updated.id)?.toString()) ? updated : t));
       toast.success(`Ticket marked as ${newStatus}`);
     } catch (err) {
       toast.error(err.message || 'Failed to update ticket');
