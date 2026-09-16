@@ -11,6 +11,7 @@ import PaymentModal from './PaymentModal';
 import ClientAuditModal from './ClientAuditModal';
 import ClientAgreementModal from './ClientAgreementModal';
 import NotificationCenter from './NotificationCenter';
+import SupportChatWidget from './SupportChatWidget';
 
 const pageTitles = {
   '/dashboard': { title: 'Dashboard', sub: 'Overview of your certification status' },
@@ -582,6 +583,9 @@ export default function Layout() {
           onSuccess={() => fetchNotifs()}
         />
       )}
+
+      {/* Floating AI & Live Support Chatbox */}
+      <SupportChatWidget />
     </div>
   );
 }
