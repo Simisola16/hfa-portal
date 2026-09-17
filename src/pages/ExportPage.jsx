@@ -10,7 +10,13 @@ export default function ExportPage({ openNew }) {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ destination_country: '', products: '', shipment_date: '', consignee_name: '', consignee_address: '', notes: '' });
 
-  const fetch = () => { setLoading(true); api.get('/api/exports').then(d => setExports(d.data || [])).catch(() => toast.error('Failed to load')).finally(() => setLoading(false)); };
+  const fetch = () => {
+    setLoading(true);
+    api.get('/api/exports')
+      .then(res => setExports(res.data?.data || res.data || []))
+      .catch(() => toast.error('Failed to load export certificates'))
+      .finally(() => setLoading(false));
+  };
   useEffect(() => { fetch(); }, []);
 
   useEffect(() => {
