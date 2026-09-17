@@ -28,20 +28,49 @@ const SUGGESTED_QUESTIONS = [
 
 export default function SupportChatWidget() {
   const { profile } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('ai'); // 'ai' | 'ticket' | 'request_form'
+  // Persist and restore open/tab state across reloads
+  const [isOpen, setIsOpen] = useState(() => {
+    return localStorage.getItem('hfa_support_chat_open') === 'true';
+  });
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('hfa_support_chat_tab') || 'ai';
+  });
+
+  // Keep open/tab synced to localStorage
+  useEffect(() => {
+    localStorage.setItem('hfa_support_chat_open', isOpen ? 'true' : 'false');
+  }, [isOpen]);
+
+  useEffect(() => {
+    localStorage.setItem('hfa_support_chat_tab', activeTab);
+  }, [activeTab]);
   
   // AI Chat State
-  const [aiMessages, setAiMessages] = useState([
-    {
-      id: 'init_welcome',
-      role: 'assistant',
-      content: `**Assalamu Alaikum! Welcome to the HFA Support Assistant.** 👋\n\nI can instantly answer questions about **Halal Certification Schemes**, **Application Stages**, **Required Documents**, **Billing & Invoices**, **Audits**, and **Certificates**.\n\nHow can I help you today? You can also click **"Talk to Real Person"** at any time to connect with our Support Manager.`,
-      time: new Date()
-    }
-  ]);
+  const [aiMessages, setAiMessages] = useState(() => {
+    try {
+      const saved = localStorage.getItem('hfa_ai_messages');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [
+      {
+        id: 'init_welcome',
+        role: 'assistant',
+        content: `**Assalamu Alaikum! Welcome to the HFA Support Assistant.** 👋\n\nI can instantly answer questions about **Halal Certification Schemes**, **Application Stages**, **Required Documents**, **Billing & Invoices**, **Audits**, and **Certificates**.\n\nHow can I help you today? You can also click **"Talk to Real Person"** at any time to connect with our Support Manager.`,
+        time: new Date()
+      }
+    ];
+  });
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+
+  // Save AI messages to localStorage
+  useEffect(() => {
+    if (aiMessages.length > 0) {
+      try {
+        localStorage.setItem('hfa_ai_messages', JSON.stringify(aiMessages.slice(-25)));
+      } catch {}
+    }
+  }, [aiMessages]);
 
   // Live Ticket State (Human Handover)
   const [activeTicket, setActiveTicket] = useState(null);
@@ -74,15 +103,27 @@ export default function SupportChatWidget() {
     scrollToBottom();
   }, [aiMessages, activeTicket?.responses, activeTab, isOpen]);
 
-  // Fetch active ticket on load
+  // Fetch active ticket on load / reload
   const fetchActiveTicket = async () => {
     const token = localStorage.getItem('hfa_token');
     if (!token) return;
     try {
       setLoadingActiveTicket(true);
       const res = await api.get('/api/tickets/active-chat');
-      if (res.data?.data) {
-        setActiveTicket(res.data.data);
+      const ticket = res.data?.data || res.data;
+      if (ticket && (ticket.status === 'open' || ticket.status === 'in_progress')) {
+        setActiveTicket(ticket);
+        // If the user previously had a ticket active, automatically switch to 'ticket' tab
+        const savedTab = localStorage.getItem('hfa_support_chat_tab');
+        if (!savedTab || savedTab === 'ticket' || savedTab === 'request_form') {
+          setActiveTab('ticket');
+        }
+      } else {
+        // If resolved/closed, clear active ticket so user can start a new query/request
+        setActiveTicket(null);
+        if (activeTab === 'ticket') {
+          setActiveTab('ai');
+        }
       }
     } catch {
       // Non-blocking
@@ -93,7 +134,7 @@ export default function SupportChatWidget() {
 
   useEffect(() => {
     fetchActiveTicket();
-  }, []);
+  }, [profile]);
 
   // Socket.io Real-Time Synchronization for Ticket replies & updates
   useEffect(() => {
@@ -107,21 +148,32 @@ export default function SupportChatWidget() {
       const myId = (profile?._id || profile?.id)?.toString();
       const isStaffReply = reply?.user_id !== myId;
 
-      if (activeTicket && ((activeTicket._id || activeTicket.id)?.toString() === ticketId?.toString())) {
-        setActiveTicket(updatedTicket);
+      const currentTicketId = (activeTicket?._id || activeTicket?.id)?.toString();
+      const targetId = ticketId?.toString();
+
+      if (currentTicketId === targetId || !activeTicket) {
+        if (updatedTicket.status === 'resolved' || updatedTicket.status === 'closed') {
+          setActiveTicket(updatedTicket);
+        } else {
+          setActiveTicket(updatedTicket);
+          setActiveTab('ticket');
+        }
+
         if (!isOpen && isStaffReply) {
           setUnreadReplies(prev => prev + 1);
         }
-      } else if (isStaffReply) {
-        // Updated active ticket if user didn't have one open
-        setActiveTicket(updatedTicket);
-        setUnreadReplies(prev => prev + 1);
       }
     };
 
     const handleTicketUpdated = (updatedTicket) => {
-      if (activeTicket && ((activeTicket._id || activeTicket.id)?.toString() === (updatedTicket._id || updatedTicket.id)?.toString())) {
+      const currentTicketId = (activeTicket?._id || activeTicket?.id)?.toString();
+      const targetId = (updatedTicket._id || updatedTicket.id)?.toString();
+
+      if (currentTicketId === targetId || (!activeTicket && (updatedTicket.status === 'open' || updatedTicket.status === 'in_progress'))) {
         setActiveTicket(updatedTicket);
+        if (updatedTicket.status === 'resolved' || updatedTicket.status === 'closed') {
+          // Keep showing it with resolved notification until client initiates new request or closes
+        }
       }
     };
 
@@ -138,8 +190,8 @@ export default function SupportChatWidget() {
   const handleOpenWidget = () => {
     setIsOpen(true);
     setUnreadReplies(0);
-    if (activeTicket && activeTab !== 'request_form') {
-      // If there's an active ticket, let user pick or stay on AI
+    if (activeTicket && (activeTicket.status === 'open' || activeTicket.status === 'in_progress')) {
+      setActiveTab('ticket');
     }
   };
 
@@ -208,13 +260,13 @@ export default function SupportChatWidget() {
         priority
       });
 
-      const newTicket = res.data?.data;
+      const newTicket = res.data?.data || res.data;
       setActiveTicket(newTicket);
       toast.success('Support request dispatched to HFA Support Manager!');
       setIssueDescription('');
       setActiveTab('ticket');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to submit support request');
+      toast.error(err.response?.data?.error || err.message || 'Failed to submit support request');
     } finally {
       setSubmittingHandover(false);
     }
@@ -231,10 +283,11 @@ export default function SupportChatWidget() {
       const res = await api.post(`/api/tickets/${targetId}/reply`, {
         message: ticketReply.trim()
       });
-      setActiveTicket(res.data?.data);
+      const updated = res.data?.data || res.data;
+      setActiveTicket(updated);
       setTicketReply('');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to send message');
+      toast.error(err.response?.data?.error || err.message || 'Failed to send message');
     } finally {
       setSendingReply(false);
     }
@@ -1007,12 +1060,12 @@ export default function SupportChatWidget() {
                         fontWeight: 700,
                         padding: '1px 6px',
                         borderRadius: 6,
-                        background: activeTicket?.status === 'resolved' ? '#dcfce7' : '#eff6ff',
-                        color: activeTicket?.status === 'resolved' ? '#15803d' : '#1d4ed8',
+                        background: (activeTicket?.status === 'resolved' || activeTicket?.status === 'closed') ? '#dcfce7' : '#eff6ff',
+                        color: (activeTicket?.status === 'resolved' || activeTicket?.status === 'closed') ? '#15803d' : '#1d4ed8',
                         textTransform: 'uppercase'
                       }}
                     >
-                      {activeTicket?.status?.replace('_', ' ') || 'Open'}
+                      {activeTicket?.status === 'resolved' ? '✓ Resolved' : (activeTicket?.status === 'closed' ? 'Closed' : (activeTicket?.status?.replace('_', ' ') || 'Open'))}
                     </span>
                   </div>
                   <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
@@ -1027,6 +1080,11 @@ export default function SupportChatWidget() {
                       <UserCheck size={14} />
                       <span>{activeTicket.assigned_staff.full_name || 'Assigned Admin'}</span>
                     </div>
+                  ) : (activeTicket?.status === 'resolved' || activeTicket?.status === 'closed') ? (
+                    <div style={{ fontSize: 11, color: '#15803d', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <CheckCircle size={13} />
+                      <span>Ticket Completed</span>
+                    </div>
                   ) : (
                     <div style={{ fontSize: 11, color: '#b45309', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                       <Clock size={12} />
@@ -1034,19 +1092,23 @@ export default function SupportChatWidget() {
                     </div>
                   )}
                   <button
-                    onClick={() => setActiveTab('request_form')}
+                    onClick={() => {
+                      setActiveTicket(null);
+                      setActiveTab('request_form');
+                    }}
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#64748b',
-                      fontSize: 10.5,
+                      color: '#047857',
+                      fontSize: 11,
+                      fontWeight: 700,
                       textDecoration: 'underline',
                       cursor: 'pointer',
                       padding: 0,
                       marginTop: 2
                     }}
                   >
-                    + New Request
+                    + New Question / Request
                   </button>
                 </div>
               </div>
