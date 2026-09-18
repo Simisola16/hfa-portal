@@ -1150,15 +1150,7 @@ export default function TrackProcessing() {
                   </div>
                 )}
 
-                {/* Scope of Certification */}
-                {app.scope && (
-                  <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Scope of Certification</div>
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#334155', lineHeight: 1.6, fontStyle: 'italic' }}>
-                      &ldquo;{app.scope}&rdquo;
-                    </div>
-                  </div>
-                )}
+
 
                 {/* Porcine / Intoxicants flags */}
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

@@ -179,8 +179,8 @@ export default function ClientProposalModal({ isOpen, onClose, proposal: propPro
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, paddingTop: 12, borderTop: '1px solid #e2e8f0' }}>
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Scope</div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginTop: 2 }}>{proposal.scope || app?.scope || 'Certification Scope'}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Scheme / Standard</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginTop: 2 }}>{app?.category || proposal.title || 'Halal Certification'}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Estimated Cost</div>
