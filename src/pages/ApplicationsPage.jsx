@@ -699,7 +699,7 @@ export default function ApplicationsPage({ openNew }) {
         return false;
       }
       if (!form.scope?.trim()) {
-        toast.error('Section E: Please enter the product description / scope.');
+        toast.error('Section E: Please enter the product description.');
         return false;
       }
       if (!form.products_on_site_count || Number(form.products_on_site_count) <= 0) {
@@ -1490,7 +1490,7 @@ export default function ApplicationsPage({ openNew }) {
                             <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#be123c' }}>Section E</span>
                           </div>
                           <h2 style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', margin: 0 }}>Process / Product Details</h2>
-                          <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Describe your production processes and product scope</p>
+                          <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Describe your production processes and product details</p>
                         </div>
                         <div style={{ display: 'grid', gap: 18 }}>
 

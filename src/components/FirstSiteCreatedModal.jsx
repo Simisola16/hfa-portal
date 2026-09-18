@@ -272,7 +272,7 @@ export default function FirstSiteCreatedModal({ isOpen, onClose, siteName }) {
               </div>
               <div>
                 <div style={{ fontSize: 13.5, fontWeight: 800, color: '#0f172a', marginBottom: 2 }}>
-                  Attach Products &amp; Scope
+                  Attach Products &amp; Details
                 </div>
                 <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.45 }}>
                   Select your certification category (Meat, Food &amp; General Processing, or UAE/GSO) and list product lines.

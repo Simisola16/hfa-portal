@@ -396,7 +396,7 @@ export default function CertificatesPage() {
                                   <h4 style={{ fontSize: 14, fontWeight: 800, color: '#1e293b', marginBottom: 12 }}>Certificate Details</h4>
                                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: '#fff', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0' }}>
                                     <div>
-                                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Scope of Certification</div>
+                                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Products Covered</div>
                                       <div style={{ fontSize: 13, color: '#334155', fontWeight: 600, marginTop: 2 }}>{cert.products_covered?.join(', ') || 'General Halal Certification'}</div>
                                     </div>
                                     <div>
