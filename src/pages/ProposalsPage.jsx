@@ -7,7 +7,7 @@ import { ClipboardList, X, Download, CheckCircle, XCircle, FileText, MessageSqua
 const getPdfUrl = (url) => {
   if (!url) return '#';
   if (url.startsWith('/api/files/')) {
-    const API_URL = import.meta.env.VITE_API_URL || 'https://hfa-portal-backend.vercel.app';
+    const API_URL = import.meta.env.VITE_API_URL || 'https://backend.hfaportal.company';
     return `${API_URL}${url}`;
   }
   // For old Cloudinary files that weren't migrated
