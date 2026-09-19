@@ -664,7 +664,7 @@ export default function AddOnApplicationPage() {
                                   style={{ margin: 0, fontSize: 13 }}
                                   value={p.code}
                                   onChange={e => updateProduct(idx, 'code', e.target.value)}
-                                  placeholder="e.g. SKU-101"
+                                  placeholder="e.g. CODE-101"
                                 />
                               </div>
                             </>

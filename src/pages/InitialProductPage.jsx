@@ -334,7 +334,7 @@ export default function InitialProductPage() {
                         </span>
                         {item.product?.code && (
                           <span style={{ background: '#f1f5f9', color: '#475569', borderRadius: 6, padding: '2px 8px', fontSize: 11.5, fontWeight: 700 }}>
-                            SKU: {item.product.code}
+                            CODE: {item.product.code}
                           </span>
                         )}
                         <span style={{
