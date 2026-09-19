@@ -372,7 +372,7 @@ export default function SupportChatWidget() {
           }}
         >
           {/* Subtle invitation pill */}
-          <div
+          {/* <div
             style={{
               background: 'white',
               color: '#0f172a',
@@ -389,8 +389,8 @@ export default function SupportChatWidget() {
             }}
           >
             <Sparkles size={14} style={{ color: '#059669' }} />
-            <span>HFA Support & AI</span>
-          </div>
+            <span>HFA Support </span>
+          </div> */}
 
           {/* Launcher Circle Button */}
           <div
