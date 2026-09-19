@@ -297,7 +297,7 @@ export default function ClientAddInitialProductModal({
 
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
-                  Product Code / SKU
+                  Product Code
                 </label>
                 <input
                   type="text"
