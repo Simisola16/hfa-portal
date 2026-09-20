@@ -36,6 +36,7 @@ export default function ClientAuditModal({
   // Date Selection State
   const [selectedDates, setSelectedDates] = useState([]);
   const [unavailable, setUnavailable] = useState(false);
+  const [clientAvailabilityNote, setClientAvailabilityNote] = useState('');
   
   // NC Upload State
   const [responseText, setResponseText] = useState('');
@@ -100,15 +101,21 @@ export default function ClientAuditModal({
       toast.error('Please select exactly 2 dates, or check the unavailable option.');
       return;
     }
+    if (unavailable && !clientAvailabilityNote.trim()) {
+      toast.error('Please specify your alternative available dates or timeframe before submitting.');
+      return;
+    }
     setSubmitting(true);
     try {
       const auditId = getCleanId(audit._id || audit.id || audit);
       await api.post('/api/audits/select-dates', {
         audit_id: auditId,
         selected_dates: selectedDates,
-        unavailable
+        unavailable,
+        remarks: clientAvailabilityNote.trim(),
+        client_availability_note: clientAvailabilityNote.trim()
       });
-      toast.success(unavailable ? 'Admin notified. Waiting for new dates.' : 'Dates confirmed successfully!');
+      toast.success(unavailable ? 'HFA Admin notified of your availability. Waiting for new dates.' : 'Dates confirmed successfully!');
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
@@ -306,6 +313,37 @@ export default function ClientAuditModal({
                     I am not available on any of these days
                   </span>
                 </label>
+
+                {/* Dynamic Alternative Dates & Availability Remarks Input */}
+                {unavailable && (
+                  <div style={{
+                    marginTop: 4,
+                    padding: 16,
+                    background: '#fff',
+                    borderRadius: 8,
+                    border: '1.5px solid #fca5a5',
+                    boxShadow: '0 2px 4px rgba(239, 68, 68, 0.05)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      <Calendar size={15} style={{ color: '#dc2626' }} />
+                      <label style={{ fontSize: 13, fontWeight: 800, color: '#991b1b', margin: 0 }}>
+                        Alternative Dates &amp; Availability Remarks <span style={{ color: '#dc2626' }}>*</span>
+                      </label>
+                    </div>
+                    <textarea
+                      rows={3}
+                      className="form-control"
+                      value={clientAvailabilityNote}
+                      onChange={e => setClientAvailabilityNote(e.target.value)}
+                      placeholder="Please specify the dates or timeframe your facility/team will be available for the audit..."
+                      style={{ fontSize: 13, borderColor: '#fca5a5', borderRadius: 8 }}
+                      required
+                    />
+                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 6, lineHeight: 1.4 }}>
+                      💡 This information will be sent directly to the HFA Lead Auditor and Admin so they can propose an alternative schedule matching your availability.
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -328,8 +366,9 @@ export default function ClientAuditModal({
               className="btn btn-primary"
               disabled={submitting || !audit || loading}
               onClick={handleSubmitDates}
+              style={unavailable ? { background: '#dc2626', borderColor: '#dc2626' } : {}}
             >
-              {submitting ? 'Submitting...' : 'Confirm Date Selection'}
+              {submitting ? 'Submitting...' : unavailable ? 'Submit Availability & Decline Dates' : 'Confirm Date Selection'}
             </button>
           )}
         </div>
