@@ -480,7 +480,17 @@ export default function AuditsPage() {
                                             </span>
                                           ))}
                                         </div>
-                                      ) : (audit.client_unavailable ? <span style={{ color: '#dc2626', fontWeight: 700 }}>Marked as Unavailable</span> : 'Not submitted yet')}
+                                      ) : (audit.client_unavailable ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                                          <span style={{ color: '#dc2626', fontWeight: 700 }}>Marked as Unavailable</span>
+                                          {audit.client_availability_note && (
+                                            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#991b1b', lineHeight: 1.4 }}>
+                                              <span style={{ fontWeight: 700 }}>Your Note / Alternative Dates: </span>
+                                              {audit.client_availability_note}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : 'Not submitted yet')}
                                     </div>
                                   </div>
 
