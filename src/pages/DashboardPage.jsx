@@ -3,7 +3,6 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, RefreshCw, Download, X, MapPin, RotateCcw, ChevronRight } from 'lucide-react';
-import ActionsNeededWidget from '../components/ActionsNeededWidget';
 import FirstSiteCreatedModal from '../components/FirstSiteCreatedModal';
 import NewUserSitePromptModal from '../components/NewUserSitePromptModal';
 
@@ -201,8 +200,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Persistent Actions Needed Widget */}
-      <ActionsNeededWidget />
+
 
       {/* Stats Grid */}
       <div className="stats-grid">
