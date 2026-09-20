@@ -254,14 +254,34 @@ export default function TrackProcessing() {
   const isApproved = status === 'approved' || status === 'certificate_issued';
   const rejectionEntry = (app.status_history || app.statusHistory || []).find(e => e.status === 'rejected');
 
+  const isRenewal = Boolean(
+    String(app?.application_type || '').toLowerCase().includes('renewal') ||
+    String(app?.type || '').toLowerCase().includes('renewal') ||
+    Boolean(app?.is_renewal) ||
+    Boolean(app?.renewed_certificate_id) ||
+    String(app?.application_number || '').includes('-RE-') ||
+    String(app?.category || '').toLowerCase().includes('renewal')
+  );
+  const isSurveillance = Boolean(
+    String(app?.application_type || '').toLowerCase().includes('surveillance') ||
+    String(app?.type || '').toLowerCase().includes('surveillance') ||
+    Boolean(app?.is_surveillance) ||
+    String(app?.application_number || '').includes('-SU-') ||
+    String(app?.category || '').toLowerCase().includes('surveillance')
+  );
+  const isFastTrack = isRenewal || isSurveillance;
+
   // Helper flags for action stepper
   const auditsArr = audit?.data || (Array.isArray(audit) ? audit : [audit]).filter(Boolean);
-  const isDualStage = (app?.category || '').toLowerCase().includes('gso') || 
+  const isDualStage = ((app?.category || '').toLowerCase().includes('gso') || 
     (app?.category || '').toLowerCase().includes('uae') || 
-    app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE';
+    app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE') && !isFastTrack;
   const stage1 = auditsArr?.find(a => a.stage === 1) || auditsArr?.[0];
   const stage2 = auditsArr?.find(a => a.stage === 2);
-  const auditWithDates = auditsArr?.find(a => a.status === 'dates_proposed' || (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'completed', 'cancelled'].includes(a.status)));
+  const auditWithDates = auditsArr?.find(a => 
+    !a.finalized_date &&
+    (a.status === 'dates_proposed' || (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(a.status)))
+  );
   const activeAudit = auditWithDates || (isDualStage ? (stage2 || stage1) : stage1);
 
   // NC state
@@ -279,23 +299,6 @@ export default function TrackProcessing() {
     }) === idx;
   });
   const latestNcReport = allNcReports.length > 0 ? allNcReports[allNcReports.length - 1] : null;
-
-  const isRenewal = Boolean(
-    String(app?.application_type || '').toLowerCase().includes('renewal') ||
-    String(app?.type || '').toLowerCase().includes('renewal') ||
-    Boolean(app?.is_renewal) ||
-    Boolean(app?.renewed_certificate_id) ||
-    String(app?.application_number || '').includes('-RE-') ||
-    String(app?.category || '').toLowerCase().includes('renewal')
-  );
-  const isSurveillance = Boolean(
-    String(app?.application_type || '').toLowerCase().includes('surveillance') ||
-    String(app?.type || '').toLowerCase().includes('surveillance') ||
-    Boolean(app?.is_surveillance) ||
-    String(app?.application_number || '').includes('-SU-') ||
-    String(app?.category || '').toLowerCase().includes('surveillance')
-  );
-  const isFastTrack = isRenewal || isSurveillance;
 
   // Invoice resolution (differentiate initial vs final invoice with robust fallbacks)
   const finalInvoice = allInvoices.find(i => i.invoice_type === 'final' || (i.title && i.title.toLowerCase().includes('final')))
@@ -315,6 +318,7 @@ export default function TrackProcessing() {
   const isAuditFinalized = Boolean(
     activeAudit?.finalized_date ||
     audit?.finalized_date ||
+    auditsArr.some(a => a.finalized_date || ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed'].includes(a.status)) ||
     ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(status) ||
     ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(activeAudit?.status) ||
     ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(audit?.status)

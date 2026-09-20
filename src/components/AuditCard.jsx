@@ -16,9 +16,15 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
   const hasAudits = audits && audits.length > 0;
   const isAvailable = ['invoice_sent', 'payment_received', 'initial_product_approved', 'dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'audit_report_submitted', 'audit_successful', 'on_hold', 'final_invoice_sent', 'logsheet_created', 'logsheet_signed', 'agreement_sent', 'agreement_signed', 'certificate_issued', 'nc_flagged', 'nc_closed', 'audit_completed'].includes(normStatus) || hasAudits;
 
-  const isDualStage = (app?.category || '').toLowerCase().includes('gso') || 
+  const isRenewalOrSurveillance = 
+    String(app?.application_type || '').toLowerCase().includes('renewal') ||
+    String(app?.application_type || '').toLowerCase().includes('surveillance') ||
+    Boolean(app?.is_renewal) ||
+    Boolean(app?.is_surveillance);
+
+  const isDualStage = ((app?.category || '').toLowerCase().includes('gso') || 
     (app?.category || '').toLowerCase().includes('uae') || 
-    app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE';
+    app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE') && !isRenewalOrSurveillance;
   const stage1 = audits?.find(a => a.stage === 1) || audits?.[0];
   const stage2 = audits?.find(a => a.stage === 2);
 
@@ -178,7 +184,8 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
     return a.status === 'dates_proposed' || (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0 && (!a.selected_dates || a.selected_dates.length === 0));
   });
 
-  const hasConfirmedDate = audits.some(a => Boolean(a.finalized_date || ['date_finalized', 'audit_assigned', 'auditors_assigned'].includes(a.status)));
+  const hasConfirmedDate = audits.some(a => Boolean(a.finalized_date || ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed'].includes(a.status))) ||
+    ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed'].includes(normStatus);
 
   return (
     <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
@@ -195,7 +202,7 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
             </div>
           </div>
         </div>
-        {hasProposedStage && onSelectDatesClick ? (
+        {!hasConfirmedDate && hasProposedStage && onSelectDatesClick ? (
           <button className="btn btn-primary btn-sm" onClick={() => onSelectDatesClick()}>
             Select Dates
           </button>
