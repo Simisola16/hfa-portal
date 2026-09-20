@@ -256,7 +256,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
                   category: 'initial_products',
                   app,
                   type: 'navigate',
-                  title: 'Initial Product in-progress',
+                  title: 'Initial Product In-Progress',
                   tag: 'Initial Product',
                   desc: `Initial product "${linkedInitProd.product?.name || 'Specification'}" is undergoing Halal technical assessment for ${facilityName}.`,
                   buttonText: 'Go to Process',
