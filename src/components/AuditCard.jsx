@@ -255,10 +255,12 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
 
         {/* NC Reports Section if present */}
         {(() => {
-          const rawNcReports = [
-            ...(app?.nc_reports || []),
-            ...audits.flatMap(a => (a.nc_reports || []))
-          ];
+          const rawNcReports = isDualStage
+            ? (stage2?.nc_reports || [])
+            : [
+                ...(app?.nc_reports || []),
+                ...audits.flatMap(a => (a.nc_reports || []))
+              ];
           const allNcReports = rawNcReports.filter((nc, idx, self) => {
             return self.findIndex(o => {
               if (o._id && nc._id && String(o._id) === String(nc._id)) return true;

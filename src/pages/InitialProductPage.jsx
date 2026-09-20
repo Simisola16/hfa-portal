@@ -105,17 +105,22 @@ export default function InitialProductPage() {
     return isPaymentConfirmed;
   });
 
-  // Auto-open modal if application_id is provided in URL query
+  // Auto-open modal if application_id is provided in URL query, strictly gating on eligibleApps
   useEffect(() => {
     const targetAppId = searchParams.get('application_id');
-    if (targetAppId && apps.length > 0) {
-      const targetApp = apps.find(a => String(a._id || a.id) === targetAppId);
-      if (targetApp) {
-        setSelectedAppForModal(targetApp);
+    if (targetAppId && !loading) {
+      const eligibleTargetApp = eligibleApps.find(a => String(a._id || a.id) === targetAppId);
+      if (eligibleTargetApp) {
+        setSelectedAppForModal(eligibleTargetApp);
         setShowAddModal(true);
+      } else if (apps.length > 0) {
+        const foundApp = apps.find(a => String(a._id || a.id) === targetAppId);
+        if (foundApp) {
+          toast.error('Initial Product submission requires confirmed initial invoice payment by HFA administration.');
+        }
       }
     }
-  }, [searchParams, apps]);
+  }, [searchParams, eligibleApps, apps, loading]);
 
   return (
     <div>
