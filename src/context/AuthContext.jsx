@@ -33,8 +33,15 @@ export function AuthProvider({ children }) {
     } else if (token) {
       api.get('/api/auth/profile')
         .then(data => { 
-          setUser(data.user); 
-          setProfile(data.user); // In MongoDB, user and profile are the same document
+          const userRole = data.user?.role || 'client';
+          if (userRole !== 'client' && !data.user?.is_impersonation) {
+            localStorage.removeItem('hfa_token');
+            setUser(null);
+            setProfile(null);
+          } else {
+            setUser(data.user); 
+            setProfile(data.user); // In MongoDB, user and profile are the same document
+          }
         })
         .catch(() => { localStorage.removeItem('hfa_token'); })
         .finally(() => setLoading(false));
@@ -45,6 +52,10 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const data = await api.post('/api/auth/login', { email, password });
+    const userRole = data.user?.role || 'client';
+    if (userRole !== 'client' && !data.user?.is_impersonation) {
+      throw new Error('Staff and administrator accounts cannot log in here. Please use the HFA Admin Portal.');
+    }
     localStorage.setItem('hfa_token', data.token); // Changed from data.session.access_token
     setUser(data.user);
     setProfile(data.user); // Merged in MongoDB
