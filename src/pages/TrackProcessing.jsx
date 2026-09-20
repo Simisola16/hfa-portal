@@ -511,7 +511,7 @@ export default function TrackProcessing() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>
-                {isFastTrack ? 'Payment Confirmed' : 'Initial Product In-Progress'}
+                {isFastTrack ? 'Payment Confirmed' : 'Initial Payment Confirmed'}
               </div>
               <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
                 {isFastTrack
