@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Users, Lock, AlertCircle, CheckCircle, FileText } from 'lucide-react';
+import { Calendar, Users, Lock, AlertCircle, CheckCircle, CheckCircle2, FileText } from 'lucide-react';
 
 const getPdfUrl = (url) => {
   if (!url) return '#';
@@ -269,14 +269,36 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
 
           if (allNcReports.length === 0) return null;
 
+          // Determine if all findings are closed / resolved
+          const isAllResolved = allNcReports.length > 0 && allNcReports.every(nc => {
+            const st = (nc.status || '').toUpperCase();
+            return st === 'CLOSED' || st === 'RESOLVED' || st === 'CORRECTED';
+          });
+
           return (
             <div style={{ marginTop: 20, borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#b91c1c', letterSpacing: '0.05em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <AlertCircle size={14} color="#dc2626" /> Non-Conformity (NC) Findings ({allNcReports.length})
+              <div style={{
+                fontSize: 11,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                color: isAllResolved ? '#047857' : '#b91c1c',
+                letterSpacing: '0.05em',
+                marginBottom: 12,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}>
+                {isAllResolved ? (
+                  <CheckCircle2 size={14} color="#047857" />
+                ) : (
+                  <AlertCircle size={14} color="#dc2626" />
+                )}
+                Non-Conformity (NC) Findings ({allNcReports.length})
               </div>
               <div style={{ display: 'grid', gap: 10 }}>
                 {allNcReports.map((nc, idx) => {
-                  const isCorrected = nc.status === 'corrected' || nc.status === 'closed';
+                  const st = (nc.status || '').toUpperCase();
+                  const isCorrected = st === 'CLOSED' || st === 'RESOLVED' || st === 'CORRECTED';
                   const fileUrl = nc.document_url || nc.url;
                   const replyFileUrl = nc.correction_document_url || nc.client_response_url;
                   return (
@@ -321,9 +343,23 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
                             href={getPdfUrl(fileUrl)}
                             target="_blank"
                             rel="noreferrer"
-                            style={{ fontSize: 12, color: '#dc2626', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            style={{
+                              fontSize: 12,
+                              color: isCorrected ? '#047857' : '#dc2626',
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              textDecoration: 'underline'
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.color = isCorrected ? '#065f46' : '#991b1b';
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.color = isCorrected ? '#047857' : '#dc2626';
+                            }}
                           >
-                            <FileText size={13} /> View NC Report Sheet
+                            <FileText size={13} color={isCorrected ? '#047857' : '#dc2626'} /> View NC Report Sheet
                           </a>
                         </div>
                       )}

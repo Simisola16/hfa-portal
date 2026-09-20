@@ -284,6 +284,7 @@ export default function AuditsPage() {
 
                   const hasFlaggedNc = audit.nc_reports?.some(nc => nc.status === 'flagged');
                   const hasNc = audit.nc_reports && audit.nc_reports.length > 0;
+                  const isAllResolved = hasNc && !hasFlaggedNc;
                   const needsDateResponse = audit.status === 'dates_proposed';
                   const statusInfo = AUDIT_STATUS_MAP[audit.status] || { label: audit.status ? audit.status.replace(/_/g, ' ') : 'Scheduled', badge: 'badge-blue' };
 
@@ -555,10 +556,16 @@ export default function AuditsPage() {
                               </div>
 
                               {/* Non-Conformity (NC) Findings Section */}
-                              <div style={{ background: '#fff', borderRadius: 12, padding: 18, border: hasFlaggedNc ? '1.5px solid #fca5a5' : '1px solid #e2e8f0' }}>
+                              <div style={{ background: '#fff', borderRadius: 12, padding: 18, border: hasFlaggedNc ? '1.5px solid #fca5a5' : isAllResolved ? '1.5px solid #bbf7d0' : '1px solid #e2e8f0' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                                  <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: hasFlaggedNc ? '#b91c1c' : '#475569', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <AlertTriangle size={16} style={{ color: hasFlaggedNc ? '#dc2626' : '#64748b' }} /> 
+                                  <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: hasFlaggedNc ? '#b91c1c' : isAllResolved ? '#047857' : '#475569', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    {hasFlaggedNc ? (
+                                      <AlertTriangle size={16} style={{ color: '#dc2626' }} /> 
+                                    ) : isAllResolved ? (
+                                      <CheckCircle2 size={16} style={{ color: '#047857' }} />
+                                    ) : (
+                                      <AlertTriangle size={16} style={{ color: '#64748b' }} />
+                                    )}
                                     Non-Conformity (NC) Findings &amp; Corrective Actions ({audit.nc_reports?.length || 0})
                                   </div>
                                   
