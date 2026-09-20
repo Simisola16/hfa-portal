@@ -280,8 +280,21 @@ export default function TrackProcessing() {
   });
   const latestNcReport = allNcReports.length > 0 ? allNcReports[allNcReports.length - 1] : null;
 
-  const isRenewal = app?.application_type === 'renewal';
-  const isSurveillance = app?.application_type === 'surveillance';
+  const isRenewal = Boolean(
+    String(app?.application_type || '').toLowerCase().includes('renewal') ||
+    String(app?.type || '').toLowerCase().includes('renewal') ||
+    Boolean(app?.is_renewal) ||
+    Boolean(app?.renewed_certificate_id) ||
+    String(app?.application_number || '').includes('-RE-') ||
+    String(app?.category || '').toLowerCase().includes('renewal')
+  );
+  const isSurveillance = Boolean(
+    String(app?.application_type || '').toLowerCase().includes('surveillance') ||
+    String(app?.type || '').toLowerCase().includes('surveillance') ||
+    Boolean(app?.is_surveillance) ||
+    String(app?.application_number || '').includes('-SU-') ||
+    String(app?.category || '').toLowerCase().includes('surveillance')
+  );
   const isFastTrack = isRenewal || isSurveillance;
 
   // Invoice resolution (differentiate initial vs final invoice with robust fallbacks)
@@ -511,54 +524,56 @@ export default function TrackProcessing() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 15, color: '#15803d', marginBottom: 4 }}>
-                {isFastTrack ? 'Payment Confirmed' : 'Initial Payment Confirmed'}
+                {isFastTrack ? (isSurveillance ? 'Surveillance Fee Confirmed' : 'Renewal Payment Confirmed') : 'Initial Payment Confirmed'}
               </div>
               <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.6 }}>
                 {isFastTrack
-                  ? 'Your payment has been successfully verified by HFA. Our administration team is preparing your audit schedule. We will propose three available audit dates for your selection shortly.'
+                  ? `Your payment has been successfully confirmed by HFA. The HFA certification committee is now preparing and finalizing your ${isSurveillance ? 'Surveillance Letter' : 'renewed Halal Certificate'}.`
                   : 'Your payment has been successfully verified by HFA. Initial product submission and evaluation are now in progress.'}
               </div>
             </div>
           </div>
-          <div>
-            {!initialProduct ? (
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowAddInitialProductModal(true)}
-                style={{
-                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                  borderColor: '#059669',
-                  fontWeight: 800,
-                  fontSize: 13,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  boxShadow: '0 4px 14px rgba(5,150,105,0.3)',
-                  padding: '10px 18px'
-                }}
-              >
-                <Plus size={16} /> Add Initial Product
-              </button>
-            ) : (
-              <button
-                className="btn btn-outline"
-                onClick={() => navigate(`/initial-products/${initialProduct._id}/track`)}
-                style={{
-                  background: '#fff',
-                  borderColor: '#059669',
-                  color: '#059669',
-                  fontWeight: 800,
-                  fontSize: 13,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '10px 16px'
-                }}
-              >
-                <Package size={16} /> Track Initial Product &rarr;
-              </button>
-            )}
-          </div>
+          {!isFastTrack && (
+            <div>
+              {!initialProduct ? (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setShowAddInitialProductModal(true)}
+                  style={{
+                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                    borderColor: '#059669',
+                    fontWeight: 800,
+                    fontSize: 13,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: '0 4px 14px rgba(5,150,105,0.3)',
+                    padding: '10px 18px'
+                  }}
+                >
+                  <Plus size={16} /> Add Initial Product
+                </button>
+              ) : (
+                <button
+                  className="btn btn-outline"
+                  onClick={() => navigate(`/initial-products/${initialProduct._id}/track`)}
+                  style={{
+                    background: '#fff',
+                    borderColor: '#059669',
+                    color: '#059669',
+                    fontWeight: 800,
+                    fontSize: 13,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '10px 16px'
+                  }}
+                >
+                  <Package size={16} /> Track Initial Product &rarr;
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
