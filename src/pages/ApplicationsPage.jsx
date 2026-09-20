@@ -674,6 +674,14 @@ export default function ApplicationsPage({ openNew }) {
         toast.error('Section E: Please select the Nature of Business (Food or Non-Food).');
         return false;
       }
+      if (form.food_nature === 'Other' && !form.food_nature_other?.trim()) {
+        toast.error('Section E: Please specify other Nature of Business for Food Manufacturers.');
+        return false;
+      }
+      if (form.nonfood_nature === 'Other' && !form.nonfood_nature_other?.trim()) {
+        toast.error('Section E: Please specify other Nature of Business for Non-Food Manufacturers.');
+        return false;
+      }
       if (!form.business_type) {
         toast.error('Section E: Please select the Type of Business.');
         return false;
@@ -1477,7 +1485,20 @@ export default function ApplicationsPage({ openNew }) {
                                   <option value="Beverages">Beverages</option>
                                   <option value="Ready meals">Ready meals</option>
                                   <option value="Snacks">Snacks</option>
+                                  <option value="Other">Other</option>
                                 </select>
+                                {form.food_nature === 'Other' && (
+                                  <div style={{ marginTop: 8 }}>
+                                    <input
+                                      type="text"
+                                      className="form-control"
+                                      placeholder="Specify food nature of business *"
+                                      value={form.food_nature_other || ''}
+                                      onChange={e => setForm(f => ({ ...f, food_nature_other: e.target.value }))}
+                                      required
+                                    />
+                                  </div>
+                                )}
                               </div>
                               <div className="form-group" style={{ margin: 0 }}>
                                 <label className="form-label">Non-Food Manufacturers <span>*</span></label>
@@ -1488,7 +1509,20 @@ export default function ApplicationsPage({ openNew }) {
                                   <option value="Packaging">Packaging</option>
                                   <option value="Cleaning Agents">Cleaning Agents</option>
                                   <option value="Filters">Filters</option>
+                                  <option value="Other">Other</option>
                                 </select>
+                                {form.nonfood_nature === 'Other' && (
+                                  <div style={{ marginTop: 8 }}>
+                                    <input
+                                      type="text"
+                                      className="form-control"
+                                      placeholder="Specify non-food nature of business *"
+                                      value={form.nonfood_nature_other || ''}
+                                      onChange={e => setForm(f => ({ ...f, nonfood_nature_other: e.target.value }))}
+                                      required
+                                    />
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

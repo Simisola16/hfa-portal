@@ -435,7 +435,7 @@ export default function TrackProcessing() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 15, color: '#ea580c', marginBottom: 4 }}>
-                {status === 'final_invoice_sent' ? 'Final Invoice Received' : 'Action Required: Pay Invoice'}
+                {status === 'final_invoice_sent' ? 'Final Invoice Received' : 'Pay Certification Invoice'}
               </div>
               <div style={{ fontSize: 13, color: '#c2410c', lineHeight: 1.6 }}>
                 {status === 'final_invoice_sent' ? 'A final invoice' : 'An invoice'} ({activeInvoiceForBanner.invoice_number}) has been issued for certification fees. Amount Due: <strong>£{Number(activeInvoiceForBanner.amount).toLocaleString('en-GB', { minimumFractionDigits: 2 })}</strong>.
@@ -634,7 +634,7 @@ export default function TrackProcessing() {
               <Calendar size={20} style={{ color: '#0284c7' }} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 15, color: '#0369a1', marginBottom: 4 }}>Action Required: Select Audit Dates</div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#0369a1', marginBottom: 4 }}>Select Audit Dates</div>
               <div style={{ fontSize: 13, color: '#075985', lineHeight: 1.6 }}>
                 Please select exactly 2 dates you are available for HFA to finalize your audit session.
               </div>
@@ -660,7 +660,7 @@ export default function TrackProcessing() {
               <FileCheck size={22} style={{ color: '#0891b2' }} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 15, color: '#0891b2', marginBottom: 4 }}>Action Required: Sign Certification Agreement</div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#0891b2', marginBottom: 4 }}>Sign Certification Agreement</div>
               <div style={{ fontSize: 13, color: '#0e7490', lineHeight: 1.6 }}>
                 Please review and execute your agreement: <strong>{agreement.title}</strong>.
               </div>
