@@ -37,6 +37,7 @@ export default function ClientAuditModal({
   const [selectedDates, setSelectedDates] = useState([]);
   const [unavailable, setUnavailable] = useState(false);
   const [clientAvailabilityNote, setClientAvailabilityNote] = useState('');
+  const [availabilityError, setAvailabilityError] = useState('');
   
   // NC Upload State
   const [responseText, setResponseText] = useState('');
@@ -50,6 +51,8 @@ export default function ClientAuditModal({
     if (isOpen) {
       setSelectedDates([]);
       setUnavailable(false);
+      setClientAvailabilityNote('');
+      setAvailabilityError('');
       setResponseText('');
       setNcFile(null);
       setMode(propMode);
@@ -102,7 +105,9 @@ export default function ClientAuditModal({
       return;
     }
     if (unavailable && !clientAvailabilityNote.trim()) {
-      toast.error('Please specify your alternative available dates or timeframe before submitting.');
+      const errMsg = 'Please specify the dates or timeframe you will be available before submitting.';
+      setAvailabilityError(errMsg);
+      toast.error(errMsg);
       return;
     }
     setSubmitting(true);
@@ -304,8 +309,13 @@ export default function ClientAuditModal({
                     type="checkbox"
                     checked={unavailable}
                     onChange={e => {
-                      setUnavailable(e.target.checked);
-                      if (e.target.checked) setSelectedDates([]);
+                      const checked = e.target.checked;
+                      setUnavailable(checked);
+                      if (checked) {
+                        setSelectedDates([]);
+                      } else {
+                        setAvailabilityError('');
+                      }
                     }}
                     style={{ width: 18, height: 18 }}
                   />
@@ -314,33 +324,49 @@ export default function ClientAuditModal({
                   </span>
                 </label>
 
-                {/* Dynamic Alternative Dates & Availability Remarks Input */}
+                {/* Dynamic Proposed Available Dates & Remarks Input */}
                 {unavailable && (
                   <div style={{
-                    marginTop: 4,
+                    marginTop: 8,
                     padding: 16,
                     background: '#fff',
                     borderRadius: 8,
-                    border: '1.5px solid #fca5a5',
-                    boxShadow: '0 2px 4px rgba(239, 68, 68, 0.05)'
+                    border: `1.5px solid ${availabilityError ? '#dc2626' : '#fca5a5'}`,
+                    boxShadow: '0 2px 6px rgba(239, 68, 68, 0.08)'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                       <Calendar size={15} style={{ color: '#dc2626' }} />
-                      <label style={{ fontSize: 13, fontWeight: 800, color: '#991b1b', margin: 0 }}>
-                        Alternative Dates &amp; Availability Remarks <span style={{ color: '#dc2626' }}>*</span>
+                      <label style={{ fontSize: 13, fontWeight: 700, color: '#991b1b', margin: 0 }}>
+                        Proposed Available Dates &amp; Remarks <span style={{ color: '#dc2626' }}>*</span>
                       </label>
                     </div>
                     <textarea
                       rows={3}
                       className="form-control"
                       value={clientAvailabilityNote}
-                      onChange={e => setClientAvailabilityNote(e.target.value)}
-                      placeholder="Please specify the dates or timeframe your facility/team will be available for the audit..."
-                      style={{ fontSize: 13, borderColor: '#fca5a5', borderRadius: 8 }}
+                      onChange={e => {
+                        setClientAvailabilityNote(e.target.value);
+                        if (availabilityError && e.target.value.trim()) {
+                          setAvailabilityError('');
+                        }
+                      }}
+                      placeholder="Please list the specific dates, days of the week, or timeframes your team/facility will be available for the audit..."
+                      style={{
+                        fontSize: 13,
+                        borderColor: availabilityError ? '#dc2626' : '#fca5a5',
+                        borderRadius: 8,
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
                       required
                     />
+                    {availabilityError && (
+                      <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 600, marginTop: 6 }}>
+                        {availabilityError}
+                      </div>
+                    )}
                     <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 6, lineHeight: 1.4 }}>
-                      💡 This information will be sent directly to the HFA Lead Auditor and Admin so they can propose an alternative schedule matching your availability.
+                      Our audit scheduling team will review your suggested availability to propose new dates.
                     </div>
                   </div>
                 )}
