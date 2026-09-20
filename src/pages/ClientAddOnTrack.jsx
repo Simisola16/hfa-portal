@@ -216,7 +216,7 @@ export default function ClientAddOnTrack() {
       }}>
         <div style={{ flex: 1, minWidth: 260 }}>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 4 }}>
-            {app.status === 'product_approval_form_enabled' ? 'Action Required From You' : 'Current Application Status'}
+            Current Application Status
           </div>
           <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
             {app.status === 'submitted' && 'Your add-on request has been submitted. HFA Food Technology specialists will review the requested products.'}
@@ -224,7 +224,7 @@ export default function ClientAddOnTrack() {
             {app.status === 'ft_assigned' && `Food Technology staff assigned (${ftNames || 'Inspector'}). Awaiting Product Approval Form setup.`}
             {app.status === 'product_approval_form_enabled' && (
               app.product_approval_form?.more_info_requested
-                ? 'Action Required: HFA has requested additional information or supporting documents. Please upload your reply and documents.'
+                ? 'HFA has requested additional information or supporting documents. Please upload your reply and documents.'
                 : 'The Product Approval Form has been enabled! Please complete and submit the specifications for each requested product.'
             )}
             {app.status === 'all_forms_received' && 'All product forms have been received. The Halal Committee is conducting the evaluation.'}
