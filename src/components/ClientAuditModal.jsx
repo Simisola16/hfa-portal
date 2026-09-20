@@ -64,7 +64,11 @@ export default function ClientAuditModal({
             const raw = res.data?.data !== undefined ? res.data.data : res.data;
             if (!raw) { setAudit(null); return; }
             if (Array.isArray(raw)) {
-              const active = raw.find(a => a.status === 'dates_proposed' || (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'completed', 'cancelled'].includes(a.status)) || a.nc_reports?.some(n => n.status === 'flagged')) || raw[0] || null;
+              const active = raw.find(a => 
+                !a.finalized_date &&
+                !['dates_accepted', 'date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(a.status) &&
+                (a.status === 'dates_proposed' || (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0) || a.nc_reports?.some(n => n.status === 'flagged'))
+              ) || raw[0] || null;
               setAudit(active);
             } else {
               setAudit(raw);
@@ -77,7 +81,11 @@ export default function ClientAuditModal({
         api.get('/api/audits')
           .then(res => {
             const list = res.data?.data !== undefined ? res.data.data : (Array.isArray(res.data) ? res.data : []);
-            const active = list.find(a => a.status === 'dates_proposed' || (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'completed', 'cancelled'].includes(a.status)) || a.nc_reports?.some(n => n.status === 'flagged')) || list[0] || null;
+            const active = list.find(a => 
+              !a.finalized_date &&
+              !['dates_accepted', 'date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(a.status) &&
+              (a.status === 'dates_proposed' || (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0) || a.nc_reports?.some(n => n.status === 'flagged'))
+            ) || list[0] || null;
             setAudit(active);
           })
           .catch(() => setAudit(null))
@@ -159,6 +167,10 @@ export default function ClientAuditModal({
   };
 
   const isNcMode = mode === 'nc_upload' || propMode === 'nc_upload';
+  const isAuditAlreadyFinalized = !isNcMode && Boolean(
+    audit?.finalized_date || 
+    ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed'].includes(audit?.status)
+  );
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1200 }} onClick={onClose}>
@@ -257,6 +269,17 @@ export default function ClientAuditModal({
                   />
                 </div>
               </div>
+            </div>
+          ) : isAuditAlreadyFinalized ? (
+            /* ── AUDIT DATE ALREADY FINALIZED UI ── */
+            <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <CheckCircle size={28} color="#16a34a" />
+              </div>
+              <h3 style={{ fontSize: 17, fontWeight: 800, color: '#166534', marginBottom: 8 }}>Audit Date Confirmed</h3>
+              <p style={{ fontSize: 13.5, color: '#15803d', lineHeight: 1.6, maxWidth: 420, margin: '0 auto 20px' }}>
+                Your audit session has been confirmed for <strong>{audit.finalized_date ? new Date(audit.finalized_date).toDateString() : 'the scheduled date'}</strong>. No further date selection is required.
+              </p>
             </div>
           ) : (
             /* ── AUDIT DATE SELECTION UI ── */
@@ -377,25 +400,29 @@ export default function ClientAuditModal({
 
         {/* Footer */}
         <div className="modal-footer" style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-          <button className="btn btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
-          {isNcMode ? (
-            <button
-              className="btn"
-              style={{ background: '#dc2626', color: '#fff', fontWeight: 700 }}
-              disabled={submitting || !audit || loading}
-              onClick={handleSubmitNc}
-            >
-              {submitting ? 'Submitting...' : 'Submit NC Correction'}
-            </button>
-          ) : (
-            <button
-              className="btn btn-primary"
-              disabled={submitting || !audit || loading}
-              onClick={handleSubmitDates}
-              style={unavailable ? { background: '#dc2626', borderColor: '#dc2626' } : {}}
-            >
-              {submitting ? 'Submitting...' : unavailable ? 'Submit Availability & Decline Dates' : 'Confirm Date Selection'}
-            </button>
+          <button className="btn btn-outline" onClick={onClose} disabled={submitting}>
+            {isAuditAlreadyFinalized ? 'Close' : 'Cancel'}
+          </button>
+          {!isAuditAlreadyFinalized && (
+            isNcMode ? (
+              <button
+                className="btn"
+                style={{ background: '#dc2626', color: '#fff', fontWeight: 700 }}
+                disabled={submitting || !audit || loading}
+                onClick={handleSubmitNc}
+              >
+                {submitting ? 'Submitting...' : 'Submit NC Correction'}
+              </button>
+            ) : (
+              <button
+                className="btn btn-primary"
+                disabled={submitting || !audit || loading}
+                onClick={handleSubmitDates}
+                style={unavailable ? { background: '#dc2626', borderColor: '#dc2626' } : {}}
+              >
+                {submitting ? 'Submitting...' : unavailable ? 'Submit Availability & Decline Dates' : 'Confirm Date Selection'}
+              </button>
+            )
           )}
         </div>
       </div>
