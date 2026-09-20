@@ -54,7 +54,11 @@ export default function InitialProductPage() {
 
   const paidInvoiceAppIds = new Set(
     invoices
-      .filter(inv => ['paid', 'client_paid', 'settled'].includes((inv.status || '').toLowerCase()))
+      .filter(inv => {
+        const isInitial = inv.invoice_type === 'initial' || !inv.invoice_type || (inv.title && !inv.title.toLowerCase().includes('final'));
+        const isPaid = ['paid', 'settled'].includes((inv.status || '').toLowerCase());
+        return isInitial && isPaid;
+      })
       .map(inv => String(inv.application_id?._id || inv.application_id))
       .filter(Boolean)
   );
@@ -64,9 +68,13 @@ export default function InitialProductPage() {
     const appType = (app.application_type || 'new').toLowerCase().trim();
     if (appType === 'renewal' || appType === 'surveillance') return false;
 
-    // Must NOT be already certified, rejected, or on hold
+    // Must NOT be in early unconfirmed stages, rejected, or on hold
     const normStatus = (app.status || '').toLowerCase().trim();
-    if (['certificate_issued', 'rejected', 'on_hold'].includes(normStatus)) return false;
+    const isUnconfirmedStatus = [
+      'created', 'draft', 'submitted', 'under_review', 'approved',
+      'proposal_sent', 'proposal_rejected', 'proposal_approved',
+      'invoice_sent', 'certificate_issued', 'rejected', 'on_hold'
+    ].includes(normStatus);
 
     // Must NOT already have an Initial Product registered
     const appId = String(app._id || app.id);
@@ -77,8 +85,9 @@ export default function InitialProductPage() {
     if (hasIp) return false;
 
     // Initial payment must be confirmed (either via application lifecycle status or confirmed paid invoice)
-    const isPaymentConfirmed = [
-      'payment_received', 'initial_payment_received',
+    const CONFIRMED_PAYMENT_STATUSES = [
+      'payment_received', 'initial_payment_received', 'payment_confirmed',
+      'initial_product_processing', 'initial_product_approved',
       'dates_proposed', 'dates_rejected', 'dates_accepted', 'date_finalized',
       'audit_assigned', 'audit_scheduled', 'auditor_assigned', 'audit_in_progress',
       'audit_successful', 'audit_completed', 'audit_report_submitted',
@@ -86,7 +95,12 @@ export default function InitialProductPage() {
       'logsheet_created', 'logsheet_signed', 'application_successful',
       'agreement_sent', 'agreement_signed', 'agreement_finalised',
       'ready_for_certificate'
-    ].includes(normStatus) || paidInvoiceAppIds.has(appId);
+    ];
+
+    const isPaymentConfirmed = (!isUnconfirmedStatus && CONFIRMED_PAYMENT_STATUSES.includes(normStatus)) ||
+      paidInvoiceAppIds.has(appId) ||
+      app.initial_payment_confirmed === true ||
+      app.initial_invoice_paid === true;
 
     return isPaymentConfirmed;
   });
