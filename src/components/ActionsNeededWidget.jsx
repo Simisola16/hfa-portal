@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { getSocket } from '../lib/socket';
 import ClientProposalModal from './ClientProposalModal';
 import PaymentModal from './PaymentModal';
 import ClientAuditModal from './ClientAuditModal';
@@ -192,13 +193,34 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
 
           case 'invoice_sent': {
             appInvoices.forEach(inv => processedInvoiceIds.add(String(inv._id || inv.id)));
-            const isPaid = hasPaidOrClientPaidInvoice ||
-                           (linkedInvoice && ['paid', 'client_paid', 'settled'].includes((linkedInvoice.status || '').toLowerCase())) ||
-                           app.initial_invoice_paid ||
-                           ['payment_received', 'initial_payment_received', 'initial_product_approved', 'dates_proposed', 'date_finalized', 'audit_assigned', 'auditors_assigned', 'completed'].includes(normStatus);
-            if (isPaid) {
+            const isConfirmedPaid = (linkedInvoice && ['paid', 'settled'].includes((linkedInvoice.status || '').toLowerCase())) ||
+                                    app.initial_invoice_paid ||
+                                    app.initial_payment_confirmed ||
+                                    ['payment_received', 'initial_payment_received', 'initial_product_approved', 'dates_proposed', 'date_finalized', 'audit_assigned', 'auditors_assigned', 'completed'].includes(normStatus);
+            if (isConfirmedPaid) {
               break;
             }
+
+            const isPendingAdminVerification = linkedInvoice && (linkedInvoice.status || '').toLowerCase() === 'client_paid';
+            if (isPendingAdminVerification) {
+              actionList.push({
+                id: `app-inv-pending-${appId}`,
+                category: 'invoices',
+                app,
+                invoice: linkedInvoice,
+                type: 'navigate',
+                title: 'Initial Payment Submitted: Awaiting Admin Verification',
+                tag: 'Payment Verification',
+                desc: `Your payment proof for ${facilityName} (£${Number(linkedInvoice?.amount || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })}) has been submitted and is currently awaiting verification by the admin team.`,
+                buttonText: 'View Invoice',
+                buttonBg: '#d97706',
+                isLink: true,
+                link: '/invoices',
+                icon: <Clock size={16} />
+              });
+              break;
+            }
+
             actionList.push({
               id: `app-inv-${appId}`,
               category: 'invoices',
@@ -226,10 +248,8 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
                 app.is_initial_product_approved ||
                 (linkedInitProd && ['approved', 'initial_product_approved', 'completed'].includes(linkedInitProd.status));
 
-              if (!isInitialProductApproved) {
-                const processLink = linkedInitProd
-                  ? `/initial-products/${linkedInitProd._id || linkedInitProd.id}/track`
-                  : `/applications/${appId}/track`;
+              if (!isInitialProductApproved && linkedInitProd) {
+                const processLink = `/initial-products/${linkedInitProd._id || linkedInitProd.id}/track`;
 
                 actionList.push({
                   id: `app-initprod-progress-${appId}`,
@@ -238,9 +258,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
                   type: 'navigate',
                   title: 'Initial Product in-progress',
                   tag: 'Initial Product',
-                  desc: linkedInitProd
-                    ? `Initial product "${linkedInitProd.product?.name || 'Specification'}" is undergoing Halal technical assessment for ${facilityName}.`
-                    : `Payment confirmed for ${facilityName}. Initial product submission and evaluation in progress.`,
+                  desc: `Initial product "${linkedInitProd.product?.name || 'Specification'}" is undergoing Halal technical assessment for ${facilityName}.`,
                   buttonText: 'Go to Process',
                   buttonBg: '#0284c7',
                   isLink: true,
@@ -404,30 +422,48 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
         const isRenewal = (app.application_type || '').toLowerCase() === 'renewal';
         if (isRenewal) continue;
 
+        // Disallow early or unconfirmed states
+        const isUnconfirmedStatus = [
+          'created', 'draft', 'submitted', 'under_review', 'approved',
+          'proposal_sent', 'proposal_rejected', 'proposal_approved',
+          'invoice_sent', 'rejected', 'cancelled', 'on_hold'
+        ].includes(normStatus);
+
         const linkedInvoice = allInvoices.find(inv => {
           const invAppId = String(inv.application_id?._id || inv.application_id || '');
-          return invAppId === appId;
-        });
+          const isInitial = inv.invoice_type === 'initial' || !inv.invoice_type || (inv.title && !inv.title.toLowerCase().includes('final'));
+          return invAppId === appId && isInitial;
+        }) || allInvoices.find(inv => String(inv.application_id?._id || inv.application_id || '') === appId);
 
-        const isInvoicePaid = Boolean(linkedInvoice && ['paid', 'client_paid', 'settled'].includes(linkedInvoice.status));
-        const isPaymentPassed = [
-          'payment_received', 'initial_payment_received',
-          'initial_product_approved',
+        // An invoice is confirmed ONLY if its status is 'paid' or 'settled' (NEVER 'client_paid', 'unpaid', etc.)
+        const isInvoiceConfirmedByAdmin = Boolean(linkedInvoice && ['paid', 'settled'].includes((linkedInvoice.status || '').toLowerCase()));
+
+        // Application statuses reflecting confirmed initial payment
+        const CONFIRMED_PAYMENT_STATUSES = [
+          'payment_received', 'initial_payment_received', 'payment_confirmed',
+          'initial_product_processing', 'initial_product_approved',
           'dates_proposed', 'dates_rejected', 'dates_accepted', 'date_finalized',
           'audit_assigned', 'audit_scheduled', 'auditor_assigned', 'audit_in_progress',
           'audit_successful', 'audit_completed', 'audit_report_submitted',
-          'nc_raised', 'nc_closed', 'final_invoice_sent', 'final_invoice_paid',
+          'nc_raised', 'nc_closed', 'nc_flagged',
+          'final_invoice_sent', 'final_invoice_paid',
           'logsheet_created', 'logsheet_signed', 'application_successful',
           'agreement_sent', 'agreement_signed', 'agreement_finalised',
-          'ready_for_certificate', 'certificate_issued', 'approved'
-        ].includes(normStatus) || isInvoicePaid;
+          'ready_for_certificate', 'certificate_issued'
+        ];
+
+        const isPaymentConfirmed = !isUnconfirmedStatus && CONFIRMED_PAYMENT_STATUSES.includes(normStatus);
+        const isInitialPaymentPassed = isPaymentConfirmed ||
+          app.initial_payment_confirmed === true ||
+          app.initial_invoice_paid === true ||
+          (normStatus === 'invoice_sent' && isInvoiceConfirmedByAdmin);
 
         const hasInitialProduct = allInitProds.some(ip => {
           const ipAppId = String(ip.application_id?._id || ip.application_id?.id || ip.application_id || '');
           return ipAppId === appId;
         });
 
-        if (isPaymentPassed && !hasInitialProduct) {
+        if (isInitialPaymentPassed && !hasInitialProduct) {
           const facilityName = app.site_name || app.establishment_name || 'your site';
           const appNum = app.application_number || `APP-${appId.slice(-6).toUpperCase()}`;
 
@@ -740,6 +776,26 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
 
   useEffect(() => {
     fetchClientActions();
+
+    const handleFocus = () => fetchClientActions();
+    window.addEventListener('focus', handleFocus);
+
+    const token = localStorage.getItem('token');
+    const socket = getSocket(token);
+    if (socket) {
+      socket.on('application:updated', fetchClientActions);
+      socket.on('invoice:updated', fetchClientActions);
+      socket.on('application_status_updated', fetchClientActions);
+    }
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      if (socket) {
+        socket.off('application:updated', fetchClientActions);
+        socket.off('invoice:updated', fetchClientActions);
+        socket.off('application_status_updated', fetchClientActions);
+      }
+    };
   }, [fetchClientActions]);
 
   const handleRefresh = () => {
