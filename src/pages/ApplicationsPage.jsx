@@ -612,14 +612,6 @@ export default function ApplicationsPage({ openNew }) {
         toast.error('Section A: Please enter the name of the establishment.');
         return false;
       }
-      if (!form.company_reg_number?.trim()) {
-        toast.error('Section A: Please enter the Company Registration Number.');
-        return false;
-      }
-      if (!form.vat_number?.trim()) {
-        toast.error('Section A: Please enter the VAT Number.');
-        return false;
-      }
       if (!form.is_manufacturer) {
         toast.error('Section A: Please indicate if you are a manufacturer of halal products.');
         return false;
@@ -1293,14 +1285,6 @@ export default function ApplicationsPage({ openNew }) {
                               <input type="text" className="form-control" placeholder="e.g. Anike Foods Ltd" value={form.establishment_name} onChange={e => setForm(f => ({ ...f, establishment_name: e.target.value }))} required />
                             </div>
                             <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">Company Registration Number <span>*</span></label>
-                              <input type="text" className="form-control" placeholder="e.g. 12345678" value={form.company_reg_number || ''} onChange={e => setForm(f => ({ ...f, company_reg_number: e.target.value }))} required />
-                            </div>
-                            <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">VAT Number <span>*</span></label>
-                              <input type="text" className="form-control" placeholder="e.g. GB123456789" value={form.vat_number || ''} onChange={e => setForm(f => ({ ...f, vat_number: e.target.value }))} required />
-                            </div>
-                            <div className="form-group" style={{ margin: 0 }}>
                               <label className="form-label">Are you a Manufacturer of Halal Products? <span>*</span></label>
                               <select className="form-control" value={form.is_manufacturer || ''} onChange={e => setForm(f => ({ ...f, is_manufacturer: e.target.value }))} required>
                                 <option value="">Select Option</option>
@@ -1342,20 +1326,16 @@ export default function ApplicationsPage({ openNew }) {
                               <input type="text" className="form-control" placeholder="Trading name" value={form.trading_name || ''} onChange={e => setForm(f => ({ ...f, trading_name: e.target.value }))} />
                             </div>
                             <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">Website Address</label>
-                              <input type="url" className="form-control" placeholder="https://example.com" value={form.website || ''} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} />
-                            </div>
-                            <div className="form-group" style={{ margin: 0 }}>
                               <label className="form-label">Email Address <span>*</span></label>
                               <input type="email" className="form-control" placeholder="company@example.com" value={form.company_email || ''} onChange={e => setForm(f => ({ ...f, company_email: e.target.value }))} required />
                             </div>
                             <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">Operating Hours / Shift Pattern</label>
-                              <input type="text" className="form-control" placeholder="e.g. 08:00–18:00, Mon–Fri" value={form.production_schedule} onChange={e => setForm(f => ({ ...f, production_schedule: e.target.value }))} />
-                            </div>
-                            <div className="form-group" style={{ margin: 0 }}>
                               <label className="form-label">Number of Employees <span>*</span></label>
                               <input type="number" className="form-control" placeholder="0" value={form.employee_count} onChange={e => setForm(f => ({ ...f, employee_count: e.target.value }))} required min="1" />
+                            </div>
+                            <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
+                              <label className="form-label">Website Address</label>
+                              <input type="url" className="form-control" placeholder="https://example.com" value={form.website || ''} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} />
                             </div>
                           </div>
                         </div>
@@ -1379,36 +1359,24 @@ export default function ApplicationsPage({ openNew }) {
                               <input type="text" className="form-control" placeholder="Manufacturer name" value={form.mfr_name || ''} onChange={e => setForm(f => ({ ...f, mfr_name: e.target.value }))} />
                             </div>
                             <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">Company Registration No.</label>
-                              <input type="text" className="form-control" placeholder="Registration number" value={form.mfr_reg_number || ''} onChange={e => setForm(f => ({ ...f, mfr_reg_number: e.target.value }))} />
-                            </div>
-                            <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">VAT No.</label>
-                              <input type="text" className="form-control" placeholder="VAT number" value={form.mfr_vat || ''} onChange={e => setForm(f => ({ ...f, mfr_vat: e.target.value }))} />
+                              <label className="form-label">Trading Name (if different)</label>
+                              <input type="text" className="form-control" placeholder="Trading name" value={form.mfr_trading_name || ''} onChange={e => setForm(f => ({ ...f, mfr_trading_name: e.target.value }))} />
                             </div>
                             <div className="form-group" style={{ margin: 0 }}>
                               <label className="form-label">Number of Years in Business</label>
                               <input type="text" className="form-control" placeholder="e.g. 10 years" value={form.mfr_years || ''} onChange={e => setForm(f => ({ ...f, mfr_years: e.target.value }))} />
                             </div>
                             <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">Trading Name (if different)</label>
-                              <input type="text" className="form-control" placeholder="Trading name" value={form.mfr_trading_name || ''} onChange={e => setForm(f => ({ ...f, mfr_trading_name: e.target.value }))} />
-                            </div>
-                            <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">Website Address</label>
-                              <input type="url" className="form-control" placeholder="https://example.com" value={form.mfr_website || ''} onChange={e => setForm(f => ({ ...f, mfr_website: e.target.value }))} />
+                              <label className="form-label">No. of Employees</label>
+                              <input type="number" className="form-control" placeholder="0" value={form.mfr_employees || ''} onChange={e => setForm(f => ({ ...f, mfr_employees: e.target.value }))} min="0" />
                             </div>
                             <div className="form-group" style={{ margin: 0 }}>
                               <label className="form-label">Email</label>
                               <input type="email" className="form-control" placeholder="manufacturer@example.com" value={form.mfr_email || ''} onChange={e => setForm(f => ({ ...f, mfr_email: e.target.value }))} />
                             </div>
                             <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">Operating Hours / Shift Pattern</label>
-                              <input type="text" className="form-control" placeholder="e.g. 07:00–19:00, Mon–Sat" value={form.mfr_hours || ''} onChange={e => setForm(f => ({ ...f, mfr_hours: e.target.value }))} />
-                            </div>
-                            <div className="form-group" style={{ margin: 0 }}>
-                              <label className="form-label">No. of Employees</label>
-                              <input type="number" className="form-control" placeholder="0" value={form.mfr_employees || ''} onChange={e => setForm(f => ({ ...f, mfr_employees: e.target.value }))} min="0" />
+                              <label className="form-label">Website Address</label>
+                              <input type="url" className="form-control" placeholder="https://example.com" value={form.mfr_website || ''} onChange={e => setForm(f => ({ ...f, mfr_website: e.target.value }))} />
                             </div>
                           </div>
                           <div className="form-group" style={{ margin: 0 }}>
@@ -1518,7 +1486,7 @@ export default function ApplicationsPage({ openNew }) {
                                   <option value="Cosmetics">Cosmetics</option>
                                   <option value="Pharmaceutical">Pharmaceutical</option>
                                   <option value="Packaging">Packaging</option>
-                                  <option value="Cleaning Agentsy">Cleaning Agentsy</option>
+                                  <option value="Cleaning Agents">Cleaning Agents</option>
                                   <option value="Filters">Filters</option>
                                 </select>
                               </div>
@@ -1534,7 +1502,7 @@ export default function ApplicationsPage({ openNew }) {
                                 <option value="Manufacturer">Manufacturer</option>
                                 <option value="Retailer">Retailer</option>
                                 <option value="Importer">Importer</option>
-                                <option value="Exporter Agentsy">Exporter Agentsy</option>
+                                <option value="Exporter Agent">Exporter Agent</option>
                                 <option value="Distributor">Distributor</option>
                               </select>
                             </div>
