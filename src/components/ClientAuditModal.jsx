@@ -400,29 +400,25 @@ export default function ClientAuditModal({
 
         {/* Footer */}
         <div className="modal-footer" style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-          <button className="btn btn-outline" onClick={onClose} disabled={submitting}>
-            {isAuditAlreadyFinalized ? 'Close' : 'Cancel'}
-          </button>
-          {!isAuditAlreadyFinalized && (
-            isNcMode ? (
-              <button
-                className="btn"
-                style={{ background: '#dc2626', color: '#fff', fontWeight: 700 }}
-                disabled={submitting || !audit || loading}
-                onClick={handleSubmitNc}
-              >
-                {submitting ? 'Submitting...' : 'Submit NC Correction'}
-              </button>
-            ) : (
-              <button
-                className="btn btn-primary"
-                disabled={submitting || !audit || loading}
-                onClick={handleSubmitDates}
-                style={unavailable ? { background: '#dc2626', borderColor: '#dc2626' } : {}}
-              >
-                {submitting ? 'Submitting...' : unavailable ? 'Submit Availability & Decline Dates' : 'Confirm Date Selection'}
-              </button>
-            )
+          <button className="btn btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
+          {isNcMode ? (
+            <button
+              className="btn"
+              style={{ background: '#dc2626', color: '#fff', fontWeight: 700 }}
+              disabled={submitting || !audit || loading}
+              onClick={handleSubmitNc}
+            >
+              {submitting ? 'Submitting...' : 'Submit NC Correction'}
+            </button>
+          ) : (
+            <button
+              className="btn btn-primary"
+              disabled={submitting || !audit || loading}
+              onClick={handleSubmitDates}
+              style={unavailable ? { background: '#dc2626', borderColor: '#dc2626' } : {}}
+            >
+              {submitting ? 'Submitting...' : unavailable ? 'Submit Availability & Decline Dates' : 'Confirm Date Selection'}
+            </button>
           )}
         </div>
       </div>
