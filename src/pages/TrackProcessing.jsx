@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, RefreshCw, Building2, Calendar,
@@ -61,6 +61,18 @@ export default function TrackProcessing() {
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [showAddInitialProductModal, setShowAddInitialProductModal] = useState(false);
+
+  // Track if any modal is active to safely pause background liveness polling
+  const isAnyModalOpenRef = useRef(false);
+  isAnyModalOpenRef.current = Boolean(
+    showProposalModal ||
+    showApproveModal ||
+    showRejectModal ||
+    showPaymentModal ||
+    showAuditModal ||
+    showAgreementModal ||
+    showAddInitialProductModal
+  );
 
   // Inline forms/submission states
   const [rejectReason, setRejectReason] = useState('');
@@ -177,16 +189,18 @@ export default function TrackProcessing() {
             };
           });
         }
-        // Silent re-fetch in background
-        fetchApp(true);
+        // Silent re-fetch in background only if no active modal is open
+        if (!isAnyModalOpenRef.current) {
+          fetchApp(true);
+        }
       }
     };
 
     socket.on('application_updated', handleUpdate);
 
-    // Fast background liveness polling (every 5 seconds when visible)
+    // Fast background liveness polling (every 5 seconds when visible and no active modal is open)
     const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && !isAnyModalOpenRef.current) {
         fetchApp(true);
       }
     }, 5000);
@@ -1085,15 +1099,15 @@ export default function TrackProcessing() {
           />
 
           {/* Post-Application Successful Invoice Card (Renewal / Surveillance) */}
-          {isFastTrack && (invoice || ['logsheet_signed', 'application_successful', 'ready_for_certificate', 'invoice_sent', 'payment_received', 'certificate_issued'].includes(status)) && (
+          {isFastTrack && (invoice || initialInvoice || allInvoices.length > 0 || ['logsheet_signed', 'application_successful', 'ready_for_certificate', 'invoice_sent', 'payment_received', 'certificate_issued'].includes(status)) && (
             <InvoiceCard
               app={app}
-              invoice={invoice}
+              invoice={invoice || initialInvoice || allInvoices[0]}
               status={status}
               isRenewal={isRenewal}
               isSurveillance={isSurveillance}
               onPayClick={() => {
-                setSelectedPaymentInvoice(invoice);
+                setSelectedPaymentInvoice(invoice || initialInvoice || allInvoices[0]);
                 setShowPaymentModal(true);
               }}
             />

@@ -40,8 +40,8 @@ export default function ClientInitialProductApprovalForm() {
   const [replyFile, setReplyFile] = useState(null);
   const [submittingReply, setSubmittingReply] = useState(false);
 
-  const fetchApp = useCallback(async () => {
-    setLoading(true);
+  const fetchApp = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await api.get(`/api/initial-products/${id}`);
       const loaded = res.data?.data || res.data;
@@ -53,7 +53,7 @@ export default function ClientInitialProductApprovalForm() {
           ...INITIAL_PRODUCT_APPROVAL_FORM,
           ...resp.form_data
         });
-      } else if (loaded) {
+      } else if (loaded && !silent) {
         // Pre-fill with available initial product info
         setFormData(f => ({
           ...f,
@@ -69,9 +69,9 @@ export default function ClientInitialProductApprovalForm() {
         setResponseText(resp.response_text);
       }
     } catch (err) {
-      toast.error('Failed to load Initial Product approval form.');
+      if (!silent) toast.error('Failed to load Initial Product approval form.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [id]);
 
@@ -91,7 +91,7 @@ export default function ClientInitialProductApprovalForm() {
 
       await api.put(`/api/initial-products/${id}/save-response`, fd, true);
       if (showToast) toast.success('Draft response saved successfully!');
-      fetchApp();
+      fetchApp(true);
       return true;
     } catch (err) {
       toast.error(err.response?.data?.error || err.message || 'Failed to save response.');
