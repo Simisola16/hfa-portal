@@ -145,12 +145,22 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           return audAppId === appId;
         });
 
-        const linkedAudit = appAudits.find(isAuditAwaitingDateSelection) || appAudits[0] || null;
-        const isDualStageApp = (app.category || '').toLowerCase().includes('gso') || (app.category || '').toLowerCase().includes('uae');
+        const isSurveillanceApp = 
+          String(app.application_type || '').toLowerCase().includes('surveillance') ||
+          Boolean(app.is_surveillance) ||
+          String(app.application_number || '').includes('-SU-') ||
+          String(app.category || '').toLowerCase().includes('surveillance');
+        const isDualStageApp = !isRenewal && !isSurveillanceApp && ((app.category || '').toLowerCase().includes('gso') || (app.category || '').toLowerCase().includes('uae'));
 
         // Check if this application or any linked audit needs date selection (including Stage 1 and Stage 2 GSO)
         const auditNeedingDates = appAudits.find(isAuditAwaitingDateSelection);
-        const isAppDateFinalized = Boolean(app.finalized_audit_date || linkedAudit?.finalized_date);
+        const isAppDateFinalized = Boolean(
+          app.finalized_audit_date || 
+          linkedAudit?.finalized_date || 
+          ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed'].includes(normStatus) ||
+          ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed'].includes(linkedAudit?.status) ||
+          appAudits.some(a => a.finalized_date || ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed'].includes(a.status))
+        );
         const isAwaitingInitialProduct = !isRenewal && ['invoice_sent', 'payment_received'].includes(normStatus);
         if (!isAwaitingInitialProduct && !isAppDateFinalized && (auditNeedingDates || (normStatus === 'dates_proposed' && !linkedAudit?.finalized_date))) {
           const targetAudit = auditNeedingDates || linkedAudit;
@@ -390,8 +400,15 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
 
         const linkedApp = allApps.find(a => String(a._id || a.id) === audAppId);
         const facilityName = linkedApp?.site_name || linkedApp?.establishment_name || aud.application_id?.site_name || aud.application_id?.establishment_name || 'your site';
-        const isGso = (linkedApp?.category || aud.application_id?.category || '').toLowerCase().includes('gso') ||
-                      (linkedApp?.category || aud.application_id?.category || '').toLowerCase().includes('uae');
+        const isSurvOrRen = 
+          String(linkedApp?.application_type || aud.application_id?.application_type || '').toLowerCase().includes('surveillance') ||
+          String(linkedApp?.application_type || aud.application_id?.application_type || '').toLowerCase().includes('renewal') ||
+          Boolean(linkedApp?.is_surveillance || aud.application_id?.is_surveillance) ||
+          Boolean(linkedApp?.is_renewal || aud.application_id?.is_renewal);
+        const isGso = !isSurvOrRen && (
+          (linkedApp?.category || aud.application_id?.category || '').toLowerCase().includes('gso') ||
+          (linkedApp?.category || aud.application_id?.category || '').toLowerCase().includes('uae')
+        );
         const stageNum = aud.stage || 1;
         const stageBadge = isGso ? ` (Stage ${stageNum})` : '';
 

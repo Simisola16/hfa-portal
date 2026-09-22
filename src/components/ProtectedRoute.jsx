@@ -9,6 +9,7 @@ export default function ProtectedRoute({ children }) {
       <div className="spinner" style={{ width: 40, height: 40 }} />
     </div>
   );
-  if (!user) return <Navigate to="/login" replace />;
+  const isClient = (user?.role || 'client') === 'client' || !!user?.is_impersonation;
+  if (!user || !isClient) return <Navigate to="/login" replace />;
   return children;
 }

@@ -49,13 +49,29 @@ export default function SupportChatWidget() {
   const [aiMessages, setAiMessages] = useState(() => {
     try {
       const saved = localStorage.getItem('hfa_ai_messages');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.map(m => {
+            if (typeof m.content === 'string') {
+              return {
+                ...m,
+                content: m.content
+                  .replace(/Assalamu\s+Alaikum!?/gi, 'Hello!')
+                  .replace(/Assalam\s+Alaykum!?/gi, 'Hello!')
+                  .replace(/Talk to (Real )?Person/gi, 'Speak with an Agent')
+              };
+            }
+            return m;
+          });
+        }
+      }
     } catch {}
     return [
       {
         id: 'init_welcome',
         role: 'assistant',
-        content: `**Assalamu Alaikum! Welcome to the HFA Support Assistant.** 👋\n\nI can instantly answer questions about **Halal Certification Schemes**, **Application Stages**, **Required Documents**, **Billing & Invoices**, **Audits**, and **Certificates**.\n\nHow can I help you today? You can also click **"Talk to Real Person"** at any time to connect with our Support Manager.`,
+        content: `**Hello! Welcome to the HFA Support Assistant.** 👋\n\nI can instantly answer questions about **Halal Certification Schemes**, **Application Stages**, **Required Documents**, **Billing & Invoices**, **Audits**, and **Certificates**.\n\nHow can I help you today? You can also click **"Speak with an Agent"** at any time to connect with our support team.`,
         time: new Date()
       }
     ];
@@ -177,14 +193,51 @@ export default function SupportChatWidget() {
       }
     };
 
+    const handleAgentConnected = (data) => {
+      const currentTicketId = (activeTicket?._id || activeTicket?.id)?.toString();
+      const targetId = (data.ticketId || data.ticket?._id || data.ticket?.id)?.toString();
+
+      if (!activeTicket || currentTicketId === targetId) {
+        if (data.ticket) {
+          setActiveTicket(data.ticket);
+        }
+        const agentName = data.agent_first_name || data.agent?.full_name?.trim()?.split(/\s+/)[0] || 'Support';
+        toast.success(`Agent ${agentName} is connected`, {
+          icon: '🟢',
+          duration: 4500
+        });
+      }
+    };
+
     socket.on('ticket_reply', handleTicketReply);
     socket.on('ticket_updated', handleTicketUpdated);
+    socket.on('agent_connected', handleAgentConnected);
 
     return () => {
       socket.off('ticket_reply', handleTicketReply);
       socket.off('ticket_updated', handleTicketUpdated);
+      socket.off('agent_connected', handleAgentConnected);
     };
   }, [activeTicket, isOpen, profile]);
+
+  // Helper: check if an agent has viewed/connected to this ticket
+  const isAgentConnected = Boolean(
+    activeTicket?.assigned_staff &&
+    (activeTicket?.agent_connected || 
+     activeTicket?.agent_viewed_at || 
+     (activeTicket?.responses && activeTicket.responses.some(r => {
+       const role = (r.user_role || '').toLowerCase();
+       return role.includes('staff') || role.includes('admin') || role.includes('agent');
+     })))
+  );
+
+  // Helper: extract agent's first name
+  const agentFirstName = (() => {
+    if (!activeTicket?.assigned_staff) return 'Specialist';
+    const raw = activeTicket.assigned_staff.full_name || activeTicket.assigned_staff.username || activeTicket.assigned_staff.email || '';
+    const clean = raw.trim().split(/\s+/)[0];
+    return clean ? (clean.charAt(0).toUpperCase() + clean.slice(1)) : 'Specialist';
+  })();
 
   // Handle open widget
   const handleOpenWidget = () => {
@@ -222,7 +275,7 @@ export default function SupportChatWidget() {
       const aiReply = {
         id: `ai_${Date.now()}`,
         role: 'assistant',
-        content: aiData?.reply || "I'm here to help! Please ask about certification, application documents, or click 'Request Human Agent'.",
+        content: aiData?.reply || "I'm here to help! Please ask about certification, application documents, or click 'Speak with an Agent'.",
         suggestedDept: aiData?.suggestedDepartment,
         needsHumanOffer: aiData?.needsHumanOffer,
         time: new Date()
@@ -235,7 +288,7 @@ export default function SupportChatWidget() {
         {
           id: `ai_err_${Date.now()}`,
           role: 'assistant',
-          content: "I'm temporarily experiencing connectivity issues. You can click **'Request Human Agent'** above to connect directly with an HFA Support Manager.",
+          content: "I'm temporarily experiencing connectivity issues. You can click **'Speak with an Agent'** above to connect directly with our support team.",
           needsHumanOffer: true,
           time: new Date()
         }
@@ -262,7 +315,7 @@ export default function SupportChatWidget() {
 
       const newTicket = res.data?.data || res.data;
       setActiveTicket(newTicket);
-      toast.success('Support request dispatched to HFA Support Manager!');
+      toast.success('Your support request has been submitted. Connecting you with an agent.');
       setIssueDescription('');
       setActiveTab('ticket');
     } catch (err) {
@@ -454,6 +507,34 @@ export default function SupportChatWidget() {
         </div>
       )}
 
+      {/* Responsive Styles & Animations */}
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(14px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes spinSlow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .spin-slow {
+          animation: spinSlow 2.5s linear infinite;
+        }
+        @media (max-width: 640px) {
+          #hfa-support-chatbox-window {
+            top: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 100% !important;
+            max-height: 100% !important;
+            border-radius: 0 !important;
+          }
+        }
+      `}</style>
+
       {/* Floating Support Chatbox Window */}
       {isOpen && (
         <div
@@ -462,9 +543,9 @@ export default function SupportChatWidget() {
             position: 'fixed',
             bottom: 24,
             right: 24,
-            width: 390,
+            width: 400,
             maxWidth: 'calc(100vw - 32px)',
-            height: 600,
+            height: 610,
             maxHeight: 'calc(100vh - 80px)',
             background: 'white',
             borderRadius: 20,
@@ -522,13 +603,13 @@ export default function SupportChatWidget() {
                   HFA Support Center
                 </div>
                 <div style={{ fontSize: 11, opacity: 0.85, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>AI Assistant</span> • <span>Live Human Escalation</span>
+                  <span>AI Assistant</span> • <span>Live Support</span>
                 </div>
               </div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {/* Talk to Human Header Button */}
+              {/* Speak with Agent Header Button */}
               {activeTab === 'ai' && (
                 <button
                   onClick={() => setActiveTab('request_form')}
@@ -546,10 +627,10 @@ export default function SupportChatWidget() {
                     cursor: 'pointer',
                     transition: 'background 0.2s',
                   }}
-                  title="Request to speak with a real person"
+                  title="Speak with an Agent"
                 >
                   <User size={12} />
-                  <span>Talk to Person</span>
+                  <span>Speak with an Agent</span>
                 </button>
               )}
 
@@ -635,14 +716,14 @@ export default function SupportChatWidget() {
               }}
             >
               <UserCheck size={13} />
-              <span>{activeTicket ? 'Live Agent' : 'Request Human'}</span>
+              <span>{activeTicket ? (isAgentConnected ? `Agent ${agentFirstName}` : 'Live Chat') : 'Speak with an Agent'}</span>
               {activeTicket && activeTicket.status !== 'closed' && (
                 <span
                   style={{
                     width: 7,
                     height: 7,
                     borderRadius: '50%',
-                    background: activeTicket.assigned_to ? '#22c55e' : '#f59e0b'
+                    background: isAgentConnected ? '#22c55e' : '#0ea5e9'
                   }}
                 />
               )}
@@ -729,7 +810,7 @@ export default function SupportChatWidget() {
                               whiteSpace: 'nowrap'
                             }}
                           >
-                            Talk to Person →
+                            Speak with an Agent →
                           </button>
                         </div>
                       )}
@@ -904,10 +985,10 @@ export default function SupportChatWidget() {
 
               <div>
                 <h4 style={{ margin: '0 0 4px 0', fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
-                  Connect with a Real Person
+                  Speak with an Agent
                 </h4>
                 <p style={{ margin: 0, fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
-                  Select your department and describe your inquiry. Our <strong>Support Manager</strong> will be notified immediately to review and assign an admin to assist you.
+                  Select your department and describe your inquiry. A support specialist will be connected to assist you.
                 </p>
               </div>
 
@@ -1028,7 +1109,7 @@ export default function SupportChatWidget() {
                   }}
                 >
                   {submittingHandover ? <RefreshCw size={16} className="spin" /> : <Send size={16} />}
-                  <span>{submittingHandover ? 'Notifying Support Manager...' : 'Submit Request to Support Manager'}</span>
+                  <span>{submittingHandover ? 'Connecting...' : 'Connect with an Agent'}</span>
                 </button>
               </form>
             </div>
@@ -1075,20 +1156,20 @@ export default function SupportChatWidget() {
 
                 {/* Assignment Indicator */}
                 <div style={{ textAlign: 'right' }}>
-                  {activeTicket?.assigned_staff ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#047857', fontWeight: 700 }}>
-                      <UserCheck size={14} />
-                      <span>{activeTicket.assigned_staff.full_name || 'Assigned Admin'}</span>
-                    </div>
-                  ) : (activeTicket?.status === 'resolved' || activeTicket?.status === 'closed') ? (
+                  {(activeTicket?.status === 'resolved' || activeTicket?.status === 'closed') ? (
                     <div style={{ fontSize: 11, color: '#15803d', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
                       <CheckCircle size={13} />
-                      <span>Ticket Completed</span>
+                      <span>Ticket Resolved</span>
+                    </div>
+                  ) : isAgentConnected ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#047857', fontWeight: 700 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 2px #bbf7d0', display: 'inline-block' }} />
+                      <span>Agent {agentFirstName} connected</span>
                     </div>
                   ) : (
-                    <div style={{ fontSize: 11, color: '#b45309', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Clock size={12} />
-                      <span>Support Mgr Assigning...</span>
+                    <div style={{ fontSize: 11, color: '#0284c7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <Clock size={12} className="spin-slow" />
+                      <span>Connecting with agent...</span>
                     </div>
                   )}
                   <button
@@ -1156,26 +1237,62 @@ export default function SupportChatWidget() {
                   </span>
                 </div>
 
-                {/* Support Manager Dispatch Notice */}
-                <div
-                  style={{
-                    alignSelf: 'center',
-                    background: '#eff6ff',
-                    border: '1px solid #bfdbfe',
-                    borderRadius: 10,
-                    padding: '8px 12px',
-                    fontSize: 11.5,
-                    color: '#1e40af',
-                    textAlign: 'center',
-                    maxWidth: '90%'
-                  }}
-                >
-                  {activeTicket?.assigned_staff ? (
-                    <span>Assigned to <strong>{activeTicket.assigned_staff.full_name}</strong> by Support Manager.</span>
-                  ) : (
-                    <span>Notice: Support Manager has received your request and is assigning an agent to respond.</span>
-                  )}
-                </div>
+                {/* Agent Connection Notice */}
+                {isAgentConnected ? (
+                  <div
+                    style={{
+                      alignSelf: 'center',
+                      background: '#ecfdf5',
+                      border: '1px solid #a7f3d0',
+                      borderRadius: 12,
+                      padding: '8px 16px',
+                      fontSize: 12,
+                      color: '#065f46',
+                      fontWeight: 700,
+                      textAlign: 'center',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      boxShadow: '0 1px 3px rgba(5, 150, 105, 0.08)'
+                    }}
+                  >
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                    <span>Agent {agentFirstName} is connected</span>
+                  </div>
+                ) : (activeTicket?.status === 'resolved' || activeTicket?.status === 'closed') ? (
+                  <div
+                    style={{
+                      alignSelf: 'center',
+                      background: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      borderRadius: 10,
+                      padding: '8px 14px',
+                      fontSize: 11.5,
+                      color: '#15803d',
+                      fontWeight: 600,
+                      textAlign: 'center',
+                      maxWidth: '90%'
+                    }}
+                  >
+                    <span>✓ This support request has been marked as resolved.</span>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      alignSelf: 'center',
+                      background: '#f0f9ff',
+                      border: '1px solid #bae6fd',
+                      borderRadius: 10,
+                      padding: '8px 14px',
+                      fontSize: 11.5,
+                      color: '#0369a1',
+                      textAlign: 'center',
+                      maxWidth: '90%'
+                    }}
+                  >
+                    <span>Your request has been received. A support specialist will be connected shortly.</span>
+                  </div>
+                )}
 
                 {/* Staff and Client Responses */}
                 {activeTicket?.responses?.map((r, idx) => {
@@ -1206,8 +1323,9 @@ export default function SupportChatWidget() {
                         }}
                       >
                         {!isMine && (
-                          <div style={{ fontSize: 11, fontWeight: 800, color: '#047857', marginBottom: 4 }}>
-                            {r.user_name || 'HFA Staff'} ({r.user_role || 'Staff'})
+                          <div style={{ fontSize: 11, fontWeight: 800, color: '#047857', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <UserCheck size={12} />
+                            <span>Agent {r.user_name ? r.user_name.trim().split(/\s+/)[0] : agentFirstName}</span>
                           </div>
                         )}
                         {r.message}
@@ -1235,7 +1353,7 @@ export default function SupportChatWidget() {
               >
                 <input
                   type="text"
-                  placeholder="Type reply to assigned agent..."
+                  placeholder={isAgentConnected ? `Type reply to Agent ${agentFirstName}...` : "Type reply to support team..."}
                   value={ticketReply}
                   onChange={e => setTicketReply(e.target.value)}
                   disabled={sendingReply || activeTicket?.status === 'closed'}

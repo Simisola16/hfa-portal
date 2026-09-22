@@ -42,7 +42,7 @@ export default function SitesPage() {
     const siteTitle = form.name || form.est_name || 'Manufacturing Site';
     try {
       if (editing) {
-        await api.put(`/api/sites/${editing.id}`, form);
+        await api.put(`/api/sites/${editing.id || editing._id}`, form);
         toast.success('Site updated successfully');
       } else {
         await api.post('/api/sites', form);
@@ -63,7 +63,8 @@ export default function SitesPage() {
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this site?')) return;
-    try { await api.delete(`/api/sites/${id}`); toast.success('Site deleted'); fetch(); }
+    const targetId = typeof id === 'object' ? (id.id || id._id) : id;
+    try { await api.delete(`/api/sites/${targetId}`); toast.success('Site deleted'); fetch(); }
     catch (err) { toast.error(err.message); }
   };
 
@@ -100,7 +101,7 @@ export default function SitesPage() {
                 </thead>
                 <tbody>
                   {sites.map(s => (
-                    <tr key={s.id}>
+                    <tr key={s.id || s._id}>
                       <td style={{ fontWeight: 700, color: '#1B7A7A' }}>{s.name}</td>
                       <td>{s.address_1}{s.city ? `, ${s.city}` : ''}</td>
                       <td>{s.contact_name}</td>
