@@ -109,15 +109,36 @@ export default function ClientAddOnTrack() {
     const socket = getSocket(token);
     if (!socket) return;
 
+    socket.emit('join_application', addonId);
+
     const handleAddOnUpdate = (data) => {
-      const incomingId = data.addOnId || data.addon_id || data._id;
+      const incomingId = data.addOnId || data.addon_id || data.id || data._id;
       if (String(incomingId) === String(addonId)) {
+        if (data.status) {
+          setApp(prev => {
+            if (!prev) return prev;
+            return { ...prev, status: data.status, statusHistory: data.statusHistory || prev.statusHistory };
+          });
+        }
         fetchApp(true);
       }
     };
 
     socket.on('addon_updated', handleAddOnUpdate);
-    return () => { socket.off('addon_updated', handleAddOnUpdate); };
+    socket.on('application_updated', handleAddOnUpdate);
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchApp(true);
+      }
+    }, 5000);
+
+    return () => {
+      socket.emit('leave_application', addonId);
+      socket.off('addon_updated', handleAddOnUpdate);
+      socket.off('application_updated', handleAddOnUpdate);
+      clearInterval(interval);
+    };
   }, [addonId, fetchApp]);
 
   if (loading) {
