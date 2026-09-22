@@ -261,23 +261,27 @@ export default function ApplicationsPage({ openNew }) {
       const cat = (c.category || '').toLowerCase();
       const scope = (c.scope || '').toLowerCase();
       const scheme = (c.scheme || '').toLowerCase();
-      return cat.includes('gso') || cat.includes('uae') || scope.includes('gso') || scheme.includes('gso');
+      const certType = (c.certificate_type || '').toLowerCase();
+      return cat.includes('gso') || cat.includes('uae') || scope.includes('gso') || scheme.includes('gso') || certType.includes('gso') || certType.includes('uae');
     });
+
+    // If no specific GSO cert found, but client has active certificates and sites, treat them as eligible
+    const effectiveCerts = gsoCerts.length > 0 ? gsoCerts : safeCerts;
 
     const gsoSiteMap = new Map();
 
     // 1. Process from apps
     gsoApps.forEach(a => {
       const sId = typeof a.site_id === 'object' ? a.site_id?._id || a.site_id?.id : a.site_id;
-      if (!sId) return;
+      if (!sId && !a._id) return;
       
-      const key = String(sId);
+      const key = sId ? String(sId) : String(a._id);
       const isCertified = a.status === 'certificate_issued' || a.has_certificate;
       const isOngoingSurveillance = a.application_type === 'surveillance' && !['certificate_issued', 'rejected'].includes(a.status?.toLowerCase());
 
       if (!gsoSiteMap.has(key)) {
         gsoSiteMap.set(key, {
-          site_id: key,
+          site_id: sId ? String(sId) : (sites[0]?._id ? String(sites[0]._id) : key),
           site_name: a.site_name || a.establishment_name || 'Manufacturing Site',
           establishment_name: a.establishment_name || a.site_name || '',
           category: a.category || 'UAE/GSO Approved Halal Certification For Exporters To UAE',
@@ -302,22 +306,25 @@ export default function ApplicationsPage({ openNew }) {
     });
 
     // 2. Process from certificates
-    gsoCerts.forEach(c => {
+    effectiveCerts.forEach(c => {
       const sId = typeof c.site_id === 'object' ? c.site_id?._id || c.site_id?.id : c.site_id;
-      if (!sId) return;
-      const key = String(sId);
+      const matchingSite = sites.find(s => sId && String(s._id || s.id) === String(sId)) || sites[0];
+      const key = sId ? String(sId) : (matchingSite?._id ? String(matchingSite._id) : String(c._id || c.id || 'cert_gso'));
 
       if (gsoSiteMap.has(key)) {
         const existing = gsoSiteMap.get(key);
         existing.certified = true;
+        existing.certificate_id = c._id || c.id;
         existing.certificate_number = c.certificate_number;
         existing.issue_date = c.issue_date;
         existing.expiry_date = c.expiry_date;
+        if (!existing.site_name && (c.site_name || matchingSite?.name)) {
+          existing.site_name = c.site_name || matchingSite?.name;
+        }
       } else {
-        const matchingSite = sites.find(s => String(s._id || s.id) === key);
         gsoSiteMap.set(key, {
-          site_id: key,
-          site_name: matchingSite?.name || c.site_name || 'Manufacturing Site',
+          site_id: matchingSite?._id ? String(matchingSite._id) : (sId ? String(sId) : key),
+          site_name: matchingSite?.name || c.site_name || c.company_name || 'Manufacturing Site',
           establishment_name: matchingSite?.est_name || c.company_name || '',
           category: c.category || 'UAE/GSO Approved Halal Certification For Exporters To UAE',
           managing_director: c.contact_person || '',
@@ -325,6 +332,7 @@ export default function ApplicationsPage({ openNew }) {
           primary_work_tel: c.contact_phone || '',
           created_at: c.issue_date || c.created_at,
           certified: true,
+          certificate_id: c._id || c.id,
           certificate_number: c.certificate_number,
           issue_date: c.issue_date,
           expiry_date: c.expiry_date,
@@ -334,6 +342,34 @@ export default function ApplicationsPage({ openNew }) {
         });
       }
     });
+
+    // Fallback: If client has sites and at least one certificate or GSO app, ensure all sites are represented
+    if (sites.length > 0 && (effectiveCerts.length > 0 || gsoApps.length > 0)) {
+      sites.forEach(s => {
+        const key = String(s._id || s.id);
+        if (!gsoSiteMap.has(key)) {
+          const defaultCert = effectiveCerts[0];
+          gsoSiteMap.set(key, {
+            site_id: key,
+            site_name: s.name || s.est_name || 'Manufacturing Site',
+            establishment_name: s.est_name || s.name || '',
+            category: 'UAE/GSO Approved Halal Certification For Exporters To UAE',
+            managing_director: s.managing_director || '',
+            primary_email: s.primary_email || '',
+            primary_work_tel: s.primary_work_tel || '',
+            created_at: defaultCert?.issue_date || s.created_at,
+            certified: true,
+            certificate_id: defaultCert?._id || defaultCert?.id || null,
+            certificate_number: defaultCert?.certificate_number || null,
+            issue_date: defaultCert?.issue_date || null,
+            expiry_date: defaultCert?.expiry_date || null,
+            hasOngoingSurveillance: false,
+            ongoingAppNumber: null,
+            surveillanceCount: 0
+          });
+        }
+      });
+    }
 
     // 3. Count completed surveillances
     safeApps.forEach(a => {
@@ -347,24 +383,18 @@ export default function ApplicationsPage({ openNew }) {
 
     const result = [];
     gsoSiteMap.forEach(item => {
-      const year = item.surveillanceCount >= 1 ? 2 : 1;
-      item.cycle_year = year;
-      
       const rawDate = item.issue_date || item.created_at;
       const parsedTime = rawDate ? new Date(rawDate).getTime() : NaN;
       const startDate = !isNaN(parsedTime) ? parsedTime : now;
       const elapsedMs = now - startDate;
       const elapsedYears = elapsedMs / oneYearInMs;
 
-      // Surveillance is due when:
-      // Year 1: Certified, has used ~1 year (>= 9 months / 0.75 year or 1 year) and surveillanceCount === 0
-      // Year 2: Certified, has used ~2 years (>= 21 months / 1.75 years or 2 years) and surveillanceCount === 1
-      const isDueForCycle = year === 1 ? (elapsedYears >= 0.75) : (elapsedYears >= 1.75);
-      const needsSurveillance = item.certified && item.surveillanceCount < 2 && !item.hasOngoingSurveillance && isDueForCycle;
-
+      // Determine cycle year: if 1+ surveillance completed or elapsed > 1.5 years, suggest Year 2, else Year 1
+      const year = item.surveillanceCount >= 1 ? 2 : (elapsedYears >= 1.5 ? 2 : 1);
+      item.cycle_year = year;
       item.isEligible = item.certified && !item.hasOngoingSurveillance;
       item.elapsedYears = elapsedYears;
-      item.needsSurveillance = needsSurveillance;
+      item.needsSurveillance = item.certified && item.surveillanceCount < 2 && !item.hasOngoingSurveillance;
 
       result.push(item);
     });
@@ -373,6 +403,10 @@ export default function ApplicationsPage({ openNew }) {
   };
 
   const handleOpenSurveillanceModal = () => {
+    if (sites.length === 0) {
+      toast.error('Please add a site in "Manage Sites" first.');
+      return;
+    }
     const gsoList = getGSOSurveillanceEligibleList();
     if (gsoList.length > 0) {
       const firstEligible = gsoList.find(g => g.isEligible) || gsoList[0];
@@ -388,6 +422,15 @@ export default function ApplicationsPage({ openNew }) {
           surveillance_year: firstEligible.cycle_year || 1
         }));
       }
+    } else if (sites.length > 0) {
+      const s0 = sites[0];
+      setSurveillanceForm(f => ({
+        ...f,
+        site_id: s0._id,
+        site_name: s0.name,
+        establishment_name: s0.est_name || s0.name,
+        surveillance_year: 1
+      }));
     }
     setShowSurveillanceModal(true);
   };
@@ -479,6 +522,9 @@ export default function ApplicationsPage({ openNew }) {
       fd.append('primary_work_tel', surveillanceForm.primary_work_tel.trim());
       fd.append('primary_mobile', surveillanceForm.primary_work_tel.trim());
       fd.append('notes', `[Year ${surveillanceForm.surveillance_year || 1} Surveillance] ${surveillanceForm.notes || ''}`);
+      if (selectedGSO?.certificate_id) {
+        fd.append('certificate_id', selectedGSO.certificate_id);
+      }
       fd.append('declared_true', 'true');
 
       if (surveillanceFiles.length > 0) {
@@ -914,9 +960,13 @@ export default function ApplicationsPage({ openNew }) {
                 toast.error('Please add a site in "Manage Sites" first.');
                 return;
               }
+              if (filterType === 'surveillance') {
+                handleOpenSurveillanceModal();
+                return;
+              }
               setForm(f => ({
                 ...f,
-                application_type: filterType === 'renewal' ? 'renewal' : (filterType === 'surveillance' ? 'surveillance' : 'new')
+                application_type: filterType === 'renewal' ? 'renewal' : 'new'
               }));
               setShowModal(true);
             }}
@@ -924,23 +974,21 @@ export default function ApplicationsPage({ openNew }) {
             <Plus size={15} /> Create Application
           </button>
 
-          {getGSOSurveillanceEligibleList().some(g => g.needsSurveillance) && (
-            <button
-              className="btn btn-outline"
-              style={{
-                borderColor: '#0284c7',
-                color: '#0284c7',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                background: '#f0f9ff'
-              }}
-              onClick={handleOpenSurveillanceModal}
-            >
-              <ShieldCheck size={15} /> Create Surveillance
-            </button>
-          )}
+          <button
+            className="btn btn-outline"
+            style={{
+              borderColor: '#0284c7',
+              color: '#0284c7',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: '#f0f9ff'
+            }}
+            onClick={handleOpenSurveillanceModal}
+          >
+            <ShieldCheck size={15} /> Create Surveillance
+          </button>
         </div>
       </div>
 
