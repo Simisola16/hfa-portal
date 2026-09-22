@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '../lib/api';
 import {
@@ -52,72 +52,80 @@ export default function InitialProductPage() {
   const inProgressCount = initialProducts.filter(p => p.status !== 'initial_product_approved').length;
   const approvedCount = initialProducts.filter(p => p.status === 'initial_product_approved').length;
 
-  const paidInvoiceAppIds = new Set(
-    invoices
-      .filter(inv => {
-        const isInitial = inv.invoice_type === 'initial' || !inv.invoice_type || (inv.title && !inv.title.toLowerCase().includes('final'));
-        const isPaid = ['paid', 'settled'].includes((inv.status || '').toLowerCase());
-        return isInitial && isPaid;
-      })
-      .map(inv => String(inv.application_id?._id || inv.application_id))
-      .filter(Boolean)
-  );
+  const paidInvoiceAppIds = useMemo(() => {
+    return new Set(
+      invoices
+        .filter(inv => {
+          const isInitial = inv.invoice_type === 'initial' || !inv.invoice_type || (inv.title && !inv.title.toLowerCase().includes('final'));
+          const isPaid = ['paid', 'settled'].includes((inv.status || '').toLowerCase());
+          return isInitial && isPaid;
+        })
+        .map(inv => String(inv.application_id?._id || inv.application_id))
+        .filter(Boolean)
+    );
+  }, [invoices]);
 
-  const eligibleApps = apps.filter(app => {
-    // Strictly NEW certification applications
-    const appType = (app.application_type || 'new').toLowerCase().trim();
-    if (appType === 'renewal' || appType === 'surveillance') return false;
+  const eligibleApps = useMemo(() => {
+    return apps.filter(app => {
+      // Strictly NEW certification applications
+      const appType = (app.application_type || 'new').toLowerCase().trim();
+      if (appType === 'renewal' || appType === 'surveillance') return false;
 
-    // Must NOT be in early unconfirmed stages, rejected, or on hold
-    const normStatus = (app.status || '').toLowerCase().trim();
-    const isUnconfirmedStatus = [
-      'created', 'draft', 'submitted', 'under_review', 'approved',
-      'proposal_sent', 'proposal_rejected', 'proposal_approved',
-      'invoice_sent', 'certificate_issued', 'rejected', 'on_hold'
-    ].includes(normStatus);
+      // Must NOT be in early unconfirmed stages, rejected, or on hold
+      const normStatus = (app.status || '').toLowerCase().trim();
+      const isUnconfirmedStatus = [
+        'created', 'draft', 'submitted', 'under_review', 'approved',
+        'proposal_sent', 'proposal_rejected', 'proposal_approved',
+        'invoice_sent', 'certificate_issued', 'rejected', 'on_hold'
+      ].includes(normStatus);
 
-    // Must NOT already have an Initial Product registered
-    const appId = String(app._id || app.id);
-    const hasIp = initialProducts.some(ip => {
-      const ipAppId = String(ip.application_id?._id || ip.application_id?.id || ip.application_id || '');
-      return ipAppId === appId;
+      // Must NOT already have an Initial Product registered
+      const appId = String(app._id || app.id);
+      const hasIp = initialProducts.some(ip => {
+        const ipAppId = String(ip.application_id?._id || ip.application_id?.id || ip.application_id || '');
+        return ipAppId === appId;
+      });
+      if (hasIp) return false;
+
+      // Initial payment must be confirmed (either via application lifecycle status or confirmed paid invoice)
+      const CONFIRMED_PAYMENT_STATUSES = [
+        'payment_received', 'initial_payment_received', 'payment_confirmed',
+        'initial_product_processing', 'initial_product_approved',
+        'dates_proposed', 'dates_rejected', 'dates_accepted', 'date_finalized',
+        'audit_assigned', 'audit_scheduled', 'auditor_assigned', 'audit_in_progress',
+        'audit_successful', 'audit_completed', 'audit_report_submitted',
+        'nc_raised', 'nc_closed', 'final_invoice_sent', 'final_invoice_paid',
+        'logsheet_created', 'logsheet_signed', 'application_successful',
+        'agreement_sent', 'agreement_signed', 'agreement_finalised',
+        'ready_for_certificate'
+      ];
+
+      const isPaymentConfirmed = (!isUnconfirmedStatus && CONFIRMED_PAYMENT_STATUSES.includes(normStatus)) ||
+        paidInvoiceAppIds.has(appId) ||
+        app.initial_payment_confirmed === true ||
+        app.initial_invoice_paid === true;
+
+      return isPaymentConfirmed;
     });
-    if (hasIp) return false;
+  }, [apps, initialProducts, paidInvoiceAppIds]);
 
-    // Initial payment must be confirmed (either via application lifecycle status or confirmed paid invoice)
-    const CONFIRMED_PAYMENT_STATUSES = [
-      'payment_received', 'initial_payment_received', 'payment_confirmed',
-      'initial_product_processing', 'initial_product_approved',
-      'dates_proposed', 'dates_rejected', 'dates_accepted', 'date_finalized',
-      'audit_assigned', 'audit_scheduled', 'auditor_assigned', 'audit_in_progress',
-      'audit_successful', 'audit_completed', 'audit_report_submitted',
-      'nc_raised', 'nc_closed', 'final_invoice_sent', 'final_invoice_paid',
-      'logsheet_created', 'logsheet_signed', 'application_successful',
-      'agreement_sent', 'agreement_signed', 'agreement_finalised',
-      'ready_for_certificate'
-    ];
-
-    const isPaymentConfirmed = (!isUnconfirmedStatus && CONFIRMED_PAYMENT_STATUSES.includes(normStatus)) ||
-      paidInvoiceAppIds.has(appId) ||
-      app.initial_payment_confirmed === true ||
-      app.initial_invoice_paid === true;
-
-    return isPaymentConfirmed;
-  });
+  const hasAutoOpenedRef = useRef(false);
 
   // Auto-open modal if application_id is provided in URL query, strictly gating on eligibleApps
   useEffect(() => {
     const targetAppId = searchParams.get('application_id');
-    if (targetAppId && !loading) {
-      const eligibleTargetApp = eligibleApps.find(a => String(a._id || a.id) === targetAppId);
-      if (eligibleTargetApp) {
-        setSelectedAppForModal(eligibleTargetApp);
-        setShowAddModal(true);
-      } else if (apps.length > 0) {
-        const foundApp = apps.find(a => String(a._id || a.id) === targetAppId);
-        if (foundApp) {
-          toast.error('Initial Product submission requires confirmed initial invoice payment by HFA administration.');
-        }
+    if (!targetAppId || loading || hasAutoOpenedRef.current) return;
+
+    const eligibleTargetApp = eligibleApps.find(a => String(a._id || a.id) === targetAppId);
+    if (eligibleTargetApp) {
+      hasAutoOpenedRef.current = true;
+      setSelectedAppForModal(eligibleTargetApp);
+      setShowAddModal(true);
+    } else if (apps.length > 0) {
+      const foundApp = apps.find(a => String(a._id || a.id) === targetAppId);
+      if (foundApp) {
+        hasAutoOpenedRef.current = true;
+        toast.error('Initial Product submission requires confirmed initial invoice payment by HFA administration.');
       }
     }
   }, [searchParams, eligibleApps, apps, loading]);
