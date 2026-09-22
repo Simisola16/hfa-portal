@@ -1048,15 +1048,15 @@ export default function TrackProcessing() {
           />
 
           {/* Post-Application Successful Invoice Card (Renewal / Surveillance) */}
-          {isFastTrack && (invoice || ['logsheet_signed', 'application_successful', 'ready_for_certificate', 'invoice_sent', 'payment_received', 'certificate_issued'].includes(status)) && (
+          {isFastTrack && (invoice || initialInvoice || allInvoices.length > 0 || ['logsheet_signed', 'application_successful', 'ready_for_certificate', 'invoice_sent', 'payment_received', 'certificate_issued'].includes(status)) && (
             <InvoiceCard
               app={app}
-              invoice={invoice}
+              invoice={invoice || initialInvoice || allInvoices[0]}
               status={status}
               isRenewal={isRenewal}
               isSurveillance={isSurveillance}
               onPayClick={() => {
-                setSelectedPaymentInvoice(invoice);
+                setSelectedPaymentInvoice(invoice || initialInvoice || allInvoices[0]);
                 setShowPaymentModal(true);
               }}
             />

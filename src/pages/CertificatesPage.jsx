@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
@@ -18,7 +18,6 @@ export default function CertificatesPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [certs, setCerts] = useState([]);
-  const [survRequests, setSurvRequests] = useState([]);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -35,15 +34,13 @@ export default function CertificatesPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [certsRes, survRes, appsRes] = await Promise.all([
+      const [certsRes, appsRes] = await Promise.all([
         api.get('/api/certificates').catch(() => ({ data: [] })),
-        api.get('/api/surveillance/my').catch(() => ({ data: [] })),
         api.get('/api/applications').catch(() => ({ data: [] }))
       ]);
       const loadedCerts = Array.isArray(certsRes) ? certsRes : (certsRes?.data || []);
       const loadedApps = Array.isArray(appsRes) ? appsRes : (appsRes?.data || []);
       setCerts(loadedCerts);
-      setSurvRequests(Array.isArray(survRes) ? survRes : (survRes?.data?.data || survRes?.data || []));
       setApplications(loadedApps);
 
       const renewId = searchParams.get('renewCertId');
@@ -221,18 +218,6 @@ export default function CertificatesPage() {
     }
   };
 
-  const handleRequestSurveillance = async (certId) => {
-    try {
-      await api.post('/api/surveillance', { certificate_id: certId });
-      toast.success('Surveillance letter requested successfully!');
-      // Reload requests
-      const res = await api.get('/api/surveillance/my');
-      setSurvRequests(res.data?.data || res.data || []);
-    } catch (err) {
-      toast.error(err.response?.data?.error || err.message || 'Failed to request surveillance');
-    }
-  };
-
   return (
     <div>
       <div className="toolbar">
@@ -269,9 +254,16 @@ export default function CertificatesPage() {
                     const isExpanded = expandedCertId === (cert.id || cert._id);
                     const is3Yr = isThreeYearCert(cert);
                     const dates = getSurveillanceDates(cert);
-                    const certReqs = survRequests.filter(r => (r.certificate_id?._id || r.certificate_id) === (cert.id || cert._id));
-                    const fulfilledReqs = certReqs.filter(r => r.status === 'fulfilled');
-                    const pendingReq = certReqs.find(r => r.status === 'pending');
+                    const certSiteId = String(cert.site_id?._id || cert.site_id?.id || cert.site_id || '');
+                    const targetCertId = String(cert._id || cert.id || '');
+                    const relatedSurvs = applications.filter(a => {
+                      if (a.application_type !== 'surveillance') return false;
+                      const aSiteId = String(a.site_id?._id || a.site_id?.id || a.site_id || '');
+                      const aCertId = String(a.certificate_id?._id || a.certificate_id?.id || a.certificate_id || '');
+                      return (certSiteId && aSiteId && aSiteId === certSiteId) || (targetCertId && aCertId && aCertId === targetCertId);
+                    });
+                    const completedSurvs = relatedSurvs.filter(a => a.status === 'certificate_issued' && (a.documents?.surveillance_letter || a.certificate_url));
+                    const ongoingSurv = relatedSurvs.find(a => !['certificate_issued', 'rejected'].includes(a.status?.toLowerCase()));
                     const effectiveStatus =
                       cert.is_renewed || cert.status === 'renewed'
                         ? 'renewed'
@@ -430,7 +422,7 @@ export default function CertificatesPage() {
                                           <div style={{ fontSize: 11, color: '#94a3b8' }}>Due by: {dates.y1 ? dates.y1.toLocaleDateString('en-GB') : '—'}</div>
                                         </div>
                                         <div>
-                                          {fulfilledReqs.some(r => new Date(r.fulfilled_at) <= dates.y1 || !dates.y2) ? (
+                                          {completedSurvs.length >= 1 ? (
                                             <span className="badge badge-green" style={{ fontSize: 10 }}>Completed</span>
                                           ) : (
                                             <span className="badge badge-gray" style={{ fontSize: 10 }}>Pending</span>
@@ -445,7 +437,7 @@ export default function CertificatesPage() {
                                           <div style={{ fontSize: 11, color: '#94a3b8' }}>Due by: {dates.y2 ? dates.y2.toLocaleDateString('en-GB') : '—'}</div>
                                         </div>
                                         <div>
-                                          {fulfilledReqs.length >= 2 ? (
+                                          {completedSurvs.length >= 2 ? (
                                             <span className="badge badge-green" style={{ fontSize: 10 }}>Completed</span>
                                           ) : (
                                             <span className="badge badge-gray" style={{ fontSize: 10 }}>Pending</span>
@@ -453,93 +445,68 @@ export default function CertificatesPage() {
                                         </div>
                                       </div>
 
-                                      {/* Surveillance Actions & Statuses */}
-                                      <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: 12, marginTop: 4 }}>
-                                        {(() => {
-                                          if (pendingReq) {
-                                            return (
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#fefce8', borderRadius: 8, border: '1px solid #fde68a', fontSize: 12, color: '#854d0e' }}>
-                                                <AlertCircle size={14} style={{ color: '#a16207' }} />
-                                                <span>Surveillance request pending administrator review.</span>
-                                              </div>
-                                            );
-                                          }
-
-                                          // Calculate next surveillance due date
-                                          let nextDueDate = dates.y1;
-                                          if (fulfilledReqs.length === 1 && dates.y2) {
-                                            nextDueDate = dates.y2;
-                                          } else if (fulfilledReqs.length >= 2 || !nextDueDate) {
-                                            nextDueDate = cert.expiry_date ? new Date(cert.expiry_date) : null;
-                                          }
-
-                                          if (!nextDueDate) {
-                                            return null;
-                                          }
-
-                                          const now = new Date();
-                                          const diffMs = nextDueDate.getTime() - now.getTime();
-                                          const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-                                          const availableDate = new Date(nextDueDate.getTime() - 90 * 24 * 60 * 60 * 1000);
-
-                                          if (diffDays > 90) {
-                                            // More than 3 months out: Locked state
-                                            return (
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px dashed #cbd5e1' }}>
-                                                <Lock size={14} style={{ color: '#94a3b8' }} />
-                                                <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>
-                                                  Surveillance Request Locked — Available starting {availableDate.toLocaleDateString('en-GB')} (3 months before due date)
-                                                </span>
-                                              </div>
-                                            );
-                                          } else if (diffDays <= 60) {
-                                            // 2 months or less out: Urgent flag + Request button
-                                            return (
-                                              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                                                <span className="badge badge-red" style={{ padding: '6px 10px', fontSize: 11, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
-                                                  🚨 URGENT: Surveillance Due in {diffDays <= 0 ? '0' : diffDays} Days!
-                                                </span>
-                                                <button
-                                                  className="btn btn-primary btn-sm"
-                                                  style={{ background: '#dc2626', borderColor: '#dc2626', fontWeight: 700 }}
-                                                  onClick={() => handleRequestSurveillance(cert.id || cert._id)}
-                                                >
-                                                  Request Surveillance Letter
-                                                </button>
-                                                <span style={{ fontSize: 11, color: '#991b1b', fontWeight: 600 }}>Submit request urgently before deadline.</span>
-                                              </div>
-                                            );
-                                          } else {
-                                            // 3 to 2 months out: Standard request button available
-                                            return (
-                                              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                                                <button
-                                                  className="btn btn-primary btn-sm"
-                                                  onClick={() => handleRequestSurveillance(cert.id || cert._id)}
-                                                >
-                                                  Request Surveillance Letter
-                                                </button>
-                                                <span style={{ fontSize: 11, color: '#64748b' }}>Surveillance window open ({diffDays} days left until due date).</span>
-                                              </div>
-                                            );
-                                          }
-                                        })()}
-
-                                        {/* Download fulfilled letter */}
-                                        {fulfilledReqs.length > 0 && (
-                                          <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-                                            <div style={{ fontSize: 11, fontWeight: 700, color: '#475569' }}>Issued Surveillance Letters:</div>
-                                            {fulfilledReqs.map((req, rIdx) => (
-                                              <div key={req._id || rIdx} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <FileText size={13} style={{ color: '#16a34a' }} />
-                                                <a href={getPdfUrl(req.letter_file_url)} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600 }}>
-                                                  Download Letter ({new Date(req.fulfilled_at).toLocaleDateString('en-GB')})
-                                                </a>
-                                              </div>
-                                            ))}
+                                      {/* Ongoing Surveillance Alert */}
+                                      {ongoingSurv && (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 14px', background: '#f0f9ff', borderRadius: 10, border: '1px solid #bae6fd' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#0369a1' }}>
+                                            <RefreshCw size={14} style={{ color: '#0284c7', flexShrink: 0 }} />
+                                            <span>Surveillance Application in Progress: <strong>#{ongoingSurv.application_number}</strong></span>
                                           </div>
-                                        )}
-                                      </div>
+                                          <Link
+                                            to={`/applications/${ongoingSurv._id || ongoingSurv.id}/track`}
+                                            className="btn btn-outline btn-sm"
+                                            style={{ borderColor: '#0284c7', color: '#0284c7', fontSize: 11, padding: '3px 9px', borderRadius: 6 }}
+                                          >
+                                            Track Progress
+                                          </Link>
+                                        </div>
+                                      )}
+
+                                      {/* Download Completed Surveillance Letters */}
+                                      {completedSurvs.length > 0 && (
+                                        <div style={{ marginTop: 6, display: 'grid', gap: 6, background: '#fff', padding: '12px 14px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                                          <div style={{ fontSize: 11, fontWeight: 700, color: '#475569' }}>Issued Official Surveillance Letters:</div>
+                                          {completedSurvs.map((sApp, sIdx) => {
+                                            const lUrl = sApp.documents?.surveillance_letter || sApp.certificate_url || sApp.surveillance_letter_data?.pdf_url;
+                                            const lNum = sApp.surveillance_letter_data?.letter_number || sApp.application_number || `Surveillance Year ${sIdx + 1}`;
+                                            return (
+                                              <div key={sApp._id || sIdx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#334155' }}>
+                                                  <FileText size={13} style={{ color: '#16a34a' }} />
+                                                  <span>{lNum}</span>
+                                                </div>
+                                                {lUrl && (
+                                                  <a
+                                                    href={getPdfUrl(lUrl)}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="btn btn-outline btn-sm"
+                                                    style={{ fontSize: 11, padding: '2px 8px', color: 'var(--primary)', borderColor: 'var(--primary)' }}
+                                                  >
+                                                    <Download size={11} style={{ marginRight: 4 }} /> Download Letter
+                                                  </a>
+                                                )}
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+
+                                      {/* Link to Applications to Create Surveillance */}
+                                      {!ongoingSurv && completedSurvs.length < 2 && (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '10px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                                          <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                                            Annual surveillance is processed via formal Surveillance Applications.
+                                          </div>
+                                          <Link
+                                            to="/applications?type=surveillance"
+                                            className="btn btn-outline btn-sm"
+                                            style={{ borderColor: '#0284c7', color: '#0284c7', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                          >
+                                            <ShieldCheck size={13} /> Surveillance Applications
+                                          </Link>
+                                        </div>
+                                      )}
 
                                     </div>
                                   </div>
