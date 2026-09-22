@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, RefreshCw, Building2, Calendar,
@@ -61,6 +61,18 @@ export default function TrackProcessing() {
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [showAddInitialProductModal, setShowAddInitialProductModal] = useState(false);
+
+  // Track if any modal is active to safely pause background liveness polling
+  const isAnyModalOpenRef = useRef(false);
+  isAnyModalOpenRef.current = Boolean(
+    showProposalModal ||
+    showApproveModal ||
+    showRejectModal ||
+    showPaymentModal ||
+    showAuditModal ||
+    showAgreementModal ||
+    showAddInitialProductModal
+  );
 
   // Inline forms/submission states
   const [rejectReason, setRejectReason] = useState('');
@@ -184,9 +196,9 @@ export default function TrackProcessing() {
 
     socket.on('application_updated', handleUpdate);
 
-    // Fast background liveness polling (every 5 seconds when visible)
+    // Fast background liveness polling (every 5 seconds when visible and no active modal is open)
     const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && !isAnyModalOpenRef.current) {
         fetchApp(true);
       }
     }, 5000);
