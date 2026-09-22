@@ -189,8 +189,10 @@ export default function TrackProcessing() {
             };
           });
         }
-        // Silent re-fetch in background
-        fetchApp(true);
+        // Silent re-fetch in background only if no active modal is open
+        if (!isAnyModalOpenRef.current) {
+          fetchApp(true);
+        }
       }
     };
 

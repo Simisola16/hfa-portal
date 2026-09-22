@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X, Package, Plus, CheckCircle2, AlertCircle, Building2,
   Sparkles, Layers, Info, Send, FileText, Check
@@ -30,9 +30,24 @@ export default function ClientAddInitialProductModal({
   const [contactPhone, setContactPhone] = useState('');
   const [message, setMessage] = useState('');
 
-  // Initialize or prefill from application when opened
+  const lastInitializedAppIdRef = useRef(null);
+  const wasOpenRef = useRef(false);
+
+  // Initialize or prefill from application strictly when modal opens or application selection changes
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) {
+      wasOpenRef.current = false;
+      lastInitializedAppIdRef.current = null;
+      return;
+    }
+
+    const currentAppId = application?._id || application?.id;
+
+    // Only prefill on fresh modal open or explicit application change, NEVER during re-renders while typing
+    if (!wasOpenRef.current || (currentAppId && currentAppId !== lastInitializedAppIdRef.current)) {
+      wasOpenRef.current = true;
+      lastInitializedAppIdRef.current = currentAppId;
+
       setError('');
       const appProduct = application?.products?.[0] || {};
       setProductName(appProduct.name || '');
@@ -59,7 +74,7 @@ export default function ClientAddInitialProductModal({
       );
       setMessage('');
     }
-  }, [isOpen, application, user]);
+  }, [isOpen, application?._id, application?.id]);
 
   if (!isOpen) return null;
 
@@ -101,9 +116,9 @@ export default function ClientAddInitialProductModal({
         product: {
           name: productName.trim(),
           code: productCode.trim(),
-          category: '',
-          ingredients: '',
-          description: ''
+          category: (productCategory || application?.category || application?.scope || '').trim(),
+          ingredients: (ingredients || '').trim(),
+          description: (description || '').trim()
         }
       };
 
