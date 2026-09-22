@@ -152,7 +152,7 @@ export default function AgreementPage() {
               <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <FileText size={18} style={{ color: 'var(--primary)' }} /> Review &amp; Sign Agreement
               </span>
-              <button className="modal-close" onClick={() => setSelected(null)}><X size={18} /></button>
+              <button type="button" className="modal-close" onClick={() => setSelected(null)}><X size={18} /></button>
             </div>
             <div className="modal-body" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
               <div style={{ marginBottom: 20 }}>
@@ -311,9 +311,10 @@ export default function AgreementPage() {
             </div>
 
             <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
-              <button className="btn btn-ghost" onClick={() => setSelected(null)} disabled={submitting}>Close</button>
+              <button type="button" className="btn btn-ghost" onClick={() => setSelected(null)} disabled={submitting}>Close</button>
               {!selected.client_signed && (
                 <button 
+                  type="button"
                   className="btn btn-primary"
                   onClick={handleSignAgreement}
                   disabled={submitting}

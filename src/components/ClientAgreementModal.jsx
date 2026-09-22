@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, FileText, CheckCircle, Download, Upload, ShieldCheck } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
@@ -27,35 +27,71 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const prevOpenRef = useRef(false);
+  const activeAgreementIdRef = useRef(null);
+
   const targetAppId = getCleanId(propAppId) || getCleanId(propApp) || getCleanId(propAgreement?.application_id);
 
   useEffect(() => {
-    if (isOpen) {
+    // 1. Modal closed: reset states & tracking refs
+    if (!isOpen) {
+      prevOpenRef.current = false;
+      activeAgreementIdRef.current = null;
       setSignName('');
       setSignedFile(null);
       setComment('');
+      setSubmitting(false);
+      return;
+    }
 
-      if (!propAgreement && targetAppId) {
-        setLoading(true);
-        api.get(`/api/agreements/application/${targetAppId}`)
-          .then(agRes => {
-            setAgreement(agRes.data || null);
-          })
-          .catch(() => setAgreement(null))
-          .finally(() => setLoading(false));
-      } else if (!propAgreement && !targetAppId) {
-        setLoading(true);
-        api.get('/api/agreements')
-          .then(agRes => {
-            const list = agRes.data?.data || agRes.data || [];
-            const active = list.find(a => a.status === 'sent') || list[0] || null;
-            setAgreement(active);
-          })
-          .catch(() => setAgreement(null))
-          .finally(() => setLoading(false));
-      } else {
-        setAgreement(propAgreement || null);
+    const currentAgreeId = getCleanId(propAgreement?._id || propAgreement?.id);
+    const isFirstOpen = !prevOpenRef.current;
+
+    // 2. Modal is already open and initialized for this agreement:
+    // Only perform silent background metadata sync — NEVER clear user inputs!
+    if (!isFirstOpen && currentAgreeId && currentAgreeId === activeAgreementIdRef.current) {
+      if (propAgreement) {
+        setAgreement(prev => ({ ...(prev || {}), ...propAgreement }));
       }
+      return;
+    }
+
+    // 3. Initial open for this modal session (or switching to a different agreement)
+    prevOpenRef.current = true;
+    activeAgreementIdRef.current = currentAgreeId || targetAppId || 'open';
+
+    setSignName('');
+    setSignedFile(null);
+    setComment('');
+
+    if (propAgreement) {
+      setAgreement(propAgreement);
+      setLoading(false);
+    } else if (targetAppId) {
+      setLoading(true);
+      api.get(`/api/agreements/application/${targetAppId}`)
+        .then(agRes => {
+          const loaded = agRes.data?.data !== undefined ? agRes.data.data : agRes.data;
+          setAgreement(loaded || null);
+          if (loaded?._id || loaded?.id) {
+            activeAgreementIdRef.current = getCleanId(loaded._id || loaded.id);
+          }
+        })
+        .catch(() => setAgreement(null))
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(true);
+      api.get('/api/agreements')
+        .then(agRes => {
+          const list = agRes.data?.data || agRes.data || [];
+          const active = list.find(a => a.status === 'sent') || list[0] || null;
+          setAgreement(active || null);
+          if (active?._id || active?.id) {
+            activeAgreementIdRef.current = getCleanId(active._id || active.id);
+          }
+        })
+        .catch(() => setAgreement(null))
+        .finally(() => setLoading(false));
     }
   }, [isOpen, propAgreement, targetAppId]);
 
@@ -104,7 +140,7 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
           <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <FileText size={20} style={{ color: 'var(--primary)' }} /> Sign & Upload Certification Agreement
           </div>
-          <button className="modal-close" onClick={onClose}><X size={18} /></button>
+          <button type="button" className="modal-close" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="modal-body" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
           {loading ? (
@@ -160,82 +196,111 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
                 </div>
               )}
 
-              {/* Signing Form */}
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div className="form-group">
-                  <label className="form-label">Full Name of Authorized Signee <span>*</span></label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. Jane Smith (Managing Director)"
-                    value={signName}
-                    onChange={e => setSignName(e.target.value)}
-                    disabled={submitting}
-                    required
-                  />
+              {/* If Agreement is already signed, display verified confirmation */}
+              {agreement.client_signed ? (
+                <div style={{ border: '1.5px dashed #bbf7d0', background: '#f0fdf4', borderRadius: 12, padding: 18, marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, color: '#15803d', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CheckCircle size={16} /> Signed Agreement Verified
+                  </div>
+                  <div style={{ fontSize: 13.5, color: '#1e293b' }}>
+                    <div>Signed by: <strong style={{ fontWeight: 700 }}>{agreement.client_sign_name || 'Authorized Signatory'}</strong></div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                      Date: {agreement.client_sign_date ? new Date(agreement.client_sign_date).toLocaleString('en-GB') : (agreement.updatedAt ? new Date(agreement.updatedAt).toLocaleString('en-GB') : 'N/A')}
+                    </div>
+                  </div>
+                  {agreement.signed_agreement_url && (
+                    <div style={{ marginTop: 14 }}>
+                      <a
+                        href={getPdfUrl(agreement.signed_agreement_url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-outline btn-sm"
+                        style={{ borderColor: '#86efac', color: '#15803d', background: '#fff', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      >
+                        <Download size={14} /> Download / View Signed Document
+                      </a>
+                    </div>
+                  )}
                 </div>
-
-                <div className="form-group">
-                  <label className="form-label">Upload Signed Agreement Document (PDF / Document) <span>*</span></label>
-                  <div
-                    onClick={() => document.getElementById('client-signed-agreement-upload').click()}
-                    style={{
-                      border: '2px dashed #cbd5e1',
-                      padding: '24px 20px',
-                      borderRadius: 12,
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      background: signedFile ? '#f0fdf4' : '#fff',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseOver={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                    onMouseOut={e => e.currentTarget.style.borderColor = '#cbd5e1'}
-                  >
-                    <Upload size={32} style={{ color: signedFile ? '#16a34a' : '#94a3b8', margin: '0 auto 8px' }} />
-                    <div style={{ fontSize: 13.5, fontWeight: 700, color: signedFile ? '#15803d' : '#334155' }}>
-                      {signedFile ? signedFile.name : 'Click to select signed agreement file'}
-                    </div>
-                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4 }}>
-                      Supported formats: PDF, DOC, DOCX, PNG, JPG
-                    </div>
+              ) : (
+                /* Signing Form */
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div className="form-group">
+                    <label className="form-label">Full Name of Authorized Signee <span>*</span></label>
                     <input
-                      id="client-signed-agreement-upload"
-                      type="file"
-                      accept=".pdf,application/pdf,image/*,.doc,.docx"
-                      style={{ display: 'none' }}
-                      onChange={e => {
-                        if (e.target.files && e.target.files[0]) {
-                          setSignedFile(e.target.files[0]);
-                        }
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. Jane Smith (Managing Director)"
+                      value={signName}
+                      onChange={e => setSignName(e.target.value)}
+                      disabled={submitting}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Upload Signed Agreement Document (PDF / Document) <span>*</span></label>
+                    <div
+                      onClick={() => document.getElementById('client-signed-agreement-upload').click()}
+                      style={{
+                        border: '2px dashed #cbd5e1',
+                        padding: '24px 20px',
+                        borderRadius: 12,
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        background: signedFile ? '#f0fdf4' : '#fff',
+                        transition: 'all 0.2s ease'
                       }}
+                      onMouseOver={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                      onMouseOut={e => e.currentTarget.style.borderColor = '#cbd5e1'}
+                    >
+                      <Upload size={32} style={{ color: signedFile ? '#16a34a' : '#94a3b8', margin: '0 auto 8px' }} />
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: signedFile ? '#15803d' : '#334155' }}>
+                        {signedFile ? signedFile.name : 'Click to select signed agreement file'}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4 }}>
+                        Supported formats: PDF, DOC, DOCX, PNG, JPG
+                      </div>
+                      <input
+                        id="client-signed-agreement-upload"
+                        type="file"
+                        accept=".pdf,application/pdf,image/*,.doc,.docx"
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          if (e.target.files && e.target.files[0]) {
+                            setSignedFile(e.target.files[0]);
+                          }
+                        }}
+                        disabled={submitting}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Comments / Additional Notes (Optional)</label>
+                    <textarea
+                      className="form-control"
+                      rows={2}
+                      placeholder="Any notes regarding the signed agreement..."
+                      value={comment}
+                      onChange={e => setComment(e.target.value)}
                       disabled={submitting}
                     />
                   </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Comments / Additional Notes (Optional)</label>
-                  <textarea
-                    className="form-control"
-                    rows={2}
-                    placeholder="Any notes regarding the signed agreement..."
-                    value={comment}
-                    onChange={e => setComment(e.target.value)}
-                    disabled={submitting}
-                  />
-                </div>
-              </form>
+                </form>
+              )}
             </>
           )}
         </div>
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose} disabled={submitting}>Cancel</button>
+          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={submitting}>Cancel</button>
           {agreement?.client_signed ? (
             <span className="badge badge-green" style={{ padding: '8px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <CheckCircle size={16} /> ✓ Agreement Already Signed
             </span>
           ) : (
             <button
+              type="button"
               className="btn btn-primary"
               onClick={handleSubmit}
               disabled={submitting || !agreement || loading}
