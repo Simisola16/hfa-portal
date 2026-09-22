@@ -70,7 +70,28 @@ export default function TrackProcessing() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [appRes, propRes, invRes, allInvRes, auditRes, agreementRes, sigRes, initProdRes] = await Promise.all([
+      // 1. Fast unified single DB round-trip fetch
+      const [detailsRes, sigRes] = await Promise.all([
+        api.get(`/api/applications/${appId}/processing-details`).catch(() => null),
+        api.get('/api/signatures').catch(() => ({ data: [] }))
+      ]);
+
+      if (detailsRes?.data?.data) {
+        const d = detailsRes.data.data;
+        setApp(d.app);
+        setProposal(d.proposal);
+        setInvoice(d.invoice);
+        setAllInvoices(d.allInvoices || []);
+        setAudit(d.audits && d.audits.length > 0 ? d.audits[0] : null);
+        setAgreement(d.agreement);
+        setSignatures(sigRes.data || sigRes.data?.data || []);
+        setInitialProduct(d.initialProduct);
+        setLastUpdated(new Date());
+        return;
+      }
+
+      // Fallback: parallel individual endpoints if processing-details is unavailable
+      const [appRes, propRes, invRes, allInvRes, auditRes, agreementRes, sigRes2, initProdRes] = await Promise.all([
         api.get(`/api/applications/${appId}`),
         api.get(`/api/proposals/application/${appId}`).catch(() => ({ data: null })),
         api.get(`/api/invoices/application/${appId}`).catch(() => ({ data: null })),
@@ -88,7 +109,7 @@ export default function TrackProcessing() {
       setAllInvoices(invoicesList);
       setAudit(auditRes.data || null);
       setAgreement(agreementRes.data?.data || agreementRes.data || null);
-      setSignatures(sigRes.data || sigRes.data?.data || []);
+      setSignatures(sigRes2.data || sigRes2.data?.data || []);
 
       const rawIp = initProdRes?.data?.data !== undefined ? initProdRes.data.data : (initProdRes?.data || null);
       let matchingInitProd = null;
@@ -128,7 +149,10 @@ export default function TrackProcessing() {
     const socket = getSocket(token);
     if (!socket) return;
 
-    const handleConnect = () => setSocketConnected(true);
+    const handleConnect = () => {
+      setSocketConnected(true);
+      socket.emit('join_application', appId);
+    };
     const handleDisconnect = () => setSocketConnected(false);
     const handleConnectError = () => setSocketConnected(false);
 
@@ -138,31 +162,44 @@ export default function TrackProcessing() {
 
     // Sync initial state
     setSocketConnected(socket.connected);
+    socket.emit('join_application', appId);
 
     const handleUpdate = (data) => {
-      if (data.appId === appId) {
-        // Silent re-fetch to sync fresh DB state with zero UI disruption
+      if (String(data?.appId) === String(appId) || String(data?.id) === String(appId)) {
+        // INSTANT zero-latency local state sync
+        if (data.status) {
+          setApp(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              status: data.status,
+              statusHistory: data.statusHistory || prev.statusHistory
+            };
+          });
+        }
+        // Silent re-fetch in background
         fetchApp(true);
       }
     };
 
     socket.on('application_updated', handleUpdate);
 
+    // Fast background liveness polling (every 5 seconds when visible)
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchApp(true);
+      }
+    }, 5000);
+
     return () => {
+      socket.emit('leave_application', appId);
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
       socket.off('connect_error', handleConnectError);
       socket.off('application_updated', handleUpdate);
+      clearInterval(interval);
     };
-  }, [appId]);
-
-  // Fallback Polling (only if socket is disconnected)
-  useEffect(() => {
-    if (socketConnected) return;
-
-    const interval = setInterval(() => fetchApp(true), 20000);
-    return () => clearInterval(interval);
-  }, [socketConnected, fetchApp]);
+  }, [appId, fetchApp]);
 
   const handleApproveProposal = async () => {
     if (!proposal) return;
