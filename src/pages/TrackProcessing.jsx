@@ -407,8 +407,8 @@ export default function TrackProcessing() {
               {app.site_name || app.establishment_name || 'Site'}
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span className={`badge ${STATUS_BADGE[status] || 'badge-blue'}`}>
-                {isFastTrack && status === 'payment_received' ? 'Renewal Fee Paid' : (STATUS_LABELS[status] || status.replace(/_/g, ' '))}
+              <span className={`badge ${STATUS_BADGE[status === 'payment_received' && !isFastTrack ? 'initial_product' : status] || 'badge-blue'}`}>
+                {isFastTrack && status === 'payment_received' ? 'Renewal Fee Paid' : (status === 'payment_received' ? 'Initial Product In-Progress' : (STATUS_LABELS[status] || status.replace(/_/g, ' ')))}
               </span>
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                 Submitted {new Date(app.created_at).toLocaleDateString('en-GB')}

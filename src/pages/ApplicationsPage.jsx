@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { Plus, HelpCircle, PlusCircle, Search, RefreshCw, X, Upload, Check, ChevronRight, ChevronLeft, Trash2, ShieldCheck, FileText, AlertTriangle, RotateCcw, CheckCircle, Package } from 'lucide-react';
-import { STATUS_LABELS, STATUS_BADGE } from '../lib/applicationStatuses';
+import { STATUS_LABELS, STATUS_BADGE, getEffectiveApplicationStatus } from '../lib/applicationStatuses';
 import { getSocket } from '../lib/socket';
 
 const CATEGORIES = [
@@ -944,14 +944,19 @@ export default function ApplicationsPage({ openNew }) {
           {Object.keys(STATUS_BADGE).map(s => <option key={s} value={s}>{STATUS_LABELS[s] || s.replace(/_/g, ' ')}</option>)}
         </select>
         <button className="btn btn-ghost btn-sm" onClick={fetchData}><RefreshCw size={14} /></button>
-        {pendingApp && (
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748b', fontWeight: 600 }}>
-            <span>Active Application:</span>
-            <span className={`badge ${STATUS_BADGE[pendingApp.status] || 'badge-blue'}`} style={{ textTransform: 'uppercase', fontSize: 11, fontWeight: 700 }}>
-              {STATUS_LABELS[pendingApp.status] || pendingApp.status.replace(/_/g, ' ')}
-            </span>
-          </div>
-        )}
+        {pendingApp && (() => {
+          const effStatus = getEffectiveApplicationStatus(pendingApp);
+          const isRenewal = (pendingApp.application_type || '').toLowerCase() === 'renewal' || (pendingApp.application_type || '').toLowerCase() === 'surveillance';
+          const label = (effStatus === 'payment_received' && isRenewal) ? 'Renewal Fee Paid' : (STATUS_LABELS[effStatus] || effStatus?.replace(/_/g, ' '));
+          return (
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748b', fontWeight: 600 }}>
+              <span>Active Application:</span>
+              <span className={`badge ${STATUS_BADGE[effStatus] || 'badge-blue'}`} style={{ textTransform: 'uppercase', fontSize: 11, fontWeight: 700 }}>
+                {label}
+              </span>
+            </div>
+          );
+        })()}
         <div style={{ display: 'flex', gap: 10, marginLeft: pendingApp ? 0 : 'auto', flexWrap: 'wrap' }}>
           <button
             className="btn btn-primary"
@@ -1019,9 +1024,16 @@ export default function ApplicationsPage({ openNew }) {
               </div>
               <div style={{ fontSize: 12, color: '#166534', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>Status:</span>
-                <span className={`badge ${STATUS_BADGE[pendingApp.status] || 'badge-green'}`} style={{ textTransform: 'capitalize', fontSize: 11, fontWeight: 700 }}>
-                  {pendingApp.status === 'payment_received' && (pendingApp.application_type || '').toLowerCase() === 'renewal' ? 'Renewal Fee Paid' : (STATUS_LABELS[pendingApp.status] || pendingApp.status?.replace(/_/g, ' '))}
-                </span>
+                {(() => {
+                  const effStatus = getEffectiveApplicationStatus(pendingApp);
+                  const isRenewal = (pendingApp.application_type || '').toLowerCase() === 'renewal' || (pendingApp.application_type || '').toLowerCase() === 'surveillance';
+                  const label = (effStatus === 'payment_received' && isRenewal) ? 'Renewal Fee Paid' : (STATUS_LABELS[effStatus] || effStatus?.replace(/_/g, ' '));
+                  return (
+                    <span className={`badge ${STATUS_BADGE[effStatus] || 'badge-green'}`} style={{ textTransform: 'capitalize', fontSize: 11, fontWeight: 700 }}>
+                      {label}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -1137,9 +1149,16 @@ export default function ApplicationsPage({ openNew }) {
                     {new Date(app.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </div>
                   <div>
-                    <span className={`badge ${STATUS_BADGE[app.status] || LEGACY_BADGE[app.status] || 'badge-gray'}`} style={{ fontSize: 11, padding: '6px 12px', borderRadius: 30 }}>
-                      {app.status === 'payment_received' && (app.application_type || '').toLowerCase() === 'renewal' ? 'Renewal Fee Paid' : (STATUS_LABELS[app.status] || app.status?.replace(/_/g, ' '))}
-                    </span>
+                    {(() => {
+                      const effStatus = getEffectiveApplicationStatus(app);
+                      const isRenewal = (app.application_type || '').toLowerCase() === 'renewal' || (app.application_type || '').toLowerCase() === 'surveillance';
+                      const label = (effStatus === 'payment_received' && isRenewal) ? 'Renewal Fee Paid' : (STATUS_LABELS[effStatus] || effStatus?.replace(/_/g, ' '));
+                      return (
+                        <span className={`badge ${STATUS_BADGE[effStatus] || LEGACY_BADGE[effStatus] || 'badge-gray'}`} style={{ fontSize: 11, padding: '6px 12px', borderRadius: 30 }}>
+                          {label}
+                        </span>
+                      );
+                    })()}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <button
