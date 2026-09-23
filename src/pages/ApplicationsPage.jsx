@@ -241,52 +241,61 @@ export default function ApplicationsPage({ openNew }) {
   };
 
   // Helper: Find GSO Certified applications/sites eligible for annual surveillance (Year 1 & Year 2)
+  // STRICT RULE: Only sites whose previous application/certificate category is a surveillance/GSO application are included
   const getGSOSurveillanceEligibleList = () => {
     const safeApps = Array.isArray(apps) ? apps : [];
     const safeCerts = Array.isArray(certs) ? certs : [];
-    const now = Date.now();
-    const oneYearInMs = 365 * 24 * 60 * 60 * 1000;
+    const safeSites = Array.isArray(sites) ? sites : [];
 
-    // Find all GSO applications and GSO certificates
+    // Helper: test if category/type belongs to UAE/GSO / Surveillance
+    const isSurveillanceCategory = (cat, type) => {
+      const c = String(cat || '').toLowerCase();
+      const t = String(type || '').toLowerCase();
+      return (
+        c.includes('gso') ||
+        c.includes('uae') ||
+        c.includes('surveillance') ||
+        t.includes('gso') ||
+        t.includes('surveillance')
+      );
+    };
+
+    // Find all previous applications whose category/type is GSO / Surveillance
     const gsoApps = safeApps.filter(a => {
       if (!a) return false;
-      const cat = (a.category || '').toLowerCase();
-      const type = (a.application_type || '').toLowerCase();
-      return cat.includes('gso') || cat.includes('uae') || type.includes('gso');
+      return isSurveillanceCategory(a.category, a.application_type);
     });
 
+    // Find all certificates whose category/scope/scheme is GSO / Surveillance
     const gsoCerts = safeCerts.filter(c => {
       if (!c) return false;
-      const cat = (c.category || '').toLowerCase();
-      const scope = (c.scope || '').toLowerCase();
-      const scheme = (c.scheme || '').toLowerCase();
-      const certType = (c.certificate_type || '').toLowerCase();
-      return cat.includes('gso') || cat.includes('uae') || scope.includes('gso') || scheme.includes('gso') || certType.includes('gso') || certType.includes('uae');
+      return isSurveillanceCategory(
+        `${c.category || ''} ${c.scope || ''} ${c.scheme || ''} ${c.certificate_type || ''}`,
+        c.type || ''
+      );
     });
-
-    // If no specific GSO cert found, but client has active certificates and sites, treat them as eligible
-    const effectiveCerts = gsoCerts.length > 0 ? gsoCerts : safeCerts;
 
     const gsoSiteMap = new Map();
 
-    // 1. Process from apps
+    // 1. Process from apps that have a surveillance/GSO category
     gsoApps.forEach(a => {
       const sId = typeof a.site_id === 'object' ? a.site_id?._id || a.site_id?.id : a.site_id;
-      if (!sId && !a._id) return;
+      // Match with client sites list to ensure accurate site_id
+      const matchingSite = safeSites.find(s => (sId && String(s._id || s.id) === String(sId)) || (s.name && a.site_name && s.name.trim().toLowerCase() === a.site_name.trim().toLowerCase()));
+      const key = matchingSite ? String(matchingSite._id || matchingSite.id) : (sId ? String(sId) : String(a._id));
       
-      const key = sId ? String(sId) : String(a._id);
-      const isCertified = a.status === 'certificate_issued' || a.has_certificate;
-      const isOngoingSurveillance = a.application_type === 'surveillance' && !['certificate_issued', 'rejected'].includes(a.status?.toLowerCase());
+      const isCertified = a.status === 'certificate_issued' || a.has_certificate || ['ready_for_certificate', 'waiting_for_certificate'].includes(a.status?.toLowerCase());
+      const isOngoingSurveillance = a.application_type === 'surveillance' && !['certificate_issued', 'rejected', 'cancelled'].includes(a.status?.toLowerCase());
 
       if (!gsoSiteMap.has(key)) {
         gsoSiteMap.set(key, {
-          site_id: sId ? String(sId) : (sites[0]?._id ? String(sites[0]._id) : key),
-          site_name: a.site_name || a.establishment_name || 'Manufacturing Site',
-          establishment_name: a.establishment_name || a.site_name || '',
-          category: a.category || 'UAE/GSO Approved Halal Certification For Exporters To UAE',
-          managing_director: a.managing_director || a.primary_contact_name || '',
-          primary_email: a.primary_email || a.company_email || '',
-          primary_work_tel: a.primary_work_tel || a.primary_mobile || '',
+          site_id: matchingSite ? String(matchingSite._id || matchingSite.id) : (sId ? String(sId) : key),
+          site_name: matchingSite?.name || a.site_name || a.establishment_name || 'Manufacturing Site',
+          establishment_name: matchingSite?.est_name || a.establishment_name || a.site_name || matchingSite?.name || '',
+          category: a.category || 'Annual Certification – UAE/GSO approved halal certification for exporters to the UAE',
+          managing_director: matchingSite?.managing_director || a.managing_director || a.primary_contact_name || '',
+          primary_email: matchingSite?.primary_email || a.primary_email || a.company_email || '',
+          primary_work_tel: matchingSite?.primary_work_tel || a.primary_work_tel || a.primary_mobile || '',
           created_at: a.created_at,
           certified: isCertified,
           hasOngoingSurveillance: isOngoingSurveillance,
@@ -304,11 +313,11 @@ export default function ApplicationsPage({ openNew }) {
       }
     });
 
-    // 2. Process from certificates
-    effectiveCerts.forEach(c => {
+    // 2. Process from certificates whose category is GSO/Surveillance
+    gsoCerts.forEach(c => {
       const sId = typeof c.site_id === 'object' ? c.site_id?._id || c.site_id?.id : c.site_id;
-      const matchingSite = sites.find(s => sId && String(s._id || s.id) === String(sId)) || sites[0];
-      const key = sId ? String(sId) : (matchingSite?._id ? String(matchingSite._id) : String(c._id || c.id || 'cert_gso'));
+      const matchingSite = safeSites.find(s => (sId && String(s._id || s.id) === String(sId)) || (s.name && c.site_name && s.name.trim().toLowerCase() === c.site_name.trim().toLowerCase()));
+      const key = matchingSite ? String(matchingSite._id || matchingSite.id) : (sId ? String(sId) : String(c._id || c.id || 'cert_gso'));
 
       if (gsoSiteMap.has(key)) {
         const existing = gsoSiteMap.get(key);
@@ -317,19 +326,19 @@ export default function ApplicationsPage({ openNew }) {
         existing.certificate_number = c.certificate_number;
         existing.issue_date = c.issue_date;
         existing.expiry_date = c.expiry_date;
-        if (!existing.site_name && (c.site_name || matchingSite?.name)) {
-          existing.site_name = c.site_name || matchingSite?.name;
+        if (!existing.site_name && (matchingSite?.name || c.site_name)) {
+          existing.site_name = matchingSite?.name || c.site_name;
         }
-      } else {
+      } else if (matchingSite) {
         gsoSiteMap.set(key, {
-          site_id: matchingSite?._id ? String(matchingSite._id) : (sId ? String(sId) : key),
-          site_name: matchingSite?.name || c.site_name || c.company_name || 'Manufacturing Site',
-          establishment_name: matchingSite?.est_name || c.company_name || '',
-          category: c.category || 'UAE/GSO Approved Halal Certification For Exporters To UAE',
-          managing_director: c.contact_person || '',
-          primary_email: c.contact_email || '',
-          primary_work_tel: c.contact_phone || '',
-          created_at: c.issue_date || c.created_at,
+          site_id: String(matchingSite._id || matchingSite.id),
+          site_name: matchingSite.name || c.site_name || c.company_name || 'Manufacturing Site',
+          establishment_name: matchingSite.est_name || c.company_name || matchingSite.name || '',
+          category: c.category || 'Annual Certification – UAE/GSO approved halal certification for exporters to the UAE',
+          managing_director: matchingSite.managing_director || c.contact_person || '',
+          primary_email: matchingSite.primary_email || c.contact_email || '',
+          primary_work_tel: matchingSite.primary_work_tel || c.contact_phone || '',
+          created_at: c.issue_date || matchingSite.created_at,
           certified: true,
           certificate_id: c._id || c.id,
           certificate_number: c.certificate_number,
@@ -341,34 +350,6 @@ export default function ApplicationsPage({ openNew }) {
         });
       }
     });
-
-    // Fallback: If client has sites and at least one certificate or GSO app, ensure all sites are represented
-    if (sites.length > 0 && (effectiveCerts.length > 0 || gsoApps.length > 0)) {
-      sites.forEach(s => {
-        const key = String(s._id || s.id);
-        if (!gsoSiteMap.has(key)) {
-          const defaultCert = effectiveCerts[0];
-          gsoSiteMap.set(key, {
-            site_id: key,
-            site_name: s.name || s.est_name || 'Manufacturing Site',
-            establishment_name: s.est_name || s.name || '',
-            category: 'UAE/GSO Approved Halal Certification For Exporters To UAE',
-            managing_director: s.managing_director || '',
-            primary_email: s.primary_email || '',
-            primary_work_tel: s.primary_work_tel || '',
-            created_at: defaultCert?.issue_date || s.created_at,
-            certified: true,
-            certificate_id: defaultCert?._id || defaultCert?.id || null,
-            certificate_number: defaultCert?.certificate_number || null,
-            issue_date: defaultCert?.issue_date || null,
-            expiry_date: defaultCert?.expiry_date || null,
-            hasOngoingSurveillance: false,
-            ongoingAppNumber: null,
-            surveillanceCount: 0
-          });
-        }
-      });
-    }
 
     // 3. Count completed surveillances
     safeApps.forEach(a => {
@@ -382,7 +363,6 @@ export default function ApplicationsPage({ openNew }) {
 
     const result = [];
     gsoSiteMap.forEach(item => {
-      // All GSO sites can undergo surveillance at any time without cycle-year or anniversary locks
       item.isEligible = !item.hasOngoingSurveillance;
       item.needsSurveillance = !item.hasOngoingSurveillance;
       result.push(item);
@@ -410,13 +390,15 @@ export default function ApplicationsPage({ openNew }) {
           primary_work_tel: firstEligible.primary_work_tel || f.primary_work_tel || ''
         }));
       }
-    } else if (sites.length > 0) {
-      const s0 = sites[0];
+    } else {
       setSurveillanceForm(f => ({
         ...f,
-        site_id: s0._id,
-        site_name: s0.name,
-        establishment_name: s0.est_name || s0.name
+        site_id: '',
+        site_name: '',
+        establishment_name: '',
+        primary_contact_name: '',
+        primary_email: '',
+        primary_work_tel: ''
       }));
     }
     setShowSurveillanceModal(true);
