@@ -493,7 +493,7 @@ export default function CertificatesPage() {
                                       )}
 
                                       {/* Link to Applications to Create Surveillance */}
-                                      {!ongoingSurv && completedSurvs.length < 2 && (
+                                      {!ongoingSurv && (
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '10px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
                                           <div style={{ fontSize: 11.5, color: '#64748b' }}>
                                             Annual surveillance is processed via formal Surveillance Applications.

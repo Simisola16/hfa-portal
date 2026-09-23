@@ -157,7 +157,6 @@ export default function ApplicationsPage({ openNew }) {
     primary_contact_name: '',
     primary_email: '',
     primary_work_tel: '',
-    surveillance_year: 1,
     notes: '',
     declared_true: false
   });
@@ -383,19 +382,9 @@ export default function ApplicationsPage({ openNew }) {
 
     const result = [];
     gsoSiteMap.forEach(item => {
-      const rawDate = item.issue_date || item.created_at;
-      const parsedTime = rawDate ? new Date(rawDate).getTime() : NaN;
-      const startDate = !isNaN(parsedTime) ? parsedTime : now;
-      const elapsedMs = now - startDate;
-      const elapsedYears = elapsedMs / oneYearInMs;
-
-      // Determine cycle year: if 1+ surveillance completed or elapsed > 1.5 years, suggest Year 2, else Year 1
-      const year = item.surveillanceCount >= 1 ? 2 : (elapsedYears >= 1.5 ? 2 : 1);
-      item.cycle_year = year;
-      item.isEligible = item.certified && !item.hasOngoingSurveillance;
-      item.elapsedYears = elapsedYears;
-      item.needsSurveillance = item.certified && item.surveillanceCount < 2 && !item.hasOngoingSurveillance;
-
+      // All GSO sites can undergo surveillance at any time without cycle-year or anniversary locks
+      item.isEligible = !item.hasOngoingSurveillance;
+      item.needsSurveillance = !item.hasOngoingSurveillance;
       result.push(item);
     });
 
@@ -418,8 +407,7 @@ export default function ApplicationsPage({ openNew }) {
           establishment_name: firstEligible.establishment_name,
           primary_contact_name: firstEligible.managing_director || f.primary_contact_name || '',
           primary_email: firstEligible.primary_email || f.primary_email || '',
-          primary_work_tel: firstEligible.primary_work_tel || f.primary_work_tel || '',
-          surveillance_year: firstEligible.cycle_year || 1
+          primary_work_tel: firstEligible.primary_work_tel || f.primary_work_tel || ''
         }));
       }
     } else if (sites.length > 0) {
@@ -428,8 +416,7 @@ export default function ApplicationsPage({ openNew }) {
         ...f,
         site_id: s0._id,
         site_name: s0.name,
-        establishment_name: s0.est_name || s0.name,
-        surveillance_year: 1
+        establishment_name: s0.est_name || s0.name
       }));
     }
     setShowSurveillanceModal(true);
@@ -447,8 +434,7 @@ export default function ApplicationsPage({ openNew }) {
           establishment_name: firstEligible.establishment_name,
           primary_contact_name: firstEligible.managing_director || f.primary_contact_name || '',
           primary_email: firstEligible.primary_email || f.primary_email || '',
-          primary_work_tel: firstEligible.primary_work_tel || f.primary_work_tel || '',
-          surveillance_year: firstEligible.cycle_year || 1
+          primary_work_tel: firstEligible.primary_work_tel || f.primary_work_tel || ''
         }));
       }
     }
@@ -467,8 +453,7 @@ export default function ApplicationsPage({ openNew }) {
         establishment_name: target.establishment_name || selectedSite?.est_name || selectedSite?.name || '',
         primary_contact_name: target.managing_director || f.primary_contact_name || '',
         primary_email: target.primary_email || f.primary_email || '',
-        primary_work_tel: target.primary_work_tel || f.primary_work_tel || '',
-        surveillance_year: target.cycle_year || 1
+        primary_work_tel: target.primary_work_tel || f.primary_work_tel || ''
       }));
     } else if (selectedSite) {
       setSurveillanceForm(f => ({
@@ -521,7 +506,7 @@ export default function ApplicationsPage({ openNew }) {
       fd.append('company_email', surveillanceForm.primary_email.trim());
       fd.append('primary_work_tel', surveillanceForm.primary_work_tel.trim());
       fd.append('primary_mobile', surveillanceForm.primary_work_tel.trim());
-      fd.append('notes', `[Year ${surveillanceForm.surveillance_year || 1} Surveillance] ${surveillanceForm.notes || ''}`);
+      fd.append('notes', `[Surveillance Application] ${surveillanceForm.notes || ''}`);
       if (selectedGSO?.certificate_id) {
         fd.append('certificate_id', selectedGSO.certificate_id);
       }
@@ -1818,7 +1803,7 @@ export default function ApplicationsPage({ openNew }) {
             <div style={{ padding: '14px 28px', background: '#f0f9ff', borderBottom: '1px solid #bae6fd', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
               <RefreshCw size={18} style={{ color: '#0284c7', flexShrink: 0 }} />
               <div style={{ fontSize: 12.5, color: '#0369a1', lineHeight: 1.4 }}>
-                <strong>Annual GSO Surveillance Cycle:</strong> GSO certifications follow a 3-year cycle with <strong>2 audit stages</strong> in Year 1 and Year 2. Upon completion, an official <strong>Surveillance Letter</strong> is issued (no certificate re-issue).
+                <strong>GSO Surveillance Application:</strong> Certified GSO facilities can undergo surveillance audits to verify ongoing Halal compliance. Upon completion, an official <strong>Surveillance Letter</strong> is issued.
               </div>
             </div>
 
@@ -1874,7 +1859,7 @@ export default function ApplicationsPage({ openNew }) {
                         <option value="">-- Choose GSO Facility --</option>
                         {gsoList.map(g => (
                           <option key={g.site_id} value={g.site_id}>
-                            {g.site_name} &bull; {g.establishment_name || g.site_name} (Year {g.cycle_year} Surveillance) {g.hasOngoingSurveillance ? '— [Surveillance in progress]' : ''}
+                            {g.site_name} &bull; {g.establishment_name || g.site_name} {g.hasOngoingSurveillance ? '— [Surveillance in progress]' : ''}
                           </option>
                         ))}
                       </select>
@@ -1888,50 +1873,6 @@ export default function ApplicationsPage({ openNew }) {
                         </div>
                       </div>
                     )}
-
-                    {/* Surveillance Year Selection */}
-                    <div className="form-group">
-                      <label className="form-label" style={{ fontWeight: 700, fontSize: 13, color: '#0f172a', marginBottom: 8 }}>
-                        Surveillance Stage / Milestone <span style={{ color: '#dc2626' }}>*</span>
-                      </label>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                        {[
-                          { year: 1, title: 'Year 1 Surveillance', desc: '1st Annual Review (12 months)' },
-                          { year: 2, title: 'Year 2 Surveillance', desc: '2nd Annual Review (24 months)' },
-                        ].map(s => {
-                          const isSelected = (surveillanceForm.surveillance_year || 1) === s.year;
-                          return (
-                            <div
-                              key={s.year}
-                              onClick={() => setSurveillanceForm(f => ({ ...f, surveillance_year: s.year }))}
-                              style={{
-                                padding: '12px 14px',
-                                borderRadius: 10,
-                                border: `2px solid ${isSelected ? '#0284c7' : '#e2e8f0'}`,
-                                background: isSelected ? '#f0f9ff' : '#fff',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <input
-                                  type="radio"
-                                  checked={isSelected}
-                                  onChange={() => {}}
-                                  style={{ accentColor: '#0284c7' }}
-                                />
-                                <span style={{ fontWeight: 800, fontSize: 13, color: isSelected ? '#0369a1' : '#0f172a' }}>
-                                  {s.title}
-                                </span>
-                              </div>
-                              <div style={{ fontSize: 11.5, color: isSelected ? '#0284c7' : '#64748b', marginTop: 4, marginLeft: 24 }}>
-                                {s.desc}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
 
                     {/* Contact Person Details */}
                     <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>

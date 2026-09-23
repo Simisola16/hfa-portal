@@ -324,9 +324,10 @@ export default function TrackProcessing() {
 
   // Helper flags for action stepper
   const auditsArr = audit?.data || (Array.isArray(audit) ? audit : [audit]).filter(Boolean);
-  const isDualStage = ((app?.category || '').toLowerCase().includes('gso') || 
+  const isDualStage = (app?.category || '').toLowerCase().includes('gso') || 
     (app?.category || '').toLowerCase().includes('uae') || 
-    app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE') && !isFastTrack;
+    app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE' ||
+    String(app?.application_type || '').toLowerCase().includes('gso');
   const stage1 = auditsArr?.find(a => a.stage === 1) || auditsArr?.[0];
   const stage2 = auditsArr?.find(a => a.stage === 2);
   const auditWithDates = auditsArr?.find(a => 
