@@ -22,9 +22,10 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
     Boolean(app?.is_renewal) ||
     Boolean(app?.is_surveillance);
 
-  const isDualStage = ((app?.category || '').toLowerCase().includes('gso') || 
+  const isDualStage = (app?.category || '').toLowerCase().includes('gso') || 
     (app?.category || '').toLowerCase().includes('uae') || 
-    app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE') && !isRenewalOrSurveillance;
+    app?.category === 'UAE/GSO Approved Halal Certification For Exporters To UAE' ||
+    String(app?.application_type || '').toLowerCase().includes('gso');
   const stage1 = audits?.find(a => a.stage === 1) || audits?.[0];
   const stage2 = audits?.find(a => a.stage === 2);
 
