@@ -149,8 +149,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           String(app.application_type || '').toLowerCase().includes('surveillance') ||
           Boolean(app.is_surveillance) ||
           String(app.application_number || '').includes('-SU-') ||
-          String(app.category || '').toLowerCase().includes('surveillance');
-        const isDualStageApp = !isRenewal && !isSurveillanceApp && ((app.category || '').toLowerCase().includes('gso') || (app.category || '').toLowerCase().includes('uae'));
+        const isDualStageApp = ((app.category || '').toLowerCase().includes('gso') || (app.category || '').toLowerCase().includes('uae') || String(app.application_type || '').toLowerCase().includes('gso'));
 
         // Check if this application or any linked audit needs date selection (including Stage 1 and Stage 2 GSO)
         const auditNeedingDates = appAudits.find(isAuditAwaitingDateSelection);
