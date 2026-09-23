@@ -77,7 +77,7 @@ export default function App() {
             <Route path="/export" element={<ExportPage />} />
             <Route path="/export/new" element={<ExportPage openNew />} />
             <Route path="/messages/inbox" element={<MessagesPage mode="inbox" />} />
-            <Route path="/messages/outbox" element={<MessagesPage mode="outbox" />} />
+            <Route path="/messages/outbox" element={<Navigate to="/messages/inbox" replace />} />
             <Route path="/messages" element={<Navigate to="/messages/inbox" replace />} />
             <Route path="/manage-users" element={<ManageUsersPage />} />
             <Route path="/sites" element={<SitesPage />} />

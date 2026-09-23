@@ -61,13 +61,7 @@ const NAV_SECTIONS = [
           { label: 'New Ticket', path: '/tickets' },
         ]
       },
-      {
-        icon: MessageSquare, label: 'Messages', path: '/messages',
-        children: [
-          { label: 'Inbox', path: '/messages/inbox' },
-          { label: 'Outbox', path: '/messages/outbox' },
-        ]
-      },
+      { icon: MessageSquare, label: 'Messages', path: '/messages/inbox' },
       { icon: Users, label: 'Manage Users', path: '/manage-users' },
       { icon: MapPin, label: 'Manage Sites', path: '/sites' },
     ]
