@@ -16,6 +16,7 @@ import { STATUS_ORDER, STATUS_LABELS } from '../lib/applicationStatuses';
  *   applicationType (string) — standard / renewal / surveillance
  *   initialProduct (object) — initial product record if loaded
  *   appId         (string)  — application _id
+ *   app           (object)  — application full doc
  */
 export default function ProcessingTimeline({
   status,
@@ -24,7 +25,8 @@ export default function ProcessingTimeline({
   applicationType = '',
   initialProduct = null,
   appId = null,
-  audits = []
+  audits = [],
+  app = null
 }) {
   const navigate = useNavigate();
   const isRejected = status === 'rejected';
@@ -573,10 +575,13 @@ export default function ProcessingTimeline({
                   )}
                   {histEntry.note && histEntry.note !== 'Application submitted by client.' && (
                     <div style={{
-                      marginTop: 4, fontSize: 12, color: isRejectedStep && isRejected ? '#991b1b' : '#475569',
+                      marginTop: 4,
+                      fontSize: 12,
+                      color: isRejectedStep && isRejected ? '#991b1b' : '#475569',
                       fontStyle: 'italic',
                       background: isRejectedStep && isRejected ? '#fef2f2' : '#f8fafc',
-                      padding: '4px 10px', borderRadius: 6,
+                      padding: '4px 10px',
+                      borderRadius: 6,
                       borderLeft: `3px solid ${isRejectedStep && isRejected ? '#fca5a5' : '#cbd5e1'}`,
                     }}>
                       {sanitizeClientNote(histEntry.note)}
