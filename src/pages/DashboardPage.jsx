@@ -6,7 +6,7 @@ import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, 
 import FirstSiteCreatedModal from '../components/FirstSiteCreatedModal';
 import NewUserSitePromptModal from '../components/NewUserSitePromptModal';
 
-import { STATUS_LABELS, STATUS_BADGE as BASE_STATUS_BADGE } from '../lib/applicationStatuses';
+import { STATUS_LABELS, STATUS_BADGE as BASE_STATUS_BADGE, getEffectiveApplicationStatus } from '../lib/applicationStatuses';
 
 const STATUS_BADGE = {
   ...BASE_STATUS_BADGE,
@@ -314,7 +314,18 @@ export default function DashboardPage() {
                       <tr key={app.id || app._id}>
                         <td><Link to={`/applications?appId=${app.id || app._id}`} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', fontSize: 12 }}>{app.site_name || app.establishment_name || 'Site'}</Link></td>
                         <td style={{ fontSize: 12, maxWidth: 150 }}><span className="truncate" style={{ display: 'block' }}>{app.category}</span></td>
-                        <td><span className={`badge ${STATUS_BADGE[app.status] || 'badge-gray'}`}>{app.status === 'payment_received' && (app.application_type || '').toLowerCase() === 'renewal' ? 'Renewal Fee Paid' : (STATUS_LABELS[app.status] || app.status?.replace(/_/g, ' '))}</span></td>
+                        <td>
+                          {(() => {
+                            const effStatus = getEffectiveApplicationStatus(app);
+                            const isRenewal = (app.application_type || '').toLowerCase() === 'renewal' || (app.application_type || '').toLowerCase() === 'surveillance';
+                            const label = (effStatus === 'payment_received' && isRenewal) ? 'Renewal Fee Paid' : (STATUS_LABELS[effStatus] || effStatus?.replace(/_/g, ' '));
+                            return (
+                              <span className={`badge ${STATUS_BADGE[effStatus] || 'badge-gray'}`}>
+                                {label}
+                              </span>
+                            );
+                          })()}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
