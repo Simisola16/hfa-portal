@@ -1,3 +1,4 @@
+﻿import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, FileText, CheckCircle, Download, Upload, ShieldCheck } from 'lucide-react';
 import api from '../lib/api';
@@ -10,14 +11,6 @@ const getCleanId = (val) => {
   return String(val);
 };
 
-const getPdfUrl = (url) => {
-  if (!url) return '#';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const API_URL = import.meta.env.VITE_API_URL || 'https://backend.hfaportal.company';
-  const cleanApi = API_URL.replace(/\/$/, '');
-  const cleanPath = url.startsWith('/') ? url : `/${url}`;
-  return `${cleanApi}${cleanPath}`;
-};
 
 export default function ClientAgreementModal({ isOpen, onClose, agreement: propAgreement, app: propApp, appId: propAppId, onSuccess }) {
   const [agreement, setAgreement] = useState(propAgreement || null);

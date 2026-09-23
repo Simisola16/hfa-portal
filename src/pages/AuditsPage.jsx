@@ -1,3 +1,4 @@
+﻿import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Calendar, Search, RefreshCw, AlertTriangle, CheckCircle2, Clock, 
@@ -8,14 +9,6 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import ClientAuditModal from '../components/ClientAuditModal';
 
-const getPdfUrl = (url) => {
-  if (!url) return '#';
-  if (url.startsWith('/api/files/') || url.startsWith('/uploads/')) {
-    const API_URL = import.meta.env.VITE_API_URL || 'https://backend.hfaportal.company';
-    return `${API_URL}${url}`;
-  }
-  return url;
-};
 
 const AUDIT_STATUS_MAP = {
   dates_proposed: { label: 'Dates Proposed', badge: 'badge-yellow', bg: '#fef3c7', text: '#92400e' },

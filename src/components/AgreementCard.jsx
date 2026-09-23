@@ -1,14 +1,7 @@
+﻿import { getPdfUrl } from '../lib/pdfUtils';
 import React from 'react';
 import { FileCheck, Download, Lock } from 'lucide-react';
 
-const getPdfUrl = (url) => {
-  if (!url) return '#';
-  if (url.startsWith('/api/files/')) {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    return `${API_URL}${url}`;
-  }
-  return url;
-};
 
 export default function AgreementCard({ agreement, status, onSignClick }) {
   const isAvailable = ['application_successful', 'logsheet_signed', 'agreement_sent', 'agreement_signed', 'agreement_finalised', 'ready_for_certificate', 'certificate_issued'].includes(status) || agreement;

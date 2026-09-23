@@ -1,3 +1,4 @@
+﻿import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
@@ -11,19 +12,6 @@ import toast from 'react-hot-toast';
 import { getSocket } from '../lib/socket';
 import InitialProductTimeline, { INITIAL_PRODUCT_STAGES, INITIAL_PRODUCT_ORDER } from '../components/InitialProductTimeline';
 
-const getPdfUrl = (url) => {
-  if (!url) return '#';
-  if (url.startsWith('/api/files/') || url.startsWith('/uploads/')) {
-    const API_URL = import.meta.env.VITE_API_URL || 'https://backend.hfaportal.company';
-    return `${API_URL}${url}`;
-  }
-  if (url.includes('res.cloudinary.com')) {
-    if (url.includes('/upload/') && !url.includes('fl_attachment')) {
-      return url.replace('/upload/', '/upload/fl_attachment/');
-    }
-  }
-  return url;
-};
 
 const STATUS_LABELS = {
   submitted: 'Initial Product Submitted',

@@ -1,20 +1,9 @@
+﻿import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { FileCheck, X, Download, CheckCircle, FileText, MessageSquare, Upload } from 'lucide-react';
 
-const getPdfUrl = (url) => {
-  if (!url) return '#';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  if (url.startsWith('/api/files/')) {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    return `${API_URL}${url}`;
-  }
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const cleanApi = API_URL.replace(/\/$/, '');
-  const cleanPath = url.startsWith('/') ? url : `/${url}`;
-  return `${cleanApi}${cleanPath}`;
-};
 
 export default function AgreementPage() {
   const [agreements, setAgreements] = useState([]);

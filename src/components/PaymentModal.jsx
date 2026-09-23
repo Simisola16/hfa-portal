@@ -1,3 +1,4 @@
+﻿import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect } from 'react';
 import { X, FileText, CheckCircle, Download, Receipt, Calendar, CreditCard, AlertCircle } from 'lucide-react';
 import api from '../lib/api';
@@ -10,14 +11,6 @@ const getCleanId = (val) => {
   return String(val);
 };
 
-const getPdfUrl = (url) => {
-  if (!url) return '#';
-  if (url.startsWith('/api/files/') || url.startsWith('/uploads/')) {
-    const API_URL = import.meta.env.VITE_API_URL || 'https://backend.hfaportal.company';
-    return `${API_URL}${url}`;
-  }
-  return url;
-};
 
 export default function PaymentModal({ isOpen, onClose, invoice: propInvoice, app: propApp, appId: propAppId, onSuccess }) {
   const [invoice, setInvoice] = useState(propInvoice || null);
