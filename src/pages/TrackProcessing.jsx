@@ -1,3 +1,4 @@
+﻿import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
@@ -25,14 +26,6 @@ import ClientAgreementModal from '../components/ClientAgreementModal';
 import ClientProposalModal from '../components/ClientProposalModal';
 import ClientAddInitialProductModal from '../components/ClientAddInitialProductModal';
 
-const getPdfUrl = (url) => {
-  if (!url) return '#';
-  if (url.startsWith('/api/files/') || url.startsWith('/uploads/')) {
-    const API_URL = import.meta.env.VITE_API_URL || 'https://backend.hfaportal.company';
-    return `${API_URL}${url}`;
-  }
-  return url;
-};
 
 export default function TrackProcessing() {
   const { appId } = useParams();

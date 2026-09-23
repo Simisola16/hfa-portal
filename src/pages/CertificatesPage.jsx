@@ -1,3 +1,4 @@
+﻿import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
@@ -5,14 +6,6 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { Award, Download, Search, RefreshCw, Eye, EyeOff, Calendar, AlertCircle, FileText, RotateCcw, Upload, X, CheckCircle, ShieldCheck, Lock, Clock } from 'lucide-react';
 
-const getPdfUrl = (url) => {
-  if (!url) return '#';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const cleanApi = API_URL.replace(/\/$/, '');
-  const cleanPath = url.startsWith('/') ? url : `/${url}`;
-  return `${cleanApi}${cleanPath}`;
-};
 
 export default function CertificatesPage() {
   const navigate = useNavigate();

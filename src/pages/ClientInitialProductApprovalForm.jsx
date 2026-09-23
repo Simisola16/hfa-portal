@@ -1,3 +1,4 @@
+﻿import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -8,19 +9,6 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import ProductApprovalRequestForm, { INITIAL_PRODUCT_APPROVAL_FORM } from '../components/ProductApprovalRequestForm';
 
-const getPdfUrl = (url) => {
-  if (!url) return '#';
-  if (url.startsWith('/api/files/') || url.startsWith('/uploads/')) {
-    const API_URL = import.meta.env.VITE_API_URL || 'https://backend.hfaportal.company';
-    return `${API_URL}${url}`;
-  }
-  if (url.includes('res.cloudinary.com')) {
-    if (url.includes('/upload/') && !url.includes('fl_attachment')) {
-      return url.replace('/upload/', '/upload/fl_attachment/');
-    }
-  }
-  return url;
-};
 
 export default function ClientInitialProductApprovalForm() {
   const { id } = useParams();
