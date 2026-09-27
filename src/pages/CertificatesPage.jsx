@@ -1,4 +1,4 @@
-﻿import { getPdfUrl } from '../lib/pdfUtils';
+import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
@@ -66,7 +66,7 @@ export default function CertificatesPage() {
 
   useEffect(() => {
     const s = searchParams.get('status');
-    if (s) setStatusFilter(s);
+    setStatusFilter(s ? s.toLowerCase() : '');
   }, [searchParams]);
 
   useEffect(() => {
@@ -100,13 +100,14 @@ export default function CertificatesPage() {
     let matchStatus = true;
     if (statusFilter) {
       const isExp = isExpiringSoon(c.expiry_date);
-      const isPast = c.status === 'expired' || (c.expiry_date && new Date(c.expiry_date) < new Date());
+      const cStatus = (c.status || '').toLowerCase().trim();
+      const isPast = cStatus === 'expired' || (c.expiry_date && new Date(c.expiry_date) < new Date());
       if (statusFilter === 'expired') {
         matchStatus = isPast;
       } else if (statusFilter === 'expiring') {
         matchStatus = isExp && !isPast;
       } else if (statusFilter === 'active') {
-        matchStatus = c.status === 'active' && !isPast;
+        matchStatus = cStatus === 'active' && !isPast;
       }
     }
 
