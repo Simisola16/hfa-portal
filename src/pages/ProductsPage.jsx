@@ -224,9 +224,9 @@ export default function ProductsPage({ openNew: openNewProp }) {
                 <thead>
                   <tr>
                     <th>Product Name</th>
-                    <th>Manufacturing Site</th>
-                    <th>Category</th>
                     <th>Code</th>
+                    <th>Category</th>
+                    <th>Manufacturing Site</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -240,14 +240,14 @@ export default function ProductsPage({ openNew: openNewProp }) {
                     return (
                       <tr key={p.id || p._id}>
                         <td style={{ fontWeight: 700, color: '#0f172a' }}>{p.name}</td>
+                        <td><code style={{ fontSize: 12, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>{p.code || p.barcode || '—'}</code></td>
+                        <td>{p.category || '—'}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#1e293b' }}>
                             <MapPin size={13} style={{ color: '#059669', flexShrink: 0 }} />
                             <span>{siteName}</span>
                           </div>
                         </td>
-                        <td>{p.category || '—'}</td>
-                        <td><code style={{ fontSize: 12, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>{p.code || p.barcode || '—'}</code></td>
                         <td>
                           <span className={`badge ${p.status === 'rejected' ? 'badge-red' : p.status === 'pending' ? 'badge-yellow' : 'badge-green'}`} style={{ textTransform: 'capitalize' }}>
                             {p.status === 'rejected' ? 'Rejected' : (p.status === 'pending' ? 'Pending' : 'Approved')}
