@@ -240,10 +240,10 @@ export default function ProductsPage({ openNew: openNewProp }) {
                     return (
                       <tr key={p.id || p._id}>
                         <td style={{ fontWeight: 700, color: '#0f172a' }}>{p.name}</td>
-                        <td><code style={{ fontSize: 12, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>{p.code || p.barcode || '—'}</code></td>
-                        <td>{p.category || '—'}</td>
+                        <td style={{ fontWeight: 700, color: '#0f172a' }}><code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>{p.code || p.barcode || '—'}</code></td>
+                        <td style={{ fontWeight: 700, color: '#0f172a' }}>{p.category || '—'}</td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#1e293b' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: '#0f172a' }}>
                             <MapPin size={13} style={{ color: '#059669', flexShrink: 0 }} />
                             <span>{siteName}</span>
                           </div>
