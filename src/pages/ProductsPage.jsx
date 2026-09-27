@@ -240,7 +240,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
                     return (
                       <tr key={p.id || p._id}>
                         <td style={{ fontWeight: 700, color: '#0f172a' }}>{p.name}</td>
-                        <td><code style={{ fontSize: 12, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>{p.code || p.barcode || '—'}</code></td>
+                        <td><code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>{p.code || p.barcode || '—'}</code></td>
                         <td>{p.category || '—'}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#1e293b' }}>
