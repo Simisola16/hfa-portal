@@ -36,6 +36,7 @@ import AgreementPage from './pages/Agreement';
 import AuditsPage from './pages/AuditsPage';
 import ExtensionApplicationPage from './pages/ExtensionApplicationPage';
 import ClientExtensionTrack from './pages/ClientExtensionTrack';
+import VerifyRedirect from './pages/VerifyRedirect';
 
 export default function App() {
   return (
@@ -49,6 +50,9 @@ export default function App() {
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/verify/:certNumber" element={<VerifyRedirect />} />
+          <Route path="/verify/*" element={<VerifyRedirect />} />
+          <Route path="/verify" element={<VerifyRedirect />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
           {/* Protected client routes */}

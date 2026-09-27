@@ -1,4 +1,4 @@
-﻿import { getPdfUrl } from '../lib/pdfUtils';
+import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
@@ -66,7 +66,7 @@ export default function CertificatesPage() {
 
   useEffect(() => {
     const s = searchParams.get('status');
-    if (s) setStatusFilter(s);
+    setStatusFilter(s ? s.toLowerCase() : '');
   }, [searchParams]);
 
   useEffect(() => {
@@ -100,18 +100,49 @@ export default function CertificatesPage() {
     let matchStatus = true;
     if (statusFilter) {
       const isExp = isExpiringSoon(c.expiry_date);
-      const isPast = c.status === 'expired' || (c.expiry_date && new Date(c.expiry_date) < new Date());
+      const cStatus = (c.status || '').toLowerCase().trim();
+      const isPast = cStatus === 'expired' || (c.expiry_date && new Date(c.expiry_date) < new Date());
       if (statusFilter === 'expired') {
         matchStatus = isPast;
       } else if (statusFilter === 'expiring') {
         matchStatus = isExp && !isPast;
       } else if (statusFilter === 'active') {
-        matchStatus = c.status === 'active' && !isPast;
+        matchStatus = cStatus === 'active' && !isPast;
       }
     }
 
     return matchSearch && matchStatus;
   });
+
+  // Map each site to its latest certificate ID so only the latest certificate shows the Renew button
+  const latestCertIdBySite = useMemo(() => {
+    const siteMap = new Map();
+    certs.forEach(cert => {
+      const siteKey = (
+        (cert.site_id?._id ? String(cert.site_id._id) : (cert.site_id ? String(cert.site_id) : '')) ||
+        (cert.site_name || cert.site_id?.name || cert.site_id?.est_name || cert.application_id?.site_name || cert.establishment_name || '')
+          .trim().toLowerCase()
+      );
+
+      const currentExpiry = new Date(cert.expiry_date || cert.issue_date || cert.createdAt || 0).getTime();
+
+      if (!siteKey) {
+        siteMap.set(`cert_${cert._id || cert.id}`, { id: String(cert._id || cert.id), time: currentExpiry });
+        return;
+      }
+
+      const existing = siteMap.get(siteKey);
+      if (!existing || currentExpiry > existing.time) {
+        siteMap.set(siteKey, { id: String(cert._id || cert.id), time: currentExpiry });
+      }
+    });
+
+    const latestIdSet = new Set();
+    siteMap.forEach(val => {
+      if (val?.id) latestIdSet.add(val.id);
+    });
+    return latestIdSet;
+  }, [certs]);
 
   const isThreeYearCert = (cert) => {
     if (!cert.issue_date || !cert.expiry_date) return false;
@@ -341,7 +372,9 @@ export default function CertificatesPage() {
                                   </button>
                                 );
                               }
-                              if (effectiveStatus === 'expired' || isExpiringSoon(cert.expiry_date)) {
+                              const isLatestForSite = latestCertIdBySite.has(String(cert._id || cert.id));
+                              const isObsolete = ['superseded', 'outdated', 'renewed'].includes((effectiveStatus || '').toLowerCase());
+                              if (isLatestForSite && !isObsolete && (effectiveStatus === 'expired' || isExpiringSoon(cert.expiry_date))) {
                                 return (
                                   <button
                                     className="btn btn-sm"

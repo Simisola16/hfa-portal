@@ -40,6 +40,7 @@ const NAV_SECTIONS = [
         children: [
           { label: 'All Certificates', path: '/certificates' },
           { label: 'Active Certificates', path: '/certificates?status=active' },
+          { label: 'Expiring Certificates', path: '/certificates?status=expiring' },
           { label: 'Expired Certificates', path: '/certificates?status=expired' },
         ]
       },
