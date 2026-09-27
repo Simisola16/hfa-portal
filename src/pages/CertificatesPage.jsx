@@ -1,5 +1,5 @@
 import { getPdfUrl } from '../lib/pdfUtils';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import api from '../lib/api';
