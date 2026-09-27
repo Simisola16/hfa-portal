@@ -1286,80 +1286,117 @@ export default function MessagesPage() {
             background: 'white',
             flexShrink: 0 
           }}>
-            {/* Quick Helper Chips */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, overflowX: 'auto', paddingBottom: 2 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginRight: 2 }}>
-                Quick Inquiries:
-              </span>
-              <button 
-                type="button" 
-                onClick={() => handleQuickTopic('Could you please update me on our Halal Certificate renewal status?')}
-                style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '3px 10px', borderRadius: 12, fontSize: 11, color: '#475569', cursor: 'pointer' }}
-              >
-                📜 Certificate Status
-              </button>
-              <button 
-                type="button" 
-                onClick={() => handleQuickTopic('When is our upcoming technical audit scheduled?')}
-                style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '3px 10px', borderRadius: 12, fontSize: 11, color: '#475569', cursor: 'pointer' }}
-              >
-                🔍 Audit Schedule
-              </button>
-              <button 
-                type="button" 
-                onClick={() => handleQuickTopic('Please check the latest uploaded compliance documents.')}
-                style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '3px 10px', borderRadius: 12, fontSize: 11, color: '#475569', cursor: 'pointer' }}
-              >
-                📑 Document Review
-              </button>
-            </div>
-
-            <form onSubmit={handleSendReply} style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-              <div style={{ flex: 1, position: 'relative' }}>
-                <textarea
-                  className="form-control"
-                  rows={2}
-                  placeholder={`Reply in ${activeThreadMeta.title}... (Press Enter to send, Shift+Enter for newline)`}
-                  value={replyText}
-                  onChange={e => setReplyText(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleSendReply(e);
-                    }
-                  }}
-                  style={{ 
-                    resize: 'none', 
-                    borderRadius: 12, 
-                    fontSize: 13.5,
-                    padding: '10px 14px',
-                    borderColor: '#cbd5e1'
-                  }}
-                />
+            {activeThreadMeta.isBroadcast ? (
+              /* READ-ONLY notice for broadcast/announcement channel */
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 16px',
+                background: '#f8fafc',
+                borderRadius: 12,
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                  background: '#ecfdf5', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: 18
+                }}>📢</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+                    Broadcast Channel — Read Only
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                    These are official notices from HFA. To contact support, use the{' '}
+                    <span
+                      onClick={() => setActiveThreadId('support_general')}
+                      style={{ color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      Support Desk
+                    </span>{' '}
+                    or start a new chat thread.
+                  </div>
+                </div>
               </div>
+            ) : (
+              <>
+                {/* Quick Helper Chips */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, overflowX: 'auto', paddingBottom: 2 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginRight: 2 }}>
+                    Quick Inquiries:
+                  </span>
+                  <button 
+                    type="button" 
+                    onClick={() => handleQuickTopic('Could you please update me on our Halal Certificate renewal status?')}
+                    style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '3px 10px', borderRadius: 12, fontSize: 11, color: '#475569', cursor: 'pointer' }}
+                  >
+                    📜 Certificate Status
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => handleQuickTopic('When is our upcoming technical audit scheduled?')}
+                    style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '3px 10px', borderRadius: 12, fontSize: 11, color: '#475569', cursor: 'pointer' }}
+                  >
+                    🔍 Audit Schedule
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => handleQuickTopic('Please check the latest uploaded compliance documents.')}
+                    style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '3px 10px', borderRadius: 12, fontSize: 11, color: '#475569', cursor: 'pointer' }}
+                  >
+                    📑 Document Review
+                  </button>
+                </div>
 
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={sendingReply || !replyText.trim()}
-                style={{
-                  height: 48,
-                  padding: '0 22px',
-                  borderRadius: 12,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontWeight: 700,
-                  boxShadow: '0 3px 10px rgba(27,122,122,0.2)'
-                }}
-              >
-                {sendingReply ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <><Send size={15} /> Send</>}
-              </button>
-            </form>
+                <form onSubmit={handleSendReply} style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1, position: 'relative' }}>
+                    <textarea
+                      className="form-control"
+                      rows={2}
+                      placeholder={`Reply in ${activeThreadMeta.title}... (Press Enter to send, Shift+Enter for newline)`}
+                      value={replyText}
+                      onChange={e => setReplyText(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleSendReply(e);
+                        }
+                      }}
+                      style={{ 
+                        resize: 'none', 
+                        borderRadius: 12, 
+                        fontSize: 13.5,
+                        padding: '10px 14px',
+                        borderColor: '#cbd5e1'
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={sendingReply || !replyText.trim()}
+                    style={{
+                      height: 48,
+                      padding: '0 22px',
+                      borderRadius: 12,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontWeight: 700,
+                      boxShadow: '0 3px 10px rgba(27,122,122,0.2)'
+                    }}
+                  >
+                    {sendingReply ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <><Send size={15} /> Send</>}
+                  </button>
+                </form>
+              </>
+            )}
           </div>
         </div>
       </div>
+
 
       {/* Start New Chat / Inquiry Modal */}
       {showCompose && (
