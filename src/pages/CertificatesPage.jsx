@@ -114,6 +114,36 @@ export default function CertificatesPage() {
     return matchSearch && matchStatus;
   });
 
+  // Map each site to its latest certificate ID so only the latest certificate shows the Renew button
+  const latestCertIdBySite = useMemo(() => {
+    const siteMap = new Map();
+    certs.forEach(cert => {
+      const siteKey = (
+        (cert.site_id?._id ? String(cert.site_id._id) : (cert.site_id ? String(cert.site_id) : '')) ||
+        (cert.site_name || cert.site_id?.name || cert.site_id?.est_name || cert.application_id?.site_name || cert.establishment_name || '')
+          .trim().toLowerCase()
+      );
+
+      const currentExpiry = new Date(cert.expiry_date || cert.issue_date || cert.createdAt || 0).getTime();
+
+      if (!siteKey) {
+        siteMap.set(`cert_${cert._id || cert.id}`, { id: String(cert._id || cert.id), time: currentExpiry });
+        return;
+      }
+
+      const existing = siteMap.get(siteKey);
+      if (!existing || currentExpiry > existing.time) {
+        siteMap.set(siteKey, { id: String(cert._id || cert.id), time: currentExpiry });
+      }
+    });
+
+    const latestIdSet = new Set();
+    siteMap.forEach(val => {
+      if (val?.id) latestIdSet.add(val.id);
+    });
+    return latestIdSet;
+  }, [certs]);
+
   const isThreeYearCert = (cert) => {
     if (!cert.issue_date || !cert.expiry_date) return false;
     const diffYears = (new Date(cert.expiry_date) - new Date(cert.issue_date)) / (365 * 24 * 60 * 60 * 1000);
@@ -342,7 +372,9 @@ export default function CertificatesPage() {
                                   </button>
                                 );
                               }
-                              if (effectiveStatus === 'expired' || isExpiringSoon(cert.expiry_date)) {
+                              const isLatestForSite = latestCertIdBySite.has(String(cert._id || cert.id));
+                              const isObsolete = ['superseded', 'outdated', 'renewed'].includes((effectiveStatus || '').toLowerCase());
+                              if (isLatestForSite && !isObsolete && (effectiveStatus === 'expired' || isExpiringSoon(cert.expiry_date))) {
                                 return (
                                   <button
                                     className="btn btn-sm"

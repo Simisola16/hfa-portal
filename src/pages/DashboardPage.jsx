@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
@@ -118,40 +118,68 @@ export default function DashboardPage() {
     return activeRenewal || null;
   };
 
-  // Helper: check if a certificate has already been renewed or has a renewal in-progress
+  // Map each site to its latest certificate ID so only the latest certificate shows the Renew button or counts as active
+  const latestCertIdBySite = useMemo(() => {
+    const siteMap = new Map();
+    (data.certificates || []).forEach(cert => {
+      const siteKey = (
+        (cert.site_id?._id ? String(cert.site_id._id) : (cert.site_id ? String(cert.site_id) : '')) ||
+        (cert.site_name || cert.site_id?.name || cert.site_id?.est_name || cert.application_id?.site_name || cert.establishment_name || '')
+          .trim().toLowerCase()
+      );
+
+      const currentExpiry = new Date(cert.expiry_date || cert.issue_date || cert.createdAt || 0).getTime();
+
+      if (!siteKey) {
+        siteMap.set(`cert_${cert._id || cert.id}`, { id: String(cert._id || cert.id), time: currentExpiry });
+        return;
+      }
+
+      const existing = siteMap.get(siteKey);
+      if (!existing || currentExpiry > existing.time) {
+        siteMap.set(siteKey, { id: String(cert._id || cert.id), time: currentExpiry });
+      }
+    });
+
+    const latestIdSet = new Set();
+    siteMap.forEach(val => {
+      if (val?.id) latestIdSet.add(val.id);
+    });
+    return latestIdSet;
+  }, [data.certificates]);
+
+  // Helper: check if a certificate has already been renewed, superseded, or has a renewal in-progress
   const isCertRenewed = (cert) => {
     if (!cert) return false;
-    if (cert.is_renewed || cert.status === 'renewed') return true;
+    const cStatus = (cert.status || '').toLowerCase().trim();
+    if (['superseded', 'outdated', 'renewed'].includes(cStatus)) return true;
+    if (cert.is_renewed) return true;
     if (cert.has_ongoing_renewal) return true;
     if (getOngoingRenewalApp(cert)) return true;
 
-    // Check if there is a newer active certificate for the same site
-    const hasNewerActiveCert = data.certificates.some(other => {
-      if (String(other._id || other.id) === String(cert._id || cert.id)) return false;
-      const certSiteId = String(cert.site_id?._id || cert.site_id || '');
-      const otherSiteId = String(other.site_id?._id || other.site_id || '');
-      const sameSite = certSiteId && otherSiteId && otherSiteId === certSiteId;
-      const isOtherActive = other.status === 'active' && (!other.expiry_date || new Date(other.expiry_date) >= now);
-      return sameSite && isOtherActive && (!cert.expiry_date || !other.expiry_date || new Date(other.expiry_date) >= new Date(cert.expiry_date));
-    });
+    // If there is a newer certificate for this site, this certificate is superseded
+    const certId = String(cert._id || cert.id || '');
+    if (certId && latestCertIdBySite.size > 0 && !latestCertIdBySite.has(certId)) {
+      return true;
+    }
 
-    return hasNewerActiveCert;
+    return false;
   };
 
-  // Active certificates (status active & not in past & not superseded)
+  // Active certificates (status active & not in past & not superseded/renewed)
   const activeCertList = data.certificates.filter(c => {
     const isPast = c.expiry_date && new Date(c.expiry_date) < now;
-    return c.status === 'active' && !isPast && !c.is_renewed;
+    return c.status === 'active' && !isPast && !isCertRenewed(c);
   });
 
-  // Expiring soon (within 90 days, not already renewed)
+  // Expiring soon (within 90 days, not already renewed/superseded)
   const expiringSoonCertList = data.certificates.filter(c => {
     if (!c.expiry_date || isCertRenewed(c)) return false;
     const diff = new Date(c.expiry_date) - now;
     return diff > 0 && diff <= 90 * 24 * 60 * 60 * 1000 && c.status === 'active';
   });
 
-  // Expired certificates that have NOT been renewed yet
+  // Expired certificates that have NOT been renewed or superseded yet
   const expiredCertList = data.certificates.filter(c => {
     if (isCertRenewed(c)) return false;
     return c.status === 'expired' || (c.expiry_date && new Date(c.expiry_date) < now);
@@ -424,9 +452,20 @@ export default function DashboardPage() {
                           </td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                              <span className={`badge ${isPast ? 'badge-red' : isExpSoon ? 'badge-orange' : 'badge-green'}`}>
-                                {isPast ? 'Expired' : isExpSoon ? 'Expiring Soon' : 'Active'}
-                              </span>
+                              {(() => {
+                                const certStatus = (cert.status || '').toLowerCase().trim();
+                                if (certStatus === 'superseded' || certStatus === 'outdated') {
+                                  return <span className="badge badge-gray">Superseded</span>;
+                                }
+                                if (certStatus === 'renewed' || cert.is_renewed) {
+                                  return <span className="badge badge-purple">Renewed</span>;
+                                }
+                                return (
+                                  <span className={`badge ${isPast ? 'badge-red' : isExpSoon ? 'badge-orange' : 'badge-green'}`}>
+                                    {isPast ? 'Expired' : isExpSoon ? 'Expiring Soon' : 'Active'}
+                                  </span>
+                                );
+                              })()}
                               {(() => {
                                 const ongoingRenewal = getOngoingRenewalApp(cert);
                                 if (ongoingRenewal) {
@@ -452,7 +491,12 @@ export default function DashboardPage() {
                                     </button>
                                   );
                                 }
-                                if (isPast || isExpSoon) {
+                                const certId = String(cert._id || cert.id || '');
+                                const isLatestForSite = latestCertIdBySite.has(certId);
+                                const certStatus = (cert.status || '').toLowerCase().trim();
+                                const isObsolete = ['superseded', 'outdated', 'renewed'].includes(certStatus) || cert.is_renewed;
+
+                                if (isLatestForSite && !isObsolete && (isPast || isExpSoon)) {
                                   return (
                                     <button
                                       className="btn btn-sm"
