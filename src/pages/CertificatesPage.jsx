@@ -1,5 +1,5 @@
 import { getPdfUrl } from '../lib/pdfUtils';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import api from '../lib/api';
@@ -76,7 +76,7 @@ export default function CertificatesPage() {
   const isExpiringSoon = (expiry) => {
     if (!expiry) return false;
     const diff = new Date(expiry) - new Date();
-    return diff > 0 && diff < 60 * 24 * 60 * 60 * 1000; // within 60 days
+    return diff > 0 && diff <= 90 * 24 * 60 * 60 * 1000; // within 90 days (3 months)
   };
 
   const filtered = certs.filter(c => {
