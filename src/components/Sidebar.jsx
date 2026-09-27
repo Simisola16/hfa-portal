@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, FileText, Award, Package, Ship,
@@ -82,12 +82,16 @@ function isChildActive(childPath, location) {
   
   if (childPathname !== location.pathname) return false;
   
-  if (!childSearch) {
-    return !location.search || location.search === '';
+  const currentSearchStr = (location.search || '').replace(/^\?/, '').trim();
+  const childSearchStr = childSearch.replace(/^\?/, '').trim();
+
+  // If child has no query params (e.g. /applications)
+  if (!childSearchStr) {
+    return !currentSearchStr;
   }
   
-  const childParams = new URLSearchParams(childSearch);
-  const currentParams = new URLSearchParams(location.search);
+  const childParams = new URLSearchParams(childSearchStr);
+  const currentParams = new URLSearchParams(currentSearchStr);
   
   for (const [key, val] of childParams.entries()) {
     if (currentParams.get(key) !== val) return false;
@@ -96,10 +100,16 @@ function isChildActive(childPath, location) {
 }
 
 function isParentActive(item, location) {
+  if (!item || !location) return false;
   if (item.children) {
-    return item.children.some(c => isChildActive(c.path, location));
+    const hasChildActive = item.children.some(c => isChildActive(c.path, location));
+    if (hasChildActive) return true;
+    if (item.path && location.pathname === item.path) return true;
+    if (item.path && location.pathname.startsWith(item.path + '/')) return true;
+    if (item.path === '/applications' && location.pathname.startsWith('/extension-applications')) return true;
+    return false;
   }
-  return location.pathname === item.path;
+  return location.pathname === item.path || (item.path && location.pathname.startsWith(item.path + '/'));
 }
 
 function matchSinglePath(link, targetPath, isChild = false) {
@@ -157,7 +167,7 @@ export default function Sidebar({ isOpen, onClose, notifications = [] }) {
   useEffect(() => {
     NAV_SECTIONS.forEach(section => {
       section.items.forEach(item => {
-        if (item.children && item.children.some(c => isChildActive(c.path, location))) {
+        if (item.children && (item.children.some(c => isChildActive(c.path, location)) || isParentActive(item, location))) {
           setExpanded(prev => ({ ...prev, [item.label]: true }));
         }
       });
@@ -254,10 +264,13 @@ export default function Sidebar({ isOpen, onClose, notifications = [] }) {
                         const childActive = isChildActive(child.path, location);
                         const childUnread = getUnreadNavCount(notifications, child.path, [], true);
                         return (
-                          <NavLink
+                          <Link
                             key={child.label}
                             to={child.path}
                             className={`nav-sub-item${childActive ? ' active' : ''}`}
+                            onClick={() => {
+                              if (window.innerWidth < 768 && onClose) onClose();
+                            }}
                           >
                             <span>{child.label}</span>
                             {childUnread > 0 && (
@@ -265,7 +278,7 @@ export default function Sidebar({ isOpen, onClose, notifications = [] }) {
                                 {childUnread > 9 ? '9+' : childUnread}
                               </span>
                             )}
-                          </NavLink>
+                          </Link>
                         );
                       })}
                     </div>

@@ -70,9 +70,10 @@ export default function ApplicationsPage({ openNew }) {
     }
   }, [searchParams]);
 
-  const pendingApp = apps.find(app => {
-    const s = app.status?.toLowerCase();
-    return s !== 'approved' && s !== 'rejected' && s !== 'certificate_issued';
+  const pendingApp = (Array.isArray(apps) ? apps : []).find(app => {
+    if (!app || !app.status) return false;
+    const s = (app.status || '').toLowerCase().trim().replace(/ /g, '_');
+    return s !== 'approved' && s !== 'rejected' && s !== 'certificate_issued' && s !== 'proposal_rejected';
   });
 
   const initialFormState = {
@@ -835,20 +836,40 @@ export default function ApplicationsPage({ openNew }) {
   const safeApps = Array.isArray(apps) ? apps : [];
   const filtered = safeApps.filter(a => {
     if (!a) return false;
-    const matchSearch = !search || a.application_number?.toLowerCase().includes(search.toLowerCase()) || a.category?.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search ||
+      (a.application_number || '').toLowerCase().includes(search.toLowerCase()) ||
+      (a.category || '').toLowerCase().includes(search.toLowerCase()) ||
+      (a.site_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (a.establishment_name || '').toLowerCase().includes(search.toLowerCase());
 
     let matchStatus = true;
     if (filterStatus) {
+      const aStatus = (a.status || '').toLowerCase().trim().replace(/ /g, '_');
       if (filterStatus === 'in_progress' || filterStatus === 'audit_scheduled') {
-        matchStatus = !['certificate_issued', 'rejected'].includes(a.status?.toLowerCase());
+        matchStatus = !['certificate_issued', 'rejected', 'proposal_rejected'].includes(aStatus);
       } else if (filterStatus === 'rejected') {
-        matchStatus = ['rejected', 'on_hold'].includes(a.status?.toLowerCase());
+        matchStatus = ['rejected', 'on_hold', 'proposal_rejected'].includes(aStatus);
+      } else if (filterStatus === 'completed' || filterStatus === 'certificate_issued') {
+        matchStatus = aStatus === 'certificate_issued';
       } else {
-        matchStatus = a.status === filterStatus;
+        matchStatus = aStatus === filterStatus.toLowerCase().replace(/ /g, '_');
       }
     }
 
-    const matchType = !filterType || a.application_type === filterType;
+    let matchType = true;
+    if (filterType) {
+      const aType = (a.application_type || 'standard').toLowerCase().trim();
+      if (filterType === 'new' || filterType === 'standard') {
+        matchType = aType === 'new' || aType === 'standard' || aType.includes('new');
+      } else if (filterType === 'renewal') {
+        matchType = aType.includes('renewal');
+      } else if (filterType === 'surveillance') {
+        matchType = aType.includes('surveillance');
+      } else {
+        matchType = aType === filterType.toLowerCase();
+      }
+    }
+
     return matchSearch && matchStatus && matchType;
   });
 
@@ -908,7 +929,11 @@ export default function ApplicationsPage({ openNew }) {
           }}
         >
           <option value="">All Statuses</option>
-          {Object.keys(STATUS_BADGE).map(s => <option key={s} value={s}>{STATUS_LABELS[s] || s.replace(/_/g, ' ')}</option>)}
+          <option value="in_progress">In Progress</option>
+          <option value="rejected">Rejected / On-Hold</option>
+          {Object.keys(STATUS_BADGE).filter(s => !['rejected', 'on_hold'].includes(s)).map(s => (
+            <option key={s} value={s}>{STATUS_LABELS[s] || s.replace(/_/g, ' ')}</option>
+          ))}
         </select>
         <button className="btn btn-ghost btn-sm" onClick={fetchData}><RefreshCw size={14} /></button>
         {pendingApp && (() => {
@@ -1018,7 +1043,15 @@ export default function ApplicationsPage({ openNew }) {
         <div style={{ padding: '24px 32px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fafaf9' }}>
           <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
             <FileText size={20} style={{ color: 'var(--primary)' }} />
-            {filterType === 'new' ? 'New Applications' : filterType === 'renewal' ? 'Renewal Applications' : filterType === 'surveillance' ? 'Surveillance Applications' : 'My Applications'}{' '}
+            {(() => {
+              if (filterStatus === 'in_progress') return 'In-Progress Applications';
+              if (filterStatus === 'rejected') return 'Rejected / On-Hold Applications';
+              if (filterStatus) return `${STATUS_LABELS[filterStatus] || filterStatus.replace(/_/g, ' ')} Applications`;
+              if (filterType === 'new') return 'New Applications';
+              if (filterType === 'renewal') return 'Renewal Applications';
+              if (filterType === 'surveillance') return 'Surveillance Applications';
+              return 'All Applications';
+            })()}{' '}
             <span style={{ background: '#e2e8f0', color: '#475569', fontSize: 12, padding: '2px 10px', borderRadius: 30 }}>{filtered.length}</span>
           </h3>
         </div>
@@ -1030,7 +1063,15 @@ export default function ApplicationsPage({ openNew }) {
             <div style={{ textAlign: 'center', padding: '60px 20px', background: '#f8fafc', borderRadius: 16, border: '2px dashed #e2e8f0' }}>
               <FileText size={48} color="#94a3b8" style={{ margin: '0 auto 16px', opacity: 0.5 }} />
               <h4 style={{ fontSize: 18, fontWeight: 700, color: '#334155', marginBottom: 8 }}>
-                {filterType === 'new' ? 'No New Applications Found' : filterType === 'renewal' ? 'No Renewal Applications Found' : filterType === 'surveillance' ? 'No Surveillance Applications Found' : 'No Applications Found'}
+                {(() => {
+                  if (filterStatus === 'in_progress') return 'No In-Progress Applications Found';
+                  if (filterStatus === 'rejected') return 'No Rejected or On-Hold Applications Found';
+                  if (filterStatus) return `No ${STATUS_LABELS[filterStatus] || filterStatus.replace(/_/g, ' ')} Applications Found`;
+                  if (filterType === 'new') return 'No New Applications Found';
+                  if (filterType === 'renewal') return 'No Renewal Applications Found';
+                  if (filterType === 'surveillance') return 'No Surveillance Applications Found';
+                  return 'No Applications Found';
+                })()}
               </h4>
               <p style={{ fontSize: 14, color: '#64748b', maxWidth: 400, margin: '0 auto 16px' }}>
                 {filterType === 'new'
