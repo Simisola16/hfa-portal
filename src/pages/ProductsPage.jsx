@@ -197,7 +197,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
         >
           <Package size={15} /> Add-on Requests <ArrowRight size={14} />
         </button>
-        <button className="btn btn-primary" onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#059669', borderColor: '#059669' }}>
+        <button className="btn btn-primary" onClick={() => navigate('/addon-applications?new=true')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#059669', borderColor: '#059669' }}>
           <Plus size={15} /> Add Product
         </button>
       </div>
