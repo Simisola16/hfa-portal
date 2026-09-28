@@ -56,10 +56,6 @@ export default function LoginPage() {
                 <BookOpen size={16} /> Read User Guide
               </button>
             </div>
-
-            <div className="auth-sidebar-footer">
-              Developed by TheYoungPioneers
-            </div>
           </div>
         </div>
 
