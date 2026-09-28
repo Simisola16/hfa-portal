@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import {
@@ -90,6 +90,7 @@ const emptyProduct = () => ({ name: '', code: '', type: 'Add product', original_
 
 export default function AddOnApplicationPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [certs, setCerts] = useState([]);
   const [sites, setSites] = useState([]);
   const [myApps, setMyApps] = useState([]);
@@ -158,6 +159,19 @@ export default function AddOnApplicationPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  // Auto-open the new application form when navigated with ?new=true
+  useEffect(() => {
+    if (searchParams.get('new') === 'true' && !loading) {
+      if (sites.length === 1) {
+        handleSiteChange(sites[0].id || sites[0]._id);
+      }
+      setShowForm(true);
+      // Remove the query param from the URL without a re-render
+      navigate('/addon-applications', { replace: true });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   const selectedCert = certs.find(c => String(c._id || c.id) === String(form.certificate_id));
   const certProducts = selectedCert?.products_covered || [];
