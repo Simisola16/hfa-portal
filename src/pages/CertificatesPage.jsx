@@ -31,8 +31,8 @@ export default function CertificatesPage() {
         api.get('/api/certificates').catch(() => ({ data: [] })),
         api.get('/api/applications').catch(() => ({ data: [] }))
       ]);
-      const loadedCerts = Array.isArray(certsRes) ? certsRes : (certsRes?.data || []);
-      const loadedApps = Array.isArray(appsRes) ? appsRes : (appsRes?.data || []);
+      const loadedCerts = Array.isArray(certsRes) ? certsRes : (Array.isArray(certsRes?.data) ? certsRes.data : (certsRes?.data?.data || []));
+      const loadedApps = Array.isArray(appsRes) ? appsRes : (Array.isArray(appsRes?.data) ? appsRes.data : (appsRes?.data?.data || []));
       setCerts(loadedCerts);
       setApplications(loadedApps);
 
