@@ -197,7 +197,6 @@ export default function AddOnApplicationPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.site_id && !form.certificate_id) return toast.error('Please select a site.');
-    if (!form.contact_name.trim()) return toast.error('Contact Person Name is required.');
     if (!form.contact_email.trim()) return toast.error('Contact Person Email is required.');
     for (const [i, p] of form.products.entries()) {
       if (!p.name.trim()) return toast.error(`Product row ${i + 1}: Product Name is required.`);
@@ -573,8 +572,8 @@ export default function AddOnApplicationPage() {
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>2. Contact Person</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Contact Person Name <span>*</span></label>
-                      <input className="form-control" value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="e.g. Jane Smith" required />
+                      <label className="form-label">Contact Person Name</label>
+                      <input className="form-control" value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="e.g. Jane Smith" />
                     </div>
                     <div className="form-group" style={{ margin: 0 }}>
                       <label className="form-label">Contact Person Number</label>
