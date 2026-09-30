@@ -57,10 +57,6 @@ export default function ManageUsersPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isTeamMember) {
-      toast.error('Only the primary account owner can add team members.');
-      return;
-    }
     setSubmitting(true);
     try {
       const res = await api.post('/api/users/company/subusers', {
@@ -100,10 +96,6 @@ export default function ManageUsersPage() {
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     if (!editingUser) return;
-    if (isTeamMember) {
-      toast.error('Only the primary account owner can update team members.');
-      return;
-    }
     setUpdating(true);
     try {
       await api.put(`/api/users/company/subusers/${editingUser.id || editingUser._id}`, {
@@ -121,10 +113,6 @@ export default function ManageUsersPage() {
   };
 
   const handleDeleteUser = async (id, name) => {
-    if (isTeamMember) {
-      toast.error('Only the primary account owner can remove team members.');
-      return;
-    }
     if (!window.confirm(`Are you sure you want to remove ${name} from your team? They will no longer be able to log in.`)) return;
     try {
       await api.delete(`/api/users/company/subusers/${id}`);
@@ -157,19 +145,13 @@ export default function ManageUsersPage() {
             Manage authorized staff members who share full portal access to view certificates, manage products, and submit applications.
           </p>
         </div>
-        {!isTeamMember ? (
-          <button 
-            className="btn btn-primary" 
-            onClick={() => setShowModal(true)} 
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', fontWeight: 700, borderRadius: 10 }}
-          >
-            <Plus size={16} /> Add Team Member
-          </button>
-        ) : (
-          <span style={{ fontSize: 13, padding: '8px 14px', borderRadius: 8, background: '#f1f5f9', color: '#475569', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #e2e8f0' }}>
-            <Shield size={14} color="#64748b" /> Full Portal Access
-          </span>
-        )}
+        <button 
+          className="btn btn-primary" 
+          onClick={() => setShowModal(true)} 
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', fontWeight: 700, borderRadius: 10 }}
+        >
+          <Plus size={16} /> Add Team Member
+        </button>
       </div>
 
       {/* Info notice for team members */}
@@ -199,7 +181,7 @@ export default function ManageUsersPage() {
             <AlertCircle size={20} />
           </div>
           <div style={{ fontSize: 13.5, color: '#334155', lineHeight: 1.5 }}>
-            <strong style={{ color: '#0f172a' }}>Team Member Account:</strong> You have full access across the company portal to view and submit applications, manage products and sites, view certificates, download invoices, and handle audits. Only the primary account owner can add or manage team members.
+            <strong style={{ color: '#0f172a' }}>Team Member Account:</strong> You have full access across the company portal to view and submit applications, manage products and sites, view certificates, download invoices, handle audits, and manage team members.
           </div>
         </div>
       )}
@@ -226,9 +208,7 @@ export default function ManageUsersPage() {
               <div className="empty-state-icon" style={{ margin: '0 auto 16px', background: '#f8fafc', width: 56, height: 56, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}><Users size={28} /></div>
               <div className="empty-state-title" style={{ fontWeight: 700, fontSize: 16 }}>No Team Members Found</div>
               <div className="empty-state-text" style={{ fontSize: 13, color: '#64748b', maxWidth: 400, margin: '6px auto 16px' }}>Add team members to give your staff access to certificates and applications.</div>
-              {!isTeamMember && (
-                <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>Add Your First Member</button>
-              )}
+              <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>Add Your First Member</button>
             </div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -238,9 +218,7 @@ export default function ManageUsersPage() {
                   <th style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Email</th>
                   <th style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Status</th>
                   <th style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Date Added</th>
-                  {!isTeamMember && (
-                    <th style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
-                  )}
+                  <th style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -283,7 +261,6 @@ export default function ManageUsersPage() {
                     <td style={{ padding: '14px 20px', color: '#64748b', fontSize: 13 }}>
                       {u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB') : '—'}
                     </td>
-                    {!isTeamMember && (
                       <td style={{ padding: '14px 20px', textAlign: 'right' }}>
                         {u.is_owner ? (
                           <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic', fontWeight: 600 }}>Account Owner</span>
@@ -308,7 +285,6 @@ export default function ManageUsersPage() {
                           </div>
                         )}
                       </td>
-                    )}
                   </tr>
                 ))}
               </tbody>
@@ -318,7 +294,7 @@ export default function ManageUsersPage() {
       </div>
 
       {/* ADD USER MODAL */}
-      {showModal && !isTeamMember && (
+      {showModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal" style={{ maxWidth: 540, borderRadius: 16, overflow: 'hidden' }}>
             <div className="modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
@@ -486,7 +462,7 @@ export default function ManageUsersPage() {
       )}
 
       {/* EDIT USER MODAL */}
-      {editingUser && !isTeamMember && (
+      {editingUser && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setEditingUser(null)}>
           <div className="modal" style={{ maxWidth: 500, borderRadius: 16, overflow: 'hidden' }}>
             <div className="modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
