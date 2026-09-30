@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { 
@@ -8,7 +9,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 export default function ManageUsersPage() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, logout } = useAuth();
+  const navigate = useNavigate();
   const isTeamMember = Boolean(currentUser?.parent_client_id);
 
   const [subUsers, setSubUsers] = useState([]);
@@ -112,14 +114,27 @@ export default function ManageUsersPage() {
     }
   };
 
-  const handleDeleteUser = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to remove ${name} from your team? They will no longer be able to log in.`)) return;
+  const handleDeleteUser = async (id, name, isOwner) => {
+    const isSelf = currentUser && (currentUser.id === id || currentUser._id === id);
+    const confirmMsg = isOwner
+      ? `Are you sure you want to remove ${name} (Primary Account Holder)?\n\nIf other team members exist, company ownership and portal assets will transfer to the next team member. If you are removing your own account, you will be logged out immediately.`
+      : `Are you sure you want to remove ${name} from your team? They will no longer be able to log in.`;
+
+    if (!window.confirm(confirmMsg)) return;
+
     try {
-      await api.delete(`/api/users/company/subusers/${id}`);
-      toast.success('Team member removed');
+      const res = await api.delete(`/api/users/company/subusers/${id}`);
+      toast.success(res.data?.message || 'User removed successfully');
+
+      if (isSelf) {
+        if (logout) logout();
+        navigate('/login');
+        return;
+      }
+
       fetchUsers();
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message || 'Failed to remove member');
+      toast.error(err.response?.data?.error || err.message || 'Failed to remove user');
     }
   };
 
@@ -262,28 +277,24 @@ export default function ManageUsersPage() {
                       {u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB') : '—'}
                     </td>
                       <td style={{ padding: '14px 20px', textAlign: 'right' }}>
-                        {u.is_owner ? (
-                          <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic', fontWeight: 600 }}>Account Owner</span>
-                        ) : (
-                          <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                            <button
-                              className="btn btn-ghost btn-sm"
-                              style={{ color: '#2563eb', padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff' }}
-                              onClick={() => handleEditOpen(u)}
-                              title="Edit Member"
-                            >
-                              <Edit3 size={14} />
-                            </button>
-                            <button
-                              className="btn btn-ghost btn-sm"
-                              style={{ color: '#ef4444', padding: '6px 8px', borderRadius: 6, border: '1px solid #fee2e2', background: '#fef2f2' }}
-                              onClick={() => handleDeleteUser(u.id || u._id, u.full_name)}
-                              title="Remove member"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        )}
+                        <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ color: '#2563eb', padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff' }}
+                            onClick={() => handleEditOpen(u)}
+                            title={u.is_owner ? 'Edit Primary Account Holder' : 'Edit Member'}
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ color: '#ef4444', padding: '6px 8px', borderRadius: 6, border: '1px solid #fee2e2', background: '#fef2f2' }}
+                            onClick={() => handleDeleteUser(u.id || u._id, u.full_name, u.is_owner)}
+                            title={u.is_owner ? 'Remove Primary Account Holder' : 'Remove member'}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                   </tr>
                 ))}
@@ -472,7 +483,7 @@ export default function ManageUsersPage() {
                 </div>
                 <div>
                   <h3 className="modal-title" style={{ fontSize: 17, fontWeight: 800, margin: 0, color: '#0f172a' }}>
-                    Edit Team Member
+                    {editingUser?.is_owner ? 'Edit Primary Account Holder' : 'Edit Team Member'}
                   </h3>
                   <p style={{ fontSize: 12, color: '#64748b', margin: '2px 0 0' }}>{editingUser.email}</p>
                 </div>
