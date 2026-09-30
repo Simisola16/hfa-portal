@@ -43,10 +43,17 @@ export default function ProductsPage({ openNew: openNewProp }) {
   const fetch = () => {
     setLoading(true);
     Promise.all([
-      api.get('/api/products').then(d => setProducts(d.data || [])).catch(() => toast.error('Failed to load products')),
-      api.get('/api/sites').then(d => setSites(d.data || [])).catch(() => { }),
+      api.get('/api/products').then(d => {
+        const list = Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : (Array.isArray(d?.data?.data) ? d.data.data : []));
+        setProducts(list);
+      }).catch(() => toast.error('Failed to load products')),
+      api.get('/api/sites').then(d => {
+        const list = Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []);
+        setSites(list);
+      }).catch(() => { }),
       api.get('/api/certificates').then(d => {
-        const active = (d.data || []).filter(c => c.status === 'active' && new Date(c.expiry_date) >= new Date());
+        const list = Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []);
+        const active = list.filter(c => c.status === 'active' && new Date(c.expiry_date) >= new Date());
         setCerts(active);
       }).catch(() => { })
     ]).finally(() => setLoading(false));
