@@ -48,12 +48,14 @@ export default function DashboardPage() {
       api.get('/api/messages/unread-count'),
       api.get('/api/sites'),
     ]).then(([apps, certs, prods, msgs, sitesRes]) => {
-      const userSites = sitesRes.data || [];
-      const userApps = apps.data || [];
+      const userSites = Array.isArray(sitesRes) ? sitesRes : (Array.isArray(sitesRes?.data) ? sitesRes.data : []);
+      const userApps = Array.isArray(apps) ? apps : (Array.isArray(apps?.data) ? apps.data : []);
+      const userCerts = Array.isArray(certs) ? certs : (Array.isArray(certs?.data) ? certs.data : []);
+      const userProducts = Array.isArray(prods) ? prods : (Array.isArray(prods?.data) ? prods.data : (Array.isArray(prods?.data?.data) ? prods.data.data : []));
       setData({
         applications: userApps,
-        certificates: certs.data || [],
-        products: prods.data || [],
+        certificates: userCerts,
+        products: userProducts,
         messages_count: msgs.count || 0,
         sites: userSites,
       });
