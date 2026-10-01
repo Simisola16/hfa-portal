@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
+import { disconnectSocket } from '../lib/socket';
 
 const AuthContext = createContext(null);
 
@@ -62,11 +63,15 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post('/api/auth/logout');
+    } catch {}
     localStorage.removeItem('hfa_token');
     sessionStorage.removeItem('dismissed_site_prompt');
     setUser(null);
     setProfile(null);
+    disconnectSocket();
   };
 
   const endImpersonation = async () => {
