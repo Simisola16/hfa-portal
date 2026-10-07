@@ -1,13 +1,14 @@
-﻿import { getPdfUrl } from '../lib/pdfUtils';
+import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, FileText, CheckCircle, Clock, AlertCircle,
-  Package, ShieldCheck, Download, Save, Send, RefreshCw, UploadCloud
+  Package, ShieldCheck, Download, Save, Send, RefreshCw, UploadCloud, Printer
 } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import ProductApprovalRequestForm, { INITIAL_PRODUCT_APPROVAL_FORM } from '../components/ProductApprovalRequestForm';
+import { exportProductApprovalPdf } from '../lib/generateProductApprovalPdf';
 
 
 export default function ClientInitialProductApprovalForm() {
@@ -172,6 +173,15 @@ export default function ClientInitialProductApprovalForm() {
         </button>
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button
+            type="button"
+            className="btn btn-outline btn-sm"
+            onClick={() => exportProductApprovalPdf({ formData, product: app?.product, company: app?.client_id })}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700, color: '#0f766e', borderColor: '#0f766e' }}
+            title="Save as professional PDF document"
+          >
+            <Printer size={14} /> Save as PDF
+          </button>
           {!isFormSubmitted && (
             <>
               <button
