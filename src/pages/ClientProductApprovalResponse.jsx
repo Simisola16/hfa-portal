@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Save, CheckCircle, FileText, ChevronLeft, ChevronRight, Send, Printer
+  ArrowLeft, Save, CheckCircle, FileText, ChevronLeft, ChevronRight, Send, Download
 } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
@@ -185,9 +185,9 @@ export default function ClientProductApprovalResponse() {
             className="btn btn-outline btn-sm"
             onClick={() => exportProductApprovalPdf({ formData, product, company: app.client_id })}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 700, color: '#0f766e', borderColor: '#0f766e' }}
-            title="Save as professional PDF document"
+            title="Save and download as PDF document"
           >
-            <Printer size={14} /> Save as PDF
+            <Download size={14} /> Save as PDF
           </button>
 
           {!alreadySubmitted && (
