@@ -6,6 +6,7 @@ import {
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import ProductApprovalRequestForm, { INITIAL_PRODUCT_APPROVAL_FORM } from '../components/ProductApprovalRequestForm';
+import { exportProductApprovalPdf } from '../lib/generateProductApprovalPdf';
 
 export default function ClientProductApprovalResponse() {
   const { addonId, productIndex } = useParams();
@@ -182,10 +183,11 @@ export default function ClientProductApprovalResponse() {
           <button
             type="button"
             className="btn btn-outline btn-sm"
-            onClick={() => window.print()}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
+            onClick={() => exportProductApprovalPdf({ formData, product, company: app.client_id })}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 700, color: '#0f766e', borderColor: '#0f766e' }}
+            title="Save as professional PDF document"
           >
-            <Printer size={14} /> Print
+            <Printer size={14} /> Save as PDF
           </button>
 
           {!alreadySubmitted && (
