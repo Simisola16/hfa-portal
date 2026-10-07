@@ -349,7 +349,9 @@ export default function AddOnApplicationPage() {
                           <span style={{ fontSize: 11, color: '#94a3b8' }}>Pending Certificate</span>
                         )}
                         <span style={{ fontSize: 11, color: '#94a3b8' }}>•</span>
-                        <span style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(app.createdAt).toLocaleDateString('en-GB')}</span>
+                        <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
+                          {new Date(app.created_at || app.submission_date || app.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })}
+                        </span>
                       </div>
 
                       {/* Products chips */}
