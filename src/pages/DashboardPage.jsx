@@ -457,11 +457,15 @@ export default function DashboardPage() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                               {(() => {
                                 const certStatus = (cert.status || '').toLowerCase().trim();
-                                if (certStatus === 'superseded' || certStatus === 'outdated') {
-                                  return <span className="badge badge-gray">Superseded</span>;
+                                if (certStatus === 'superseded' || certStatus === 'outdated' || certStatus === 'inactive') {
+                                  return <span className="badge badge-gray">Inactive</span>;
                                 }
                                 if (certStatus === 'renewed' || cert.is_renewed) {
-                                  return <span className="badge badge-purple">Renewed</span>;
+                                  return (
+                                    <span className={`badge ${isPast ? 'badge-red' : isExpSoon ? 'badge-orange' : 'badge-green'}`}>
+                                      {isPast ? 'Expired' : isExpSoon ? 'Expiring Soon' : 'Active'}
+                                    </span>
+                                  );
                                 }
                                 return (
                                   <span className={`badge ${isPast ? 'badge-red' : isExpSoon ? 'badge-orange' : 'badge-green'}`}>
@@ -516,7 +520,7 @@ export default function DashboardPage() {
                                 const certId = String(cert._id || cert.id || '');
                                 const isLatestForSite = latestCertIdBySite.has(certId);
                                 const certStatus = (cert.status || '').toLowerCase().trim();
-                                const isObsolete = ['superseded', 'outdated', 'renewed'].includes(certStatus) || cert.is_renewed;
+                                const isObsolete = ['superseded', 'outdated', 'inactive'].includes(certStatus);
 
                                 if (isLatestForSite && !isObsolete && (isPast || isExpSoon)) {
                                   return (

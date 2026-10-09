@@ -317,15 +317,14 @@ export default function CertificatesPage() {
                           </td>
                           <td>
                             <span className={`badge ${
-                              effectiveStatus === 'active' ? 'badge-green' :
-                              effectiveStatus === 'renewed' ? 'badge-blue' :
-                              effectiveStatus === 'outdated' || effectiveStatus === 'superseded' ? 'badge-orange' :
+                              effectiveStatus === 'active' || effectiveStatus === 'renewed' ? 'badge-green' :
+                              effectiveStatus === 'outdated' || effectiveStatus === 'superseded' || effectiveStatus === 'inactive' ? 'badge-gray' :
                               effectiveStatus === 'revoked' ? 'badge-red' :
                               'badge-gray'
                             }`} style={{ textTransform: 'capitalize' }}>
                               {effectiveStatus === 'outdated' ? 'Outdated' :
-                               effectiveStatus === 'superseded' ? 'Superseded' :
-                               effectiveStatus === 'renewed' ? 'Renewed' :
+                               effectiveStatus === 'superseded' || effectiveStatus === 'inactive' ? 'Inactive' :
+                               effectiveStatus === 'renewed' ? 'Active' :
                                effectiveStatus === 'active' ? 'Active' :
                                effectiveStatus === 'expired' ? 'Expired' :
                                effectiveStatus === 'revoked' ? 'Revoked' :
@@ -373,7 +372,7 @@ export default function CertificatesPage() {
                                 );
                               }
                               const isLatestForSite = latestCertIdBySite.has(String(cert._id || cert.id));
-                              const isObsolete = ['superseded', 'outdated', 'renewed'].includes((effectiveStatus || '').toLowerCase());
+                              const isObsolete = ['superseded', 'outdated', 'inactive'].includes((effectiveStatus || '').toLowerCase());
                               if (isLatestForSite && !isObsolete && (effectiveStatus === 'expired' || isExpiringSoon(cert.expiry_date))) {
                                 return (
                                   <button
