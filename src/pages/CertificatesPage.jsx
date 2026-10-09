@@ -1,4 +1,4 @@
-import { getPdfUrl } from '../lib/pdfUtils';
+import { getPdfUrl, getCertificateDownloadUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
@@ -333,17 +333,17 @@ export default function CertificatesPage() {
                             </span>
                           </td>
                           <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                            {effectiveStatus === 'active' && (
-                              <a
-                                href={getPdfUrl(cert.certificate_url || cert.document_url || cert.pdf_url || `/api/certificates/${cert.id || cert._id}/download?token=${localStorage.getItem('hfa_token') || ''}`)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="btn btn-outline btn-sm"
-                                onClick={e => e.stopPropagation()}
-                              >
-                                <Download size={13} /> Download
-                              </a>
-                            )}
+                            <a
+                              href={getCertificateDownloadUrl(cert)}
+                              target="_blank"
+                              rel="noreferrer"
+                              download={`${(cert.certificate_number || 'Certificate').replace(/[\/\\:]/g, '_')}.pdf`}
+                              className="btn btn-outline btn-sm"
+                              onClick={e => e.stopPropagation()}
+                              title={`Download certificate ${cert.certificate_number || ''}`}
+                            >
+                              <Download size={13} /> Download
+                            </a>
                             {(() => {
                               const ongoingRenewal = getOngoingRenewalApp(cert);
                               if (ongoingRenewal) {
@@ -429,6 +429,18 @@ export default function CertificatesPage() {
                                       <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Expiry Date</div>
                                       <div style={{ fontSize: 13, color: '#334155', fontWeight: 600, marginTop: 2 }}>{cert.expiry_date ? new Date(cert.expiry_date).toDateString() : '—'}</div>
                                     </div>
+                                  </div>
+                                  <div style={{ marginTop: 12 }}>
+                                    <a
+                                      href={getCertificateDownloadUrl(cert)}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      download={`${(cert.certificate_number || 'Certificate').replace(/[\/\\:]/g, '_')}.pdf`}
+                                      className="btn btn-outline btn-sm"
+                                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                                    >
+                                      <Download size={13} /> Download Certificate PDF
+                                    </a>
                                   </div>
                                 </div>
 

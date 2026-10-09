@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, RefreshCw, Download, X, MapPin, RotateCcw, ChevronRight } from 'lucide-react';
+import { getCertificateDownloadUrl } from '../lib/pdfUtils';
 import FirstSiteCreatedModal from '../components/FirstSiteCreatedModal';
 import NewUserSitePromptModal from '../components/NewUserSitePromptModal';
 
@@ -468,6 +469,25 @@ export default function DashboardPage() {
                                   </span>
                                 );
                               })()}
+                              <a
+                                href={getCertificateDownloadUrl(cert)}
+                                target="_blank"
+                                rel="noreferrer"
+                                download={`${(cert.certificate_number || 'Certificate').replace(/[\/\\:]/g, '_')}.pdf`}
+                                className="btn btn-outline btn-sm"
+                                style={{
+                                  padding: '3px 8px',
+                                  fontSize: 10.5,
+                                  fontWeight: 600,
+                                  borderRadius: 6,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4
+                                }}
+                                title={`Download certificate ${cert.certificate_number || ''}`}
+                              >
+                                <Download size={11} /> Download
+                              </a>
                               {(() => {
                                 const ongoingRenewal = getOngoingRenewalApp(cert);
                                 if (ongoingRenewal) {

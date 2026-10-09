@@ -22,3 +22,29 @@ export const getPdfUrl = (url) => {
   // Relative path without leading slash
   return `${API_URL}/${url}`;
 };
+
+export const getCertificateDownloadUrl = (cert) => {
+  if (!cert) return '#';
+  const token = localStorage.getItem('hfa_token') || '';
+  const certId = cert._id || cert.id;
+
+  // If no certificate_url, route through backend download endpoint which auto-generates the PDF
+  if (!cert.certificate_url && !cert.document_url && !cert.pdf_url) {
+    return getPdfUrl(`/api/certificates/${certId}/download?token=${encodeURIComponent(token)}&download=1`);
+  }
+
+  const rawUrl = cert.certificate_url || cert.document_url || cert.pdf_url;
+  // If it's a relative path or an internal backend file endpoint, ensure download=1 query parameter is set
+  if (rawUrl.startsWith('/') || rawUrl.includes('/api/files/')) {
+    const sep = rawUrl.includes('?') ? '&' : '?';
+    const finalUrl = rawUrl.includes('download=') ? rawUrl : `${rawUrl}${sep}download=1`;
+    return getPdfUrl(finalUrl);
+  }
+
+  if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+    const sep = rawUrl.includes('?') ? '&' : '?';
+    return rawUrl.includes('download=') ? rawUrl : `${rawUrl}${sep}download=1`;
+  }
+
+  return getPdfUrl(rawUrl);
+};
