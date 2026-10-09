@@ -107,7 +107,9 @@ export default function CertificatesPage() {
       } else if (statusFilter === 'expiring') {
         matchStatus = isExp && !isPast;
       } else if (statusFilter === 'active') {
-        matchStatus = cStatus === 'active' && !isPast;
+        matchStatus = (cStatus === 'active' || cStatus === 'renewed') && !isPast && cStatus !== 'inactive' && cStatus !== 'superseded';
+      } else if (statusFilter === 'inactive') {
+        matchStatus = cStatus === 'inactive' || cStatus === 'superseded';
       }
     }
 
@@ -288,12 +290,19 @@ export default function CertificatesPage() {
                     });
                     const completedSurvs = relatedSurvs.filter(a => a.status === 'certificate_issued' && (a.documents?.surveillance_letter || a.certificate_url));
                     const ongoingSurv = relatedSurvs.find(a => !['certificate_issued', 'rejected'].includes(a.status?.toLowerCase()));
+                    const s = (cert.status || '').toLowerCase().trim();
                     const effectiveStatus =
-                      cert.is_renewed || cert.status === 'renewed'
-                        ? 'renewed'
-                        : cert.status === 'active' && cert.expiry_date && new Date(cert.expiry_date) < new Date()
-                          ? 'expired'
-                          : cert.status;
+                      s === 'inactive' || s === 'superseded'
+                        ? 'inactive'
+                        : s === 'revoked'
+                          ? 'revoked'
+                          : s === 'outdated'
+                            ? 'outdated'
+                            : (s === 'renewed' || cert.is_renewed)
+                              ? 'renewed'
+                              : s === 'active' && cert.expiry_date && new Date(cert.expiry_date) < new Date()
+                                ? 'expired'
+                                : (s || 'active');
 
                     return (
                       <React.Fragment key={cert.id || cert._id}>
