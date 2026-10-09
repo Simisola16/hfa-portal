@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, RefreshCw, Download, X, MapPin, RotateCcw, ChevronRight } from 'lucide-react';
+import { getCertificateDownloadUrl } from '../lib/pdfUtils';
 import FirstSiteCreatedModal from '../components/FirstSiteCreatedModal';
 import NewUserSitePromptModal from '../components/NewUserSitePromptModal';
 
@@ -456,11 +457,15 @@ export default function DashboardPage() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                               {(() => {
                                 const certStatus = (cert.status || '').toLowerCase().trim();
-                                if (certStatus === 'superseded' || certStatus === 'outdated') {
-                                  return <span className="badge badge-gray">Superseded</span>;
+                                if (certStatus === 'superseded' || certStatus === 'outdated' || certStatus === 'inactive') {
+                                  return <span className="badge badge-gray">Inactive</span>;
                                 }
                                 if (certStatus === 'renewed' || cert.is_renewed) {
-                                  return <span className="badge badge-purple">Renewed</span>;
+                                  return (
+                                    <span className={`badge ${isPast ? 'badge-red' : isExpSoon ? 'badge-orange' : 'badge-green'}`}>
+                                      {isPast ? 'Expired' : isExpSoon ? 'Expiring Soon' : 'Active'}
+                                    </span>
+                                  );
                                 }
                                 return (
                                   <span className={`badge ${isPast ? 'badge-red' : isExpSoon ? 'badge-orange' : 'badge-green'}`}>
@@ -468,6 +473,25 @@ export default function DashboardPage() {
                                   </span>
                                 );
                               })()}
+                              <a
+                                href={getCertificateDownloadUrl(cert)}
+                                target="_blank"
+                                rel="noreferrer"
+                                download={`${(cert.certificate_number || 'Certificate').replace(/[\/\\:]/g, '_')}.pdf`}
+                                className="btn btn-outline btn-sm"
+                                style={{
+                                  padding: '3px 8px',
+                                  fontSize: 10.5,
+                                  fontWeight: 600,
+                                  borderRadius: 6,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4
+                                }}
+                                title={`Download certificate ${cert.certificate_number || ''}`}
+                              >
+                                <Download size={11} /> Download
+                              </a>
                               {(() => {
                                 const ongoingRenewal = getOngoingRenewalApp(cert);
                                 if (ongoingRenewal) {
@@ -496,7 +520,7 @@ export default function DashboardPage() {
                                 const certId = String(cert._id || cert.id || '');
                                 const isLatestForSite = latestCertIdBySite.has(certId);
                                 const certStatus = (cert.status || '').toLowerCase().trim();
-                                const isObsolete = ['superseded', 'outdated', 'renewed'].includes(certStatus) || cert.is_renewed;
+                                const isObsolete = ['superseded', 'outdated', 'inactive'].includes(certStatus);
 
                                 if (isLatestForSite && !isObsolete && (isPast || isExpSoon)) {
                                   return (

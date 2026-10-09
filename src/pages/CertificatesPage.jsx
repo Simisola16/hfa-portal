@@ -1,4 +1,4 @@
-import { getPdfUrl } from '../lib/pdfUtils';
+import { getPdfUrl, getCertificateDownloadUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
@@ -107,7 +107,9 @@ export default function CertificatesPage() {
       } else if (statusFilter === 'expiring') {
         matchStatus = isExp && !isPast;
       } else if (statusFilter === 'active') {
-        matchStatus = cStatus === 'active' && !isPast;
+        matchStatus = (cStatus === 'active' || cStatus === 'renewed') && !isPast && cStatus !== 'inactive' && cStatus !== 'superseded';
+      } else if (statusFilter === 'inactive') {
+        matchStatus = cStatus === 'inactive' || cStatus === 'superseded';
       }
     }
 
@@ -288,12 +290,19 @@ export default function CertificatesPage() {
                     });
                     const completedSurvs = relatedSurvs.filter(a => a.status === 'certificate_issued' && (a.documents?.surveillance_letter || a.certificate_url));
                     const ongoingSurv = relatedSurvs.find(a => !['certificate_issued', 'rejected'].includes(a.status?.toLowerCase()));
+                    const s = (cert.status || '').toLowerCase().trim();
                     const effectiveStatus =
-                      cert.is_renewed || cert.status === 'renewed'
-                        ? 'renewed'
-                        : cert.status === 'active' && cert.expiry_date && new Date(cert.expiry_date) < new Date()
-                          ? 'expired'
-                          : cert.status;
+                      s === 'inactive' || s === 'superseded'
+                        ? 'inactive'
+                        : s === 'revoked'
+                          ? 'revoked'
+                          : s === 'outdated'
+                            ? 'outdated'
+                            : (s === 'renewed' || cert.is_renewed)
+                              ? 'renewed'
+                              : s === 'active' && cert.expiry_date && new Date(cert.expiry_date) < new Date()
+                                ? 'expired'
+                                : (s || 'active');
 
                     return (
                       <React.Fragment key={cert.id || cert._id}>
@@ -317,15 +326,14 @@ export default function CertificatesPage() {
                           </td>
                           <td>
                             <span className={`badge ${
-                              effectiveStatus === 'active' ? 'badge-green' :
-                              effectiveStatus === 'renewed' ? 'badge-blue' :
-                              effectiveStatus === 'outdated' || effectiveStatus === 'superseded' ? 'badge-orange' :
+                              effectiveStatus === 'active' || effectiveStatus === 'renewed' ? 'badge-green' :
+                              effectiveStatus === 'outdated' || effectiveStatus === 'superseded' || effectiveStatus === 'inactive' ? 'badge-gray' :
                               effectiveStatus === 'revoked' ? 'badge-red' :
                               'badge-gray'
                             }`} style={{ textTransform: 'capitalize' }}>
                               {effectiveStatus === 'outdated' ? 'Outdated' :
-                               effectiveStatus === 'superseded' ? 'Superseded' :
-                               effectiveStatus === 'renewed' ? 'Renewed' :
+                               effectiveStatus === 'superseded' || effectiveStatus === 'inactive' ? 'Inactive' :
+                               effectiveStatus === 'renewed' ? 'Active' :
                                effectiveStatus === 'active' ? 'Active' :
                                effectiveStatus === 'expired' ? 'Expired' :
                                effectiveStatus === 'revoked' ? 'Revoked' :
@@ -333,17 +341,17 @@ export default function CertificatesPage() {
                             </span>
                           </td>
                           <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                            {effectiveStatus === 'active' && (
-                              <a
-                                href={getPdfUrl(cert.certificate_url || cert.document_url || cert.pdf_url || `/api/certificates/${cert.id || cert._id}/download?token=${localStorage.getItem('hfa_token') || ''}`)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="btn btn-outline btn-sm"
-                                onClick={e => e.stopPropagation()}
-                              >
-                                <Download size={13} /> Download
-                              </a>
-                            )}
+                            <a
+                              href={getCertificateDownloadUrl(cert)}
+                              target="_blank"
+                              rel="noreferrer"
+                              download={`${(cert.certificate_number || 'Certificate').replace(/[\/\\:]/g, '_')}.pdf`}
+                              className="btn btn-outline btn-sm"
+                              onClick={e => e.stopPropagation()}
+                              title={`Download certificate ${cert.certificate_number || ''}`}
+                            >
+                              <Download size={13} /> Download
+                            </a>
                             {(() => {
                               const ongoingRenewal = getOngoingRenewalApp(cert);
                               if (ongoingRenewal) {
@@ -373,7 +381,7 @@ export default function CertificatesPage() {
                                 );
                               }
                               const isLatestForSite = latestCertIdBySite.has(String(cert._id || cert.id));
-                              const isObsolete = ['superseded', 'outdated', 'renewed'].includes((effectiveStatus || '').toLowerCase());
+                              const isObsolete = ['superseded', 'outdated', 'inactive'].includes((effectiveStatus || '').toLowerCase());
                               if (isLatestForSite && !isObsolete && (effectiveStatus === 'expired' || isExpiringSoon(cert.expiry_date))) {
                                 return (
                                   <button
@@ -429,6 +437,18 @@ export default function CertificatesPage() {
                                       <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Expiry Date</div>
                                       <div style={{ fontSize: 13, color: '#334155', fontWeight: 600, marginTop: 2 }}>{cert.expiry_date ? new Date(cert.expiry_date).toDateString() : '—'}</div>
                                     </div>
+                                  </div>
+                                  <div style={{ marginTop: 12 }}>
+                                    <a
+                                      href={getCertificateDownloadUrl(cert)}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      download={`${(cert.certificate_number || 'Certificate').replace(/[\/\\:]/g, '_')}.pdf`}
+                                      className="btn btn-outline btn-sm"
+                                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                                    >
+                                      <Download size={13} /> Download Certificate PDF
+                                    </a>
                                   </div>
                                 </div>
 
