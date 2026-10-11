@@ -501,6 +501,11 @@ export default function TrackProcessing() {
               </div>
               <div style={{ fontSize: 13, color: '#c2410c', lineHeight: 1.6 }}>
                 {status === 'final_invoice_sent' ? 'A final invoice' : 'An invoice'} ({activeInvoiceForBanner.invoice_number}) has been issued for certification fees. Amount Due: <strong>£{Number(activeInvoiceForBanner.amount).toLocaleString('en-GB', { minimumFractionDigits: 2 })}</strong>.
+                {isFastTrack && (
+                  <div style={{ marginTop: 6, fontSize: 12, color: '#9a3412', fontWeight: 600 }}>
+                    As an existing HFA client, your application continues to progress normally while payment is arranged.
+                  </div>
+                )}
               </div>
             </div>
           </div>
