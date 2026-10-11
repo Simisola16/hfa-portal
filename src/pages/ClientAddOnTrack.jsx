@@ -52,13 +52,13 @@ const getFlowSteps = (addonType) => {
       { id: 'completed', label: 'Certificate' }
     ];
   }
-  if (addonType === 'change_ingredients') {
+  if (addonType === 'change_ingredients' || addonType === 'change_supplier') {
     return [
       { id: 'submitted', label: 'Submit Request' },
       { id: 'accepted', label: 'Accepted' },
       { id: 'ft_assigned', label: 'Assign FT' },
       { id: 'all_forms_received', label: 'Documents Review' },
-      { id: 'completed', label: 'Ingredients Accepted' }
+      { id: 'completed', label: addonType === 'change_supplier' ? 'Supplier Accepted' : 'Ingredients Accepted' }
     ];
   }
   return [
@@ -77,7 +77,7 @@ const getOrderForType = (addonType) => {
   if (addonType === 'remove_product') {
     return ['submitted', 'accepted', 'ft_assigned', 'all_forms_received', 'ready_for_certificate', 'completed'];
   }
-  if (addonType === 'change_ingredients') {
+  if (addonType === 'change_ingredients' || addonType === 'change_supplier') {
     return ['submitted', 'accepted', 'ft_assigned', 'all_forms_received', 'completed'];
   }
   return [
@@ -341,6 +341,8 @@ export default function ClientAddOnTrack() {
             {app.status === 'completed' && (
               app.addon_type === 'change_ingredients'
                 ? 'Change of ingredients request accepted and completed!'
+                : app.addon_type === 'change_supplier'
+                ? 'Change of supplier/manufacturer request accepted and completed!'
                 : 'Add-on request complete! Your Halal Certificate products list has been successfully updated.'
             )}
             {app.status === 'rejected' && (app.rejection_reason ? `Application Rejected: ${app.rejection_reason}` : 'Application rejected by administration.')}
@@ -375,7 +377,7 @@ export default function ClientAddOnTrack() {
             </button>
           )}
 
-          {app.status === 'completed' && app.addon_type !== 'change_ingredients' && (
+          {app.status === 'completed' && !['change_ingredients', 'change_supplier'].includes(app.addon_type) && (
             <button
               className="btn btn-primary"
               style={{ background: '#16a34a', borderColor: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}

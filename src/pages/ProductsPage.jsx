@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
-import { Plus, Search, Package, Edit, Trash2, X, PlusCircle, ExternalLink, ArrowRight, MapPin, Filter } from 'lucide-react';
+import { Plus, Search, Package, Edit, Trash2, X, PlusCircle, ExternalLink, ArrowRight, MapPin, Filter, ChevronDown, Beaker, Building2, FileEdit } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const PRODUCT_TYPES = ['Add product', 'Remove product', 'Change name/code', 'Change ingredient'];
@@ -24,6 +24,18 @@ export default function ProductsPage({ openNew: openNewProp }) {
   const [filterSite, setFilterSite] = useState('');
   const [editing, setEditing] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showOtherRequest, setShowOtherRequest] = useState(false);
+  const otherRequestRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (otherRequestRef.current && !otherRequestRef.current.contains(e.target)) {
+        setShowOtherRequest(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Single product form for Edit
   const [form, setForm] = useState({ name: '', description: '', ingredients: '', product_type: '', barcode: '', category: '', site_id: '' });
@@ -198,20 +210,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
         )}
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <button
-            className="btn btn-outline"
-            onClick={() => navigate('/addon-applications?new=true&type=remove_product')}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#dc2626', borderColor: '#fca5a5', background: '#fff', fontWeight: 600 }}
-          >
-            <Trash2 size={15} /> Remove Product
-          </button>
-          <button
-            className="btn btn-outline"
-            onClick={() => navigate('/addon-applications?new=true&type=change_ingredients')}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0284c7', borderColor: '#bae6fd', background: '#fff', fontWeight: 600 }}
-          >
-            <Edit size={15} /> Change Ingredients
-          </button>
+          {/* 1st Button: Add Product */}
           <button
             className="btn btn-primary"
             onClick={() => navigate('/addon-applications?new=true&type=add_product')}
@@ -219,6 +218,117 @@ export default function ProductsPage({ openNew: openNewProp }) {
           >
             <Plus size={15} /> Add Product
           </button>
+
+          {/* 2nd Button: Delete / Remove Product */}
+          <button
+            className="btn btn-outline"
+            onClick={() => navigate('/addon-applications?new=true&type=remove_product')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#dc2626', borderColor: '#fca5a5', background: '#fff', fontWeight: 600 }}
+          >
+            <Trash2 size={15} /> Remove Product
+          </button>
+
+          {/* 3rd Button: Other Request Dropdown */}
+          <div style={{ position: 'relative' }} ref={otherRequestRef}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => setShowOtherRequest(prev => !prev)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                color: '#0284c7',
+                borderColor: showOtherRequest ? '#0284c7' : '#bae6fd',
+                background: showOtherRequest ? '#f0f9ff' : '#fff',
+                fontWeight: 600
+              }}
+            >
+              <FileEdit size={15} /> Other Request <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: showOtherRequest ? 'rotate(180deg)' : 'none' }} />
+            </button>
+
+            {showOtherRequest && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: 0,
+                  width: 290,
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 12,
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.06)',
+                  padding: '6px',
+                  zIndex: 100,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtherRequest(false);
+                    navigate('/addon-applications?new=true&type=change_ingredients');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: 'none',
+                    background: 'transparent',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background 0.15s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f0f9ff'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#0284c7', marginTop: 2 }}>
+                    <Beaker size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Change Ingredients</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Update recipe formulation (No certificate required)</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtherRequest(false);
+                    navigate('/addon-applications?new=true&type=change_supplier');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: 'none',
+                    background: 'transparent',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background 0.15s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f0f9ff'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#0284c7', marginTop: 2 }}>
+                    <Building2 size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Change Supplier/Manufacturer</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Update material supplier or facility (No certificate required)</div>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   ArrowLeft, Award, PlusCircle, Trash2, FileText,
   CheckCircle, AlertCircle, Package, X, Users, ChevronDown, ChevronUp, ArrowUpRight, Activity,
-  UploadCloud, Paperclip, Lock, Edit
+  UploadCloud, Paperclip, Lock, Edit, Beaker, Building2, FileEdit
 } from 'lucide-react';
 
 const formatSiteName = (str) => {
@@ -31,7 +31,7 @@ const getSiteName = (c) => {
   return formatSiteName(raw);
 };
 
-const PRODUCT_TYPES = ['Add product', 'Remove product', 'Change name/code', 'Change ingredients'];
+const PRODUCT_TYPES = ['Add product', 'Remove product', 'Change name/code', 'Change ingredients', 'Change supplier/manufacturer'];
 
 const STATUS_LABELS = {
   submitted: 'Submitted',
@@ -91,6 +91,7 @@ const getClientStepIdx = (status) => {
 const getRowTypeForAddonType = (aType) => {
   if (aType === 'remove_product') return 'Remove product';
   if (aType === 'change_ingredients') return 'Change ingredients';
+  if (aType === 'change_supplier') return 'Change supplier/manufacturer';
   return 'Add product';
 };
 
@@ -120,6 +121,18 @@ export default function AddOnApplicationPage() {
 
   const [addonType, setAddonType] = useState('add_product');
   const [attachments, setAttachments] = useState([]);
+  const [showOtherRequest, setShowOtherRequest] = useState(false);
+  const otherRequestRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (otherRequestRef.current && !otherRequestRef.current.contains(e.target)) {
+        setShowOtherRequest(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const [form, setForm] = useState({
     site_id: '',
@@ -196,7 +209,7 @@ export default function AddOnApplicationPage() {
   }, [form.site_id]);
 
   const openFormWithType = (type = 'add_product') => {
-    const resolved = ['remove_product', 'change_ingredients', 'add_product'].includes(type) ? type : 'add_product';
+    const resolved = ['remove_product', 'change_ingredients', 'change_supplier', 'add_product'].includes(type) ? type : 'add_product';
     setAddonType(resolved);
     const rowType = getRowTypeForAddonType(resolved);
     setAttachments([]);
@@ -337,8 +350,8 @@ export default function AddOnApplicationPage() {
       ...f,
       site_id: selectedSiteId,
       certificate_id: matchingCert ? (matchingCert._id || matchingCert.id) : (f.certificate_id || ''),
-      // For remove_product or change_ingredients, reset product picks so client picks from the newly selected site
-      products: ['remove_product', 'change_ingredients'].includes(addonType)
+      // For remove_product, change_ingredients, or change_supplier, reset product picks so client picks from the newly selected site
+      products: ['remove_product', 'change_ingredients', 'change_supplier'].includes(addonType)
         ? [emptyProduct(rowType)]
         : f.products
     }));
@@ -375,6 +388,8 @@ export default function AddOnApplicationPage() {
         ? 'Request to remove product(s)'
         : addonType === 'change_ingredients'
         ? 'Request to change ingredients'
+        : addonType === 'change_supplier'
+        ? 'Request to change supplier/manufacturer'
         : 'Add-on product application';
       toast.success(`${title} submitted successfully!`);
       setShowForm(false);
@@ -433,20 +448,7 @@ export default function AddOnApplicationPage() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <button
-            className="btn btn-outline"
-            onClick={() => openFormWithType('remove_product')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', fontWeight: 700, color: '#dc2626', borderColor: '#fca5a5', background: '#fff' }}
-          >
-            <Trash2 size={15} /> Remove Product
-          </button>
-          <button
-            className="btn btn-outline"
-            onClick={() => openFormWithType('change_ingredients')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', fontWeight: 700, color: '#0284c7', borderColor: '#bae6fd', background: '#fff' }}
-          >
-            <Edit size={15} /> Change Ingredients
-          </button>
+          {/* 1st Button: Add Product */}
           <button
             className="btn btn-primary"
             onClick={() => openFormWithType('add_product')}
@@ -454,6 +456,118 @@ export default function AddOnApplicationPage() {
           >
             <PlusCircle size={16} /> + Add Product
           </button>
+
+          {/* 2nd Button: Delete / Remove Product */}
+          <button
+            className="btn btn-outline"
+            onClick={() => openFormWithType('remove_product')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', fontWeight: 700, color: '#dc2626', borderColor: '#fca5a5', background: '#fff' }}
+          >
+            <Trash2 size={15} /> Remove Product
+          </button>
+
+          {/* 3rd Button: Other Request Dropdown */}
+          <div style={{ position: 'relative' }} ref={otherRequestRef}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => setShowOtherRequest(prev => !prev)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '10px 16px',
+                fontWeight: 700,
+                color: '#0284c7',
+                borderColor: showOtherRequest ? '#0284c7' : '#bae6fd',
+                background: showOtherRequest ? '#f0f9ff' : '#fff'
+              }}
+            >
+              <FileEdit size={15} /> Other Request <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: showOtherRequest ? 'rotate(180deg)' : 'none' }} />
+            </button>
+
+            {showOtherRequest && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: 0,
+                  width: 295,
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 12,
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.06)',
+                  padding: '6px',
+                  zIndex: 100,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtherRequest(false);
+                    openFormWithType('change_ingredients');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: 'none',
+                    background: 'transparent',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background 0.15s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f0f9ff'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#0284c7', marginTop: 2 }}>
+                    <Beaker size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Change Ingredients</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Update recipe formulation (No certificate required)</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtherRequest(false);
+                    openFormWithType('change_supplier');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: 'none',
+                    background: 'transparent',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background 0.15s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f0f9ff'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#0284c7', marginTop: 2 }}>
+                    <Building2 size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Change Supplier/Manufacturer</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Update material supplier or facility (No certificate required)</div>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -718,6 +832,7 @@ export default function AddOnApplicationPage() {
               <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {addonType === 'remove_product' && <><Trash2 size={18} color="#dc2626" /> Request to Remove Product(s)</>}
                 {addonType === 'change_ingredients' && <><Edit size={18} color="#0284c7" /> Request to Change Product Ingredients</>}
+                {addonType === 'change_supplier' && <><Building2 size={18} color="#0284c7" /> Request to Change Supplier / Manufacturer</>}
                 {addonType === 'add_product' && <><PlusCircle size={18} color="#059669" /> New Add-on Product Application</>}
               </span>
               <button className="modal-close" onClick={() => setShowForm(false)}><X size={18} /></button>
@@ -854,9 +969,9 @@ export default function AddOnApplicationPage() {
                               borderRadius: 8,
                               fontSize: 13,
                               fontWeight: 700,
-                              background: p.type === 'Remove product' ? '#fef2f2' : p.type === 'Change ingredients' ? '#f0f9ff' : '#f0fdf4',
-                              color: p.type === 'Remove product' ? '#991b1b' : p.type === 'Change ingredients' ? '#0369a1' : '#166534',
-                              border: `1.5px solid ${p.type === 'Remove product' ? '#fecaca' : p.type === 'Change ingredients' ? '#bae6fd' : '#bbf7d0'}`,
+                              background: p.type === 'Remove product' ? '#fef2f2' : (p.type === 'Change ingredients' || p.type === 'Change supplier/manufacturer') ? '#f0f9ff' : '#f0fdf4',
+                              color: p.type === 'Remove product' ? '#991b1b' : (p.type === 'Change ingredients' || p.type === 'Change supplier/manufacturer') ? '#0369a1' : '#166534',
+                              border: `1.5px solid ${p.type === 'Remove product' ? '#fecaca' : (p.type === 'Change ingredients' || p.type === 'Change supplier/manufacturer') ? '#bae6fd' : '#bbf7d0'}`,
                               display: 'flex',
                               alignItems: 'center',
                               gap: 6
@@ -979,7 +1094,7 @@ export default function AddOnApplicationPage() {
                             </>
                           )}
 
-                          {p.type === 'Change ingredients' && (
+                          {(p.type === 'Change ingredients' || p.type === 'Change supplier/manufacturer') && (
                             <>
                               <div>
                                 <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Pick Product *</label>
@@ -1013,13 +1128,15 @@ export default function AddOnApplicationPage() {
                                 )}
                               </div>
                               <div>
-                                <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Notes / Ingredient Changes</label>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>
+                                  {p.type === 'Change supplier/manufacturer' ? 'Notes / Supplier or Manufacturer Changes' : 'Notes / Ingredient Changes'}
+                                </label>
                                 <input
                                   className="form-control"
                                   style={{ margin: 0, fontSize: 13 }}
                                   value={p.description || ''}
                                   onChange={e => updateProduct(idx, 'description', e.target.value)}
-                                  placeholder="e.g. Revised oil formulation or changed ingredient supplier"
+                                  placeholder={p.type === 'Change supplier/manufacturer' ? 'e.g. New supplier name, manufacturer facility, address & certifications' : 'e.g. Revised oil formulation or changed ingredient supplier'}
                                 />
                               </div>
                             </>
@@ -1135,11 +1252,11 @@ export default function AddOnApplicationPage() {
                   className="btn btn-primary"
                   disabled={submitting}
                   style={{
-                    background: addonType === 'remove_product' ? '#dc2626' : addonType === 'change_ingredients' ? '#0284c7' : '#059669',
-                    borderColor: addonType === 'remove_product' ? '#dc2626' : addonType === 'change_ingredients' ? '#0284c7' : '#059669'
+                    background: addonType === 'remove_product' ? '#dc2626' : (addonType === 'change_ingredients' || addonType === 'change_supplier') ? '#0284c7' : '#059669',
+                    borderColor: addonType === 'remove_product' ? '#dc2626' : (addonType === 'change_ingredients' || addonType === 'change_supplier') ? '#0284c7' : '#059669'
                   }}
                 >
-                  {submitting ? 'Submitting...' : addonType === 'remove_product' ? 'Submit Remove Request' : addonType === 'change_ingredients' ? 'Submit Change Ingredients Request' : 'Submit Add-on Application'}
+                  {submitting ? 'Submitting...' : addonType === 'remove_product' ? 'Submit Remove Request' : addonType === 'change_ingredients' ? 'Submit Change Ingredients Request' : addonType === 'change_supplier' ? 'Submit Change Supplier/Manufacturer Request' : 'Submit Add-on Application'}
                 </button>
               </div>
             </form>
