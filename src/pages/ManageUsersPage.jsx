@@ -4,14 +4,16 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { 
   Users, Plus, X, Trash2, Edit3, Shield, Key, 
-  Copy, Check, Eye, EyeOff, AlertCircle, Sparkles 
+  Copy, Check, Eye, EyeOff, AlertCircle, Sparkles,
+  Crown, ArrowRightLeft
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function ManageUsersPage() {
-  const { user: currentUser, logout } = useAuth();
+  const { user: currentUser, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const isTeamMember = Boolean(currentUser?.parent_client_id);
+  const isPrimaryAccountHolder = !currentUser?.parent_client_id;
 
   const [subUsers, setSubUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +30,15 @@ export default function ManageUsersPage() {
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({ full_name: '', is_active: true });
   const [updating, setUpdating] = useState(false);
+
+  // Transfer Primary Account Holder modal
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferCandidateId, setTransferCandidateId] = useState('');
+  const [transferring, setTransferring] = useState(false);
+
+  const currentOwner = subUsers.find(u => u.is_owner);
+  const eligibleMembers = subUsers.filter(u => !u.is_owner && u.is_active !== false);
+  const selectedCandidate = eligibleMembers.find(u => (u.id || u._id) === transferCandidateId);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -138,6 +149,47 @@ export default function ManageUsersPage() {
     }
   };
 
+  const handleOpenTransferModal = (targetUser = null) => {
+    if (targetUser && (targetUser.id || targetUser._id)) {
+      setTransferCandidateId(targetUser.id || targetUser._id);
+    } else {
+      const firstEligible = eligibleMembers[0];
+      setTransferCandidateId(firstEligible ? (firstEligible.id || firstEligible._id) : '');
+    }
+    setShowTransferModal(true);
+  };
+
+  const handleConfirmTransfer = async (e) => {
+    e.preventDefault();
+    if (!transferCandidateId) {
+      toast.error('Please select a team member to become Primary Account Holder');
+      return;
+    }
+
+    const targetUser = subUsers.find(u => (u.id || u._id) === transferCandidateId);
+    const targetName = targetUser?.full_name || 'Selected user';
+
+    setTransferring(true);
+    try {
+      const res = await api.put('/api/users/company/transfer-primary', {
+        new_primary_user_id: transferCandidateId
+      });
+
+      toast.success(res.data?.message || `Primary Account Holder transferred to ${targetName}`);
+      setShowTransferModal(false);
+      setTransferCandidateId('');
+
+      if (refreshUser) {
+        await refreshUser();
+      }
+      await fetchUsers();
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Failed to transfer ownership');
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   const copyCredentials = () => {
     if (!newCredentials) return;
     const text = `HFA Client Portal Login Credentials:\nURL: ${window.location.origin}\nEmail: ${newCredentials.email}\nTemporary Password: ${newCredentials.password}`;
@@ -160,13 +212,38 @@ export default function ManageUsersPage() {
             Manage authorized staff members who share full portal access to view certificates, manage products, and submit applications.
           </p>
         </div>
-        <button 
-          className="btn btn-primary" 
-          onClick={() => setShowModal(true)} 
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', fontWeight: 700, borderRadius: 10 }}
-        >
-          <Plus size={16} /> Add Team Member
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {isPrimaryAccountHolder && eligibleMembers.length > 0 && (
+            <button 
+              type="button"
+              className="btn" 
+              onClick={() => handleOpenTransferModal()} 
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: 8, 
+                padding: '10px 18px', 
+                fontWeight: 700, 
+                borderRadius: 10,
+                background: '#fffbeb',
+                color: '#b45309',
+                border: '1px solid #fde68a',
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+              }}
+              title="Change Primary Account Holder to another team member"
+            >
+              <Crown size={17} style={{ color: '#d97706' }} /> Change Primary Account Holder
+            </button>
+          )}
+          <button 
+            className="btn btn-primary" 
+            onClick={() => setShowModal(true)} 
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', fontWeight: 700, borderRadius: 10 }}
+          >
+            <Plus size={16} /> Add Team Member
+          </button>
+        </div>
       </div>
 
       {/* Info notice for team members */}
@@ -253,9 +330,27 @@ export default function ManageUsersPage() {
                         </div>
                         <div>
                           <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14 }}>{u.full_name}</div>
-                          <span style={{ fontSize: 11, color: u.is_owner ? '#2563eb' : '#64748b', fontWeight: 600 }}>
-                            {u.is_owner ? 'Primary Account Holder' : 'Team Member'}
-                          </span>
+                          {u.is_owner ? (
+                            <span style={{ 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: 4, 
+                              fontSize: 11, 
+                              color: '#1e40af', 
+                              background: '#eff6ff', 
+                              fontWeight: 700, 
+                              padding: '2px 8px', 
+                              borderRadius: 12,
+                              border: '1px solid #bfdbfe',
+                              marginTop: 2
+                            }}>
+                              <Crown size={12} style={{ color: '#2563eb' }} /> Primary Account Holder
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
+                              Team Member
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -278,6 +373,28 @@ export default function ManageUsersPage() {
                     </td>
                       <td style={{ padding: '14px 20px', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                          {isPrimaryAccountHolder && !u.is_owner && (
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              style={{ 
+                                color: '#b45309', 
+                                padding: '6px 10px', 
+                                borderRadius: 6, 
+                                border: '1px solid #fde68a', 
+                                background: '#fffbeb',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                fontSize: 12,
+                                fontWeight: 700
+                              }}
+                              onClick={() => handleOpenTransferModal(u)}
+                              title={`Make ${u.full_name} Primary Account Holder`}
+                            >
+                              <Crown size={13} style={{ color: '#d97706' }} />
+                              <span>Make Primary</span>
+                            </button>
+                          )}
                           <button
                             className="btn btn-ghost btn-sm"
                             style={{ color: '#2563eb', padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff' }}
@@ -525,6 +642,161 @@ export default function ManageUsersPage() {
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={updating} style={{ borderRadius: 8, padding: '10px 20px', fontWeight: 700 }}>
                   {updating ? <span className="spinner" style={{ width: 16, height: 16 }} /> : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* TRANSFER PRIMARY ACCOUNT HOLDER MODAL */}
+      {showTransferModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !transferring && setShowTransferModal(false)}>
+          <div className="modal" style={{ maxWidth: 560, borderRadius: 16, overflow: 'hidden' }}>
+            <div className="modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', background: 'linear-gradient(135deg, #fffbeb, #fef3c7)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: '#fde68a', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.06)' }}>
+                  <Crown size={22} style={{ color: '#d97706' }} />
+                </div>
+                <div>
+                  <h3 className="modal-title" style={{ fontSize: 17, fontWeight: 800, margin: 0, color: '#92400e' }}>
+                    Change Primary Account Holder
+                  </h3>
+                  <p style={{ fontSize: 12, color: '#b45309', margin: '2px 0 0' }}>
+                    Designate an existing team member as the legal Primary Account Holder
+                  </p>
+                </div>
+              </div>
+              <button 
+                className="modal-close" 
+                onClick={() => !transferring && setShowTransferModal(false)}
+                disabled={transferring}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmTransfer}>
+              <div className="modal-body" style={{ padding: 24, display: 'grid', gap: 18 }}>
+                {/* Current vs New comparison */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: 6 }}>
+                      Current Primary
+                    </div>
+                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {currentOwner?.full_name || currentUser?.full_name || 'Current Owner'}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {currentOwner?.email || currentUser?.email}
+                    </div>
+                    <div style={{ marginTop: 6, fontSize: 11, color: '#2563eb', fontWeight: 600 }}>
+                      &rarr; Will become Team Member
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 12, padding: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#1d4ed8', marginBottom: 6 }}>
+                      New Primary
+                    </div>
+                    <div style={{ fontWeight: 800, color: '#1e3a8a', fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {selectedCandidate?.full_name || 'Select a member'}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#3b82f6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {selectedCandidate?.email || '—'}
+                    </div>
+                    <div style={{ marginTop: 6, fontSize: 11, color: '#16a34a', fontWeight: 700 }}>
+                      &rarr; Will become Primary Owner
+                    </div>
+                  </div>
+                </div>
+
+                {/* Member Selector */}
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, display: 'block' }}>
+                    Select Team Member to Make Primary <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  {eligibleMembers.length === 0 ? (
+                    <div style={{ padding: 14, background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: 8, color: '#991b1b', fontSize: 13 }}>
+                      No other team members available. Please add a team member first before transferring primary ownership.
+                    </div>
+                  ) : (
+                    <select
+                      className="form-control"
+                      value={transferCandidateId}
+                      onChange={e => setTransferCandidateId(e.target.value)}
+                      required
+                      style={{ borderRadius: 8, height: 44, fontWeight: 600, fontSize: 13.5 }}
+                    >
+                      <option value="">-- Choose a team member --</option>
+                      {eligibleMembers.map(m => (
+                        <option key={m.id || m._id} value={m.id || m._id}>
+                          {m.full_name} ({m.email})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Warning notice */}
+                <div style={{
+                  padding: '14px 16px',
+                  background: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  borderRadius: 12,
+                  fontSize: 12.5,
+                  color: '#92400e',
+                  lineHeight: 1.55,
+                  display: 'flex',
+                  gap: 12
+                }}>
+                  <AlertCircle size={20} style={{ color: '#d97706', flexShrink: 0, marginTop: 2 }} />
+                  <div>
+                    <strong style={{ display: 'block', marginBottom: 4, color: '#78350f' }}>Important Information:</strong>
+                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                      <li>The selected team member will become the official <strong>Primary Account Holder</strong>.</li>
+                      <li>Your account remains active as a <strong>Team Member</strong> with uninterrupted access to all certificates, applications, and documents.</li>
+                      <li>All existing certificates, applications, and company records will remain safely linked to the company account.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button 
+                  type="button" 
+                  className="btn btn-ghost" 
+                  onClick={() => setShowTransferModal(false)} 
+                  disabled={transferring}
+                  style={{ borderRadius: 8 }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  disabled={transferring || !transferCandidateId || eligibleMembers.length === 0} 
+                  style={{ 
+                    borderRadius: 8, 
+                    padding: '10px 22px', 
+                    fontWeight: 700, 
+                    background: 'linear-gradient(135deg, #d97706, #b45309)',
+                    borderColor: '#b45309',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8
+                  }}
+                >
+                  {transferring ? (
+                    <>
+                      <span className="spinner" style={{ width: 16, height: 16, borderTopColor: '#fff' }} />
+                      <span>Transferring...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Crown size={16} />
+                      <span>Transfer Primary Ownership</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
