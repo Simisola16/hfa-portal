@@ -4,7 +4,8 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, Award, PlusCircle, Trash2, FileText,
-  CheckCircle, AlertCircle, Package, X, Users, ChevronDown, ChevronUp, ArrowUpRight, Activity
+  CheckCircle, AlertCircle, Package, X, Users, ChevronDown, ChevronUp, ArrowUpRight, Activity,
+  UploadCloud, Paperclip, Lock, Edit
 } from 'lucide-react';
 
 const formatSiteName = (str) => {
@@ -86,7 +87,20 @@ const getClientStepIdx = (status) => {
 };
 
 
-const emptyProduct = () => ({ name: '', code: '', type: 'Add product', original_name: '', new_name: '', new_code: '' });
+const getRowTypeForAddonType = (aType) => {
+  if (aType === 'remove_product') return 'Remove product';
+  if (aType === 'change_ingredients') return 'Change ingredients';
+  return 'Add product';
+};
+
+const emptyProduct = (rowType = 'Add product') => ({
+  name: '',
+  code: '',
+  type: rowType,
+  original_name: '',
+  new_name: '',
+  new_code: ''
+});
 
 export default function AddOnApplicationPage() {
   const navigate = useNavigate();
@@ -100,6 +114,9 @@ export default function AddOnApplicationPage() {
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
 
+  const [addonType, setAddonType] = useState('add_product');
+  const [attachments, setAttachments] = useState([]);
+
   const [form, setForm] = useState({
     site_id: '',
     certificate_id: '',
@@ -107,7 +124,7 @@ export default function AddOnApplicationPage() {
     contact_email: '',
     contact_phone: '',
     message: '',
-    products: [emptyProduct()]
+    products: [emptyProduct('Add product')]
   });
 
   const fetchData = async () => {
@@ -160,14 +177,26 @@ export default function AddOnApplicationPage() {
 
   useEffect(() => { fetchData(); }, []);
 
+  const openFormWithType = (type = 'add_product') => {
+    const resolved = ['remove_product', 'change_ingredients', 'add_product'].includes(type) ? type : 'add_product';
+    setAddonType(resolved);
+    const rowType = getRowTypeForAddonType(resolved);
+    setAttachments([]);
+    setForm(f => ({
+      ...f,
+      products: [emptyProduct(rowType)]
+    }));
+    if (sites.length === 1) {
+      handleSiteChange(sites[0].id || sites[0]._id);
+    }
+    setShowForm(true);
+  };
+
   // Auto-open the new application form when navigated with ?new=true
   useEffect(() => {
     if (searchParams.get('new') === 'true' && !loading) {
-      if (sites.length === 1) {
-        handleSiteChange(sites[0].id || sites[0]._id);
-      }
-      setShowForm(true);
-      // Remove the query param from the URL without a re-render
+      const qType = searchParams.get('type') || 'add_product';
+      openFormWithType(qType);
       navigate('/addon-applications', { replace: true });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -188,7 +217,10 @@ export default function AddOnApplicationPage() {
     });
   };
 
-  const addProduct = () => setForm(f => ({ ...f, products: [...f.products, emptyProduct()] }));
+  const addProduct = () => {
+    const rowType = getRowTypeForAddonType(addonType);
+    setForm(f => ({ ...f, products: [...f.products, emptyProduct(rowType)] }));
+  };
 
   const removeProduct = (idx) => {
     if (form.products.length === 1) return toast.error('At least one product is required.');
@@ -218,9 +250,29 @@ export default function AddOnApplicationPage() {
     }
     setSubmitting(true);
     try {
-      await api.post('/api/add-on-applications', form);
-      toast.success('Add-on application submitted successfully!');
+      const formData = new FormData();
+      formData.append('addon_type', addonType);
+      if (form.site_id) formData.append('site_id', form.site_id);
+      if (form.certificate_id) formData.append('certificate_id', form.certificate_id);
+      formData.append('contact_name', form.contact_name);
+      formData.append('contact_email', form.contact_email);
+      if (form.contact_phone) formData.append('contact_phone', form.contact_phone);
+      if (form.message) formData.append('message', form.message);
+      formData.append('products', JSON.stringify(form.products));
+
+      for (const file of attachments) {
+        formData.append('attachments', file);
+      }
+
+      await api.post('/api/add-on-applications', formData);
+      const title = addonType === 'remove_product'
+        ? 'Request to remove product(s)'
+        : addonType === 'change_ingredients'
+        ? 'Request to change ingredients'
+        : 'Add-on product application';
+      toast.success(`${title} submitted successfully!`);
       setShowForm(false);
+      setAttachments([]);
       setForm({
         site_id: sites.length === 1 ? (sites[0].id || sites[0]._id) : '',
         certificate_id: certs.length === 1 ? (certs[0]._id || certs[0].id) : '',
@@ -228,7 +280,7 @@ export default function AddOnApplicationPage() {
         contact_email: '',
         contact_phone: '',
         message: '',
-        products: [emptyProduct()]
+        products: [emptyProduct('Add product')]
       });
       fetchData();
     } catch (err) {
@@ -274,18 +326,29 @@ export default function AddOnApplicationPage() {
             <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>Add, remove, or modify products covered under your business sites.</p>
           </div>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            if (sites.length === 1) {
-              handleSiteChange(sites[0].id || sites[0]._id);
-            }
-            setShowForm(true);
-          }}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', fontWeight: 700 }}
-        >
-          <PlusCircle size={16} /> New Add-on Application
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            className="btn btn-outline"
+            onClick={() => openFormWithType('remove_product')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', fontWeight: 700, color: '#dc2626', borderColor: '#fca5a5', background: '#fff' }}
+          >
+            <Trash2 size={15} /> Remove Product
+          </button>
+          <button
+            className="btn btn-outline"
+            onClick={() => openFormWithType('change_ingredients')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', fontWeight: 700, color: '#0284c7', borderColor: '#bae6fd', background: '#fff' }}
+          >
+            <Edit size={15} /> Change Ingredients
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => openFormWithType('add_product')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', fontWeight: 700, background: '#059669', borderColor: '#059669' }}
+          >
+            <PlusCircle size={16} /> + Add Product
+          </button>
+        </div>
       </div>
 
       {/* Info banner when no active cert but has submitted add-on apps (from new application) */}
@@ -539,7 +602,11 @@ export default function AddOnApplicationPage() {
         <div className="modal-overlay" style={{ zIndex: 1000 }}>
           <div className="modal" style={{ maxWidth: 840, maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
-              <span className="modal-title">New Add-on Product Application</span>
+              <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {addonType === 'remove_product' && <><Trash2 size={18} color="#dc2626" /> Request to Remove Product(s)</>}
+                {addonType === 'change_ingredients' && <><Edit size={18} color="#0284c7" /> Request to Change Product Ingredients</>}
+                {addonType === 'add_product' && <><PlusCircle size={18} color="#059669" /> New Add-on Product Application</>}
+              </span>
               <button className="modal-close" onClick={() => setShowForm(false)}><X size={18} /></button>
             </div>
             <form onSubmit={handleSubmit}>
@@ -647,16 +714,25 @@ export default function AddOnApplicationPage() {
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
                           <div>
-                            <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Action Type *</label>
-                            <select
-                              className="form-control"
-                              style={{ margin: 0, fontSize: 13 }}
-                              value={p.type}
-                              onChange={e => updateProduct(idx, 'type', e.target.value)}
-                              required
-                            >
-                              {PRODUCT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
+                            <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                              Action Type <Lock size={12} color="#64748b" title="Action type is fixed for this request" />
+                            </label>
+                            <div style={{
+                              padding: '8px 12px',
+                              borderRadius: 8,
+                              fontSize: 13,
+                              fontWeight: 700,
+                              background: p.type === 'Remove product' ? '#fef2f2' : p.type === 'Change ingredients' ? '#f0f9ff' : '#f0fdf4',
+                              color: p.type === 'Remove product' ? '#991b1b' : p.type === 'Change ingredients' ? '#0369a1' : '#166534',
+                              border: `1.5px solid ${p.type === 'Remove product' ? '#fecaca' : p.type === 'Change ingredients' ? '#bae6fd' : '#bbf7d0'}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6
+                            }}>
+                              <Lock size={12} />
+                              <span>{p.type}</span>
+                              <span style={{ fontSize: 10, opacity: 0.7, fontWeight: 500, marginLeft: 'auto' }}>(Fixed)</span>
+                            </div>
                           </div>
 
                           {p.type === 'Add product' && (
@@ -790,11 +866,114 @@ export default function AddOnApplicationPage() {
                     <PlusCircle size={13} /> Add Another Product
                   </button>
                 </div>
+
+                {/* 5. Supporting Documents */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      5. Supporting Documents {addonType !== 'add_product' && <span style={{ color: '#0284c7' }}>(Attach As Many As Needed)</span>}
+                    </div>
+                    <label style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12,
+                      color: '#0284c7',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      background: '#f0f9ff',
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      border: '1px solid #bae6fd'
+                    }}>
+                      <UploadCloud size={14} /> Add Documents
+                      <input
+                        type="file"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          if (e.target.files) {
+                            setAttachments(prev => [...prev, ...Array.from(e.target.files)]);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>
+                    Upload specifications, recipes, product data sheets, removal authorization letters, or ingredient declarations.
+                  </div>
+
+                  {attachments.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {attachments.map((file, fIdx) => (
+                        <div key={fIdx} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          padding: '8px 12px',
+                          borderRadius: 8,
+                          fontSize: 12
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            <FileText size={14} color="#0284c7" />
+                            <span style={{ fontWeight: 600, color: '#0f172a', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              {file.name}
+                            </span>
+                            <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                              ({(file.size / 1024).toFixed(1)} KB)
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setAttachments(prev => prev.filter((_, i) => i !== fIdx))}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: 2 }}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{
+                      border: '1.5px dashed #cbd5e1',
+                      borderRadius: 8,
+                      padding: '16px',
+                      textAlign: 'center',
+                      background: '#fafafa'
+                    }}>
+                      <label style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                        <UploadCloud size={20} color="#94a3b8" />
+                        <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Click to select and attach multiple documents</span>
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>PDF, DOCX, XLSX, Images accepted (can attach as many as needed)</span>
+                        <input
+                          type="file"
+                          multiple
+                          style={{ display: 'none' }}
+                          onChange={e => {
+                            if (e.target.files) {
+                              setAttachments(prev => [...prev, ...Array.from(e.target.files)]);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)} disabled={submitting}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={submitting}>
-                  {submitting ? 'Submitting...' : 'Submit Add-on Application'}
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={submitting}
+                  style={{
+                    background: addonType === 'remove_product' ? '#dc2626' : addonType === 'change_ingredients' ? '#0284c7' : '#059669',
+                    borderColor: addonType === 'remove_product' ? '#dc2626' : addonType === 'change_ingredients' ? '#0284c7' : '#059669'
+                  }}
+                >
+                  {submitting ? 'Submitting...' : addonType === 'remove_product' ? 'Submit Remove Request' : addonType === 'change_ingredients' ? 'Submit Change Ingredients Request' : 'Submit Add-on Application'}
                 </button>
               </div>
             </form>

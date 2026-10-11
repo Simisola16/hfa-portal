@@ -1,10 +1,11 @@
-﻿import { getPdfUrl } from '../lib/pdfUtils';
+import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, CheckCircle, XCircle, RefreshCw,
   Building2, FileText, User, Calendar, Shield,
-  ChevronRight, AlertCircle, Clock, Package, Download, Eye, ClipboardList, Award, Users, Check, ExternalLink
+  ChevronRight, AlertCircle, Clock, Package, Download, Eye, ClipboardList, Award, Users, Check, ExternalLink,
+  UploadCloud, X, Paperclip
 } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
@@ -40,27 +41,57 @@ const STATUS_BADGE = {
   completed: 'badge-green'
 };
 
-const FLOW_STEPS = [
-  { id: 'submitted', label: 'Submit Add-On' },
-  { id: 'accepted', label: 'Accepted' },
-  { id: 'ft_assigned', label: 'Assign FT' },
-  { id: 'product_approval_form_enabled', label: 'Product Form Enabled' },
-  { id: 'all_forms_received', label: 'Product Form Received' },
-  { id: 'product_form_approved', label: 'Product Approved' },
-  { id: 'ready_for_certificate', label: 'Ready for Cert' },
-  { id: 'completed', label: 'Certificate' }
-];
-
-const ORDER = [
-  'submitted', 'accepted', 'ft_assigned', 'product_approval_form_enabled',
-  'all_forms_received', 'product_form_approved', 'ready_for_certificate', 'completed'
-];
-
-const getClientStepIdx = (status) => {
-  if (['logsheet_created', 'waiting_sharia_signature'].includes(status)) {
-    return ORDER.indexOf('all_forms_received');
+const getFlowSteps = (addonType) => {
+  if (addonType === 'remove_product') {
+    return [
+      { id: 'submitted', label: 'Submit Request' },
+      { id: 'accepted', label: 'Accepted' },
+      { id: 'ft_assigned', label: 'Assign FT' },
+      { id: 'all_forms_received', label: 'Documents Review' },
+      { id: 'ready_for_certificate', label: 'Product Removed' },
+      { id: 'completed', label: 'Certificate' }
+    ];
   }
-  return ORDER.indexOf(status);
+  if (addonType === 'change_ingredients') {
+    return [
+      { id: 'submitted', label: 'Submit Request' },
+      { id: 'accepted', label: 'Accepted' },
+      { id: 'ft_assigned', label: 'Assign FT' },
+      { id: 'all_forms_received', label: 'Documents Review' },
+      { id: 'completed', label: 'Ingredients Accepted' }
+    ];
+  }
+  return [
+    { id: 'submitted', label: 'Submit Add-On' },
+    { id: 'accepted', label: 'Accepted' },
+    { id: 'ft_assigned', label: 'Assign FT' },
+    { id: 'product_approval_form_enabled', label: 'Product Form Enabled' },
+    { id: 'all_forms_received', label: 'Product Form Received' },
+    { id: 'product_form_approved', label: 'Product Approved' },
+    { id: 'ready_for_certificate', label: 'Ready for Cert' },
+    { id: 'completed', label: 'Certificate' }
+  ];
+};
+
+const getOrderForType = (addonType) => {
+  if (addonType === 'remove_product') {
+    return ['submitted', 'accepted', 'ft_assigned', 'all_forms_received', 'ready_for_certificate', 'completed'];
+  }
+  if (addonType === 'change_ingredients') {
+    return ['submitted', 'accepted', 'ft_assigned', 'all_forms_received', 'completed'];
+  }
+  return [
+    'submitted', 'accepted', 'ft_assigned', 'product_approval_form_enabled',
+    'all_forms_received', 'product_form_approved', 'ready_for_certificate', 'completed'
+  ];
+};
+
+const getClientStepIdx = (status, addonType) => {
+  const order = getOrderForType(addonType);
+  if (['logsheet_created', 'waiting_sharia_signature'].includes(status)) {
+    return order.indexOf('all_forms_received');
+  }
+  return order.indexOf(status);
 };
 
 export default function ClientAddOnTrack() {
@@ -71,6 +102,12 @@ export default function ClientAddOnTrack() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [viewProductModal, setViewProductModal] = useState({ isOpen: false, formData: null, product: null, company: null });
+
+  // Document Reply Modal State
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  const [replyNote, setReplyNote] = useState('');
+  const [replyFiles, setReplyFiles] = useState([]);
+  const [submittingReply, setSubmittingReply] = useState(false);
 
   const fetchApp = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
@@ -184,6 +221,33 @@ export default function ClientAddOnTrack() {
   const responses = app.product_approval_form?.product_responses || [];
   const savedCount = productsList.filter((_, idx) => responses.some(r => r.product_index === idx && r.is_saved)).length;
   const isFormEnabled = app.status === 'product_approval_form_enabled' || responses.length > 0;
+  const isStandardAddon = (app.addon_type || 'add_product') === 'add_product';
+  const pendingDocRequest = (app.document_requests || []).find(r => r.status === 'pending');
+
+  const handleSendReply = async (e) => {
+    e.preventDefault();
+    if (!replyNote.trim() && replyFiles.length === 0) {
+      return toast.error('Please enter a note or attach at least one document.');
+    }
+    setSubmittingReply(true);
+    try {
+      const fd = new FormData();
+      if (replyNote.trim()) fd.append('reply_note', replyNote.trim());
+      for (const file of replyFiles) {
+        fd.append('reply_attachments', file);
+      }
+      await api.post(`/api/add-on-applications/${app._id}/reply-more-documents`, fd);
+      toast.success('Your reply and documents have been sent to HFA successfully!');
+      setShowReplyModal(false);
+      setReplyNote('');
+      setReplyFiles([]);
+      fetchApp(true);
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || 'Failed to submit reply');
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
 
   return (
     <div className="page-content">
@@ -216,6 +280,37 @@ export default function ClientAddOnTrack() {
         </button>
       </div>
 
+      {/* ─── Document Request Alert Banner ─── */}
+      {pendingDocRequest && (
+        <div style={{
+          background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 16,
+          padding: '16px 20px', marginBottom: 20,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14,
+          boxShadow: '0 2px 6px rgba(217, 119, 6, 0.08)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <AlertCircle size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: '#92400e' }}>
+                Action Required: Additional Documents Requested by HFA
+              </div>
+              <div style={{ fontSize: 13, color: '#b45309', marginTop: 2 }}>
+                "{pendingDocRequest.note}"
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowReplyModal(true)}
+            className="btn btn-primary btn-sm"
+            style={{ background: '#d97706', borderColor: '#d97706', fontWeight: 700, padding: '8px 16px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <UploadCloud size={15} /> Reply &amp; Attach Documents
+          </button>
+        </div>
+      )}
+
       {/* ─── Top Action / Notification Banner matching Admin ─── */}
       <div style={{
         background: 'white', border: '1px solid var(--border)', borderRadius: 16,
@@ -228,24 +323,42 @@ export default function ClientAddOnTrack() {
             Current Application Status
           </div>
           <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            {app.status === 'submitted' && 'Your add-on request has been submitted. HFA Food Technology specialists will review the requested products.'}
-            {app.status === 'accepted' && 'Application accepted. HFA is assigning Food Technologies staff to verify your product formulations.'}
-            {app.status === 'ft_assigned' && `Food Technology staff assigned (${ftNames || 'Inspector'}). Awaiting Product Approval Form setup.`}
+            {app.status === 'submitted' && 'Your request has been submitted. HFA Food Technology specialists will review the details.'}
+            {app.status === 'accepted' && 'Application accepted. HFA is assigning Food Technologies staff.'}
+            {app.status === 'ft_assigned' && `Food Technology staff assigned (${ftNames || 'Specialist'}). Under technical documentation review.`}
             {app.status === 'product_approval_form_enabled' && (
               app.product_approval_form?.more_info_requested
                 ? 'HFA has requested additional information or supporting documents. Please upload your reply and documents.'
                 : 'The Product Approval Form has been enabled! Please complete and submit the specifications for each requested product.'
             )}
-            {app.status === 'all_forms_received' && 'All product forms have been received. The Halal Committee is conducting the evaluation.'}
+            {app.status === 'all_forms_received' && 'All documents have been verified and marked as received. Shariah Committee Logsheet review is in progress.'}
             {['logsheet_created', 'waiting_sharia_signature'].includes(app.status) && 'Technical & Shariah Committee evaluation is currently underway.'}
-            {['product_form_approved', 'ready_for_certificate'].includes(app.status) && 'Product specifications approved by the Shariah Committee! Your updated certificate is being prepared.'}
-            {app.status === 'completed' && 'Add-on application complete! Your Halal Certificate products list has been successfully updated.'}
+            {['product_form_approved', 'ready_for_certificate'].includes(app.status) && (
+              app.addon_type === 'remove_product'
+                ? 'Products removed from active list! Your updated certificate is being prepared.'
+                : 'Product specifications approved by the Shariah Committee! Your updated certificate is being prepared.'
+            )}
+            {app.status === 'completed' && (
+              app.addon_type === 'change_ingredients'
+                ? 'Change of ingredients request accepted and completed!'
+                : 'Add-on request complete! Your Halal Certificate products list has been successfully updated.'
+            )}
             {app.status === 'rejected' && (app.rejection_reason ? `Application Rejected: ${app.rejection_reason}` : 'Application rejected by administration.')}
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {app.status === 'product_approval_form_enabled' && (
+          {pendingDocRequest && (
+            <button
+              className="btn btn-primary"
+              style={{ background: '#d97706', borderColor: '#d97706', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              onClick={() => setShowReplyModal(true)}
+            >
+              <UploadCloud size={15} /> Upload Requested Documents
+            </button>
+          )}
+
+          {isStandardAddon && app.status === 'product_approval_form_enabled' && (
             <button
               className="btn btn-primary"
               style={{
@@ -262,7 +375,7 @@ export default function ClientAddOnTrack() {
             </button>
           )}
 
-          {app.status === 'completed' && (
+          {app.status === 'completed' && app.addon_type !== 'change_ingredients' && (
             <button
               className="btn btn-primary"
               style={{ background: '#16a34a', borderColor: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}
@@ -378,8 +491,8 @@ export default function ClientAddOnTrack() {
             </div>
           </div>
 
-          {/* Card 2: Product Approval Form Status */}
-          {isFormEnabled && (
+          {/* Card 2: Product Approval Form Status (Add Product Only) */}
+          {isStandardAddon && isFormEnabled && (
             <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
               <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -402,7 +515,6 @@ export default function ClientAddOnTrack() {
               </div>
 
               <div style={{ padding: '20px 24px' }}>
-                {/* Admin Form instructions if provided */}
                 {(app.product_approval_form?.form_text || app.product_approval_form?.form_file_url) && (
                   <div style={{ marginBottom: 20, background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0' }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.04em' }}>
@@ -421,7 +533,6 @@ export default function ClientAddOnTrack() {
                   </div>
                 )}
 
-                {/* Per product response cards */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {productsList.map((p, idx) => {
                     const resp = responses.find(r => r.product_index === idx);
@@ -488,6 +599,113 @@ export default function ClientAddOnTrack() {
                     );
                   })}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Card 2B: Supporting Documents Section (For Remove Product & Change Ingredients) */}
+          {!isStandardAddon && (
+            <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: '#f0f9ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Paperclip size={18} style={{ color: '#0284c7' }} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>
+                      Supporting Documents ({app.supporting_documents?.length || 0})
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      Attached specifications, formulation details &amp; letters
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => setShowReplyModal(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#0284c7', borderColor: '#bae6fd' }}
+                >
+                  <UploadCloud size={14} /> Attach More Documents
+                </button>
+              </div>
+
+              <div style={{ padding: '20px 24px' }}>
+                {Array.isArray(app.supporting_documents) && app.supporting_documents.length > 0 ? (
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {app.supporting_documents.map((doc, dIdx) => (
+                      <div key={dIdx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', padding: '12px 16px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                          <FileText size={18} color="#0284c7" />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{doc.file_name}</div>
+                            <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                              {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB · ` : ''}Uploaded {new Date(doc.uploaded_at || Date.now()).toLocaleDateString('en-GB')}
+                            </div>
+                          </div>
+                        </div>
+                        <a
+                          href={getPdfUrl(doc.file_url)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-outline btn-sm"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, background: 'white' }}
+                        >
+                          <Download size={13} /> View / Download
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ padding: '20px', background: '#fafbfc', borderRadius: 10, textAlign: 'center', color: '#64748b', fontSize: 13, border: '1px dashed #cbd5e1' }}>
+                    No supporting documents uploaded yet. You can click "Attach More Documents" above to upload files.
+                  </div>
+                )}
+
+                {/* Document Requests History */}
+                {Array.isArray(app.document_requests) && app.document_requests.length > 0 && (
+                  <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #f1f5f9' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 12, letterSpacing: '0.04em' }}>
+                      HFA Document Requests &amp; Communication History ({app.document_requests.length})
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {app.document_requests.map((req, rIdx) => (
+                        <div key={rIdx} style={{ background: req.status === 'pending' ? '#fffbeb' : '#f8fafc', border: `1px solid ${req.status === 'pending' ? '#fde68a' : '#e2e8f0'}`, borderRadius: 10, padding: 14 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>
+                              REQUEST #{rIdx + 1} &middot; {new Date(req.requested_at).toLocaleDateString('en-GB')}
+                            </span>
+                            <span className={`badge ${req.status === 'pending' ? 'badge-yellow' : 'badge-green'}`} style={{ fontSize: 10 }}>
+                              {req.status === 'pending' ? 'Awaiting Reply' : 'Replied'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 13, color: '#0f172a', fontWeight: 600 }}>{req.note}</div>
+                          {req.attachment_url && (
+                            <a href={getPdfUrl(req.attachment_url)} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#0284c7', marginTop: 6, fontWeight: 600, textDecoration: 'none' }}>
+                              <Download size={12} /> {req.attachment_name || 'Download HFA Reference File'}
+                            </a>
+                          )}
+                          {req.status === 'replied' && (
+                            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #e2e8f0', background: 'rgba(255,255,255,0.7)', padding: 10, borderRadius: 6 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: '#15803d' }}>YOUR REPLY ({new Date(req.replied_at).toLocaleDateString('en-GB')}):</div>
+                              <div style={{ fontSize: 12.5, color: '#334155', marginTop: 2 }}>{req.reply_note || 'Documents attached.'}</div>
+                              {req.reply_attachments?.length > 0 && (
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                                  {req.reply_attachments.map((att, aIdx) => (
+                                    <a key={aIdx} href={getPdfUrl(att.file_url)} target="_blank" rel="noreferrer" className="badge badge-teal" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                      <Paperclip size={11} /> {att.file_name}
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -566,11 +784,13 @@ export default function ClientAddOnTrack() {
             </div>
             <div className="card-body" style={{ padding: '20px 24px' }}>
               <div style={{ padding: '8px 0' }}>
-                {FLOW_STEPS.map((step, idx) => {
-                  const stepIdx = ORDER.indexOf(step.id);
+                {getFlowSteps(app?.addon_type).map((step, idx) => {
+                  const currentIdx = getClientStepIdx(app.status, app.addon_type);
+                  const order = getOrderForType(app.addon_type);
+                  const stepIdx = order.indexOf(step.id);
                   const isDone = currentIdx > stepIdx || app.status === 'completed';
                   const isCurrent = currentIdx === stepIdx && app.status !== 'completed';
-                  const isLast = idx === FLOW_STEPS.length - 1;
+                  const isLast = idx === getFlowSteps(app?.addon_type).length - 1;
                   const histEntry = historyMap[step.id];
 
                   let circleColor = isDone ? '#15803d' : isCurrent ? '#2563eb' : '#cbd5e1';
@@ -700,6 +920,118 @@ export default function ClientAddOnTrack() {
         product={viewProductModal.product}
         company={viewProductModal.company}
       />
+
+      {/* ── Reply to Document Request Modal ── */}
+      {showReplyModal && (
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+          <div className="modal" style={{ maxWidth: 560 }}>
+            <div className="modal-header">
+              <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <UploadCloud size={18} color="#d97706" /> Reply &amp; Attach Documents for HFA
+              </span>
+              <button className="modal-close" onClick={() => setShowReplyModal(false)}><X size={18} /></button>
+            </div>
+            <form onSubmit={handleSendReply}>
+              <div className="modal-body" style={{ padding: 24, display: 'grid', gap: 16 }}>
+                {pendingDocRequest && (
+                  <div style={{ background: '#fef3c7', padding: 12, borderRadius: 8, border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>
+                    <strong>HFA Request Note:</strong> {pendingDocRequest.note}
+                  </div>
+                )}
+
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 700, fontSize: 12.5 }}>Reply Note / Message to HFA</label>
+                  <textarea
+                    className="form-control"
+                    rows={4}
+                    value={replyNote}
+                    onChange={e => setReplyNote(e.target.value)}
+                    placeholder="Enter details, clarification, or notes regarding the uploaded documents..."
+                  />
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: 12.5, margin: 0 }}>Attach Documents</label>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#0284c7', fontWeight: 700, cursor: 'pointer' }}>
+                      <UploadCloud size={14} /> Add Files
+                      <input
+                        type="file"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          if (e.target.files) {
+                            setReplyFiles(prev => [...prev, ...Array.from(e.target.files)]);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {replyFiles.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {replyFiles.map((file, fIdx) => (
+                        <div key={fIdx} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          padding: '8px 12px',
+                          borderRadius: 8,
+                          fontSize: 12
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            <FileText size={14} color="#0284c7" />
+                            <span style={{ fontWeight: 600, color: '#0f172a', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              {file.name}
+                            </span>
+                            <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                              ({(file.size / 1024).toFixed(1)} KB)
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setReplyFiles(prev => prev.filter((_, i) => i !== fIdx))}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: 2 }}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ border: '1.5px dashed #cbd5e1', borderRadius: 8, padding: 16, textAlign: 'center', background: '#fafafa' }}>
+                      <label style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                        <UploadCloud size={20} color="#94a3b8" />
+                        <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Click to select files to attach</span>
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>Multiple files supported</span>
+                        <input
+                          type="file"
+                          multiple
+                          style={{ display: 'none' }}
+                          onChange={e => {
+                            if (e.target.files) {
+                              setReplyFiles(prev => [...prev, ...Array.from(e.target.files)]);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn btn-ghost" onClick={() => setShowReplyModal(false)} disabled={submittingReply}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={submittingReply} style={{ background: '#d97706', borderColor: '#d97706' }}>
+                  {submittingReply ? 'Submitting...' : 'Send Reply & Documents'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
