@@ -181,7 +181,7 @@ export default function ClientAddOnTrack() {
         <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>Add-on Application Not Found</h3>
         <p style={{ fontSize: 14, color: '#64748b', marginBottom: 20 }}>The requested add-on application could not be found or you do not have permission to view it.</p>
         <button className="btn btn-primary" onClick={() => navigate('/addon-applications')}>
-          <ArrowLeft size={16} style={{ marginRight: 6 }} /> Back to Add-on Applications
+          <ArrowLeft size={16} style={{ marginRight: 6 }} /> Back
         </button>
       </div>
     );
@@ -254,7 +254,7 @@ export default function ClientAddOnTrack() {
       {/* ─── Top Header Section matching Admin Processing ─── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
         <button className="btn btn-ghost btn-sm" onClick={() => navigate('/addon-applications')}>
-          <ArrowLeft size={16} /> Back to Add-on Applications
+          <ArrowLeft size={16} /> Back
         </button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', marginBottom: 2 }}>
