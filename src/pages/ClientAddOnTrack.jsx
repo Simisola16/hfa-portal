@@ -431,7 +431,14 @@ export default function ClientAddOnTrack() {
                       return (
                         <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: '#94a3b8' }}>{p.sn || idx + 1}</td>
-                          <td style={{ padding: '12px', fontWeight: 700, color: '#0f172a' }}>{p.new_name || p.name}</td>
+                          <td style={{ padding: '12px', fontWeight: 700, color: '#0f172a' }}>
+                            <div>{p.new_name || p.name}</div>
+                            {p.description && (
+                              <div style={{ fontSize: 11, fontWeight: 500, color: '#0284c7', marginTop: 3 }}>
+                                Note: {p.description}
+                              </div>
+                            )}
+                          </td>
                           <td style={{ padding: '12px', color: '#64748b' }}>{p.new_code || p.code || '—'}</td>
                           <td style={{ padding: '12px' }}>
                             <span style={{

@@ -100,7 +100,8 @@ const emptyProduct = (rowType = 'Add product') => ({
   type: rowType,
   original_name: '',
   new_name: '',
-  new_code: ''
+  new_code: '',
+  description: ''
 });
 
 export default function AddOnApplicationPage() {
@@ -303,11 +304,16 @@ export default function AddOnApplicationPage() {
 
   const handleSelectProduct = (idx, selectedName) => {
     const matched = siteSpecificProducts.find(p => p.name === selectedName);
-    updateProduct(idx, 'name', selectedName);
-    updateProduct(idx, 'original_name', selectedName);
-    if (matched?.code) {
-      updateProduct(idx, 'code', matched.code);
-    }
+    setForm(f => {
+      const products = [...f.products];
+      products[idx] = {
+        ...products[idx],
+        name: selectedName,
+        original_name: selectedName,
+        code: matched?.code || ''
+      };
+      return { ...f, products };
+    });
   };
 
   const addProduct = () => {
@@ -380,7 +386,7 @@ export default function AddOnApplicationPage() {
         contact_email: '',
         contact_phone: '',
         message: '',
-        products: [emptyProduct('Add product')]
+        products: [emptyProduct(getRowTypeForAddonType(addonType))]
       });
       fetchData();
     } catch (err) {
@@ -661,7 +667,14 @@ export default function AddOnApplicationPage() {
                             {(app.products || []).map((p, i) => (
                               <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                 <td style={{ padding: '6px 10px', color: '#94a3b8' }}>{p.sn || i + 1}</td>
-                                <td style={{ padding: '6px 10px', fontWeight: 600, color: '#0f172a' }}>{p.new_name || p.name}</td>
+                                <td style={{ padding: '6px 10px', fontWeight: 600, color: '#0f172a' }}>
+                                  {p.new_name || p.name}
+                                  {p.description && (
+                                    <div style={{ fontSize: 11, fontWeight: 500, color: '#0284c7', marginTop: 2 }}>
+                                      Note: {p.description}
+                                    </div>
+                                  )}
+                                </td>
                                 <td style={{ padding: '6px 10px', color: '#64748b' }}>{p.new_code || p.code || '—'}</td>
                                 <td style={{ padding: '6px 10px' }}>
                                   <span style={{
@@ -1004,7 +1017,7 @@ export default function AddOnApplicationPage() {
                                 <input
                                   className="form-control"
                                   style={{ margin: 0, fontSize: 13 }}
-                                  value={p.description || p.code || ''}
+                                  value={p.description || ''}
                                   onChange={e => updateProduct(idx, 'description', e.target.value)}
                                   placeholder="e.g. Revised oil formulation or changed ingredient supplier"
                                 />
