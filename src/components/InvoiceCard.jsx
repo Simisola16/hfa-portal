@@ -1,4 +1,4 @@
-﻿import { getPdfUrl } from '../lib/pdfUtils';
+import { getPdfUrl } from '../lib/pdfUtils';
 import React from 'react';
 import { Receipt, Download, Lock, CheckCircle, Clock } from 'lucide-react';
 
@@ -48,13 +48,13 @@ export default function InvoiceCard({ app, invoice, status, isInitial, isFinal, 
   }
 
   const isPaid = invoice.status === 'paid' || 
+    invoice.status === 'confirmed' ||
     status === 'payment_received' || 
     status === 'final_invoice_paid' || 
     (!isFinal && !isFastTrack && ['dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'nc_flagged', 'nc_closed', 'audit_report_submitted', 'audit_successful', 'logsheet_created', 'logsheet_signed', 'application_successful', 'agreement_sent', 'agreement_signed', 'agreement_finalised', 'ready_for_certificate', 'certificate_issued'].includes(normStatus)) ||
-    (isFastTrack && ['ready_for_certificate', 'certificate_issued'].includes(normStatus)) ||
     (isFinal && ['ready_for_certificate', 'certificate_issued'].includes(normStatus));
 
-  const isAwaiting = invoice.status === 'client_paid' && !isPaid;
+  const isAwaiting = (invoice.status === 'client_paid' || Boolean(invoice.payment_proof_url && invoice.status !== 'paid')) && !isPaid;
 
   return (
     <div style={{
@@ -164,13 +164,34 @@ export default function InvoiceCard({ app, invoice, status, isInitial, isFinal, 
             >
               <Clock size={14} style={{ color: '#d97706' }} /> Awaiting Confirmation
             </span>
-          ) : (status === 'invoice_sent' || status === 'final_invoice_sent') ? (
+          ) : onPayClick ? (
             <button className="btn btn-primary btn-sm" style={{ background: '#ea580c', borderColor: '#ea580c', fontWeight: 700 }} onClick={onPayClick}>
               Pay Now
             </button>
           ) : null}
         </div>
       </div>
+
+      {isFastTrack && !isPaid && (
+        <div style={{
+          margin: '16px 24px 0',
+          background: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: 10,
+          padding: '10px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          fontSize: 12,
+          color: '#1e40af',
+          lineHeight: 1.5
+        }}>
+          <CheckCircle size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
+          <div>
+            <strong style={{ color: '#1e3a8a' }}>Existing HFA Client:</strong> As an existing client, your {isSurv ? 'surveillance' : 'renewal'} application continues processing normally without interruption while payment is pending.
+          </div>
+        </div>
+      )}
 
       <div style={{ padding: '20px 24px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
