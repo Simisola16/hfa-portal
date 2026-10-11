@@ -1,4 +1,4 @@
-﻿import { getPdfUrl } from '../lib/pdfUtils';
+import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, FileText, AlertCircle, Upload, CheckCircle } from 'lucide-react';
 import api from '../lib/api';
@@ -101,8 +101,8 @@ export default function ClientAuditModal({
 
   const handleSubmitDates = async () => {
     if (!audit) return;
-    if (!unavailable && selectedDates.length !== 2) {
-      toast.error('Please select exactly 2 dates, or check the unavailable option.');
+    if (!unavailable && selectedDates.length === 0) {
+      toast.error('Please select the proposed date, or indicate that you are not available.');
       return;
     }
     if (unavailable && !clientAvailabilityNote.trim()) {
@@ -121,7 +121,7 @@ export default function ClientAuditModal({
         remarks: clientAvailabilityNote.trim(),
         client_availability_note: clientAvailabilityNote.trim()
       });
-      toast.success(unavailable ? 'HFA Admin notified of your availability. Waiting for new dates.' : 'Dates confirmed successfully!');
+      toast.success(unavailable ? 'HFA Admin notified of your availability. Waiting for new date.' : 'Audit date confirmed successfully!');
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
@@ -278,7 +278,9 @@ export default function ClientAuditModal({
             /* ── AUDIT DATE SELECTION UI ── */
             <>
               <p style={{ fontSize: 13, color: '#475569', marginBottom: 20 }}>
-                The Admin has proposed the following dates for your upcoming audit. Please select <strong>exactly 2 dates</strong> that you are available, or indicate that you are not available on any of these days.
+                {audit.proposed_dates?.length === 1
+                  ? 'The Admin has proposed the following date for your upcoming audit. Please confirm your availability, or indicate that you are not available on this day.'
+                  : 'The Admin has proposed the following audit date options. Please select your available date, or indicate that you are not available.'}
               </p>
 
               <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
@@ -293,22 +295,25 @@ export default function ClientAuditModal({
                     transition: 'all 0.2s'
                   }}>
                     <input
-                      type="checkbox"
+                      type={audit.proposed_dates?.length === 1 ? 'radio' : 'checkbox'}
+                      name="client_selected_audit_date"
                       disabled={unavailable}
                       checked={selectedDates.includes(d)}
                       onChange={e => {
-                        let newDates = [...selectedDates];
                         if (e.target.checked) {
-                          if (newDates.length < 2) newDates.push(d);
-                          else toast.error('You can only select exactly 2 dates.');
+                          setSelectedDates([d]);
+                          setUnavailable(false);
+                          setAvailabilityError('');
                         } else {
-                          newDates = newDates.filter(x => x !== d);
+                          setSelectedDates([]);
                         }
-                        setSelectedDates(newDates);
                       }}
                       style={{ width: 18, height: 18 }}
                     />
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>{new Date(d).toDateString()}</span>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#334155' }}>{new Date(d).toDateString()}</span>
+                      <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600, marginTop: 2 }}>Proposed Audit Date</div>
+                    </div>
                   </label>
                 ))}
 
@@ -336,7 +341,7 @@ export default function ClientAuditModal({
                     style={{ width: 18, height: 18 }}
                   />
                   <span style={{ fontSize: 14, fontWeight: 600, color: unavailable ? '#dc2626' : '#334155' }}>
-                    I am not available on any of these days
+                    I am not available on this day
                   </span>
                 </label>
 
@@ -410,7 +415,7 @@ export default function ClientAuditModal({
               onClick={handleSubmitDates}
               style={unavailable ? { background: '#dc2626', borderColor: '#dc2626' } : {}}
             >
-              {submitting ? 'Submitting...' : unavailable ? 'Submit Availability & Decline Dates' : 'Confirm Date Selection'}
+              {submitting ? 'Submitting...' : unavailable ? 'Submit Availability Note' : 'Confirm Audit Date'}
             </button>
           )}
         </div>

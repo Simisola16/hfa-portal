@@ -1,4 +1,4 @@
-﻿import { getPdfUrl } from '../lib/pdfUtils';
+import { getPdfUrl } from '../lib/pdfUtils';
 import React from 'react';
 import { Calendar, Users, Lock, AlertCircle, CheckCircle, CheckCircle2, FileText } from 'lucide-react';
 
@@ -143,7 +143,7 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
                   style={{ background: '#ca8a04', borderColor: '#ca8a04', fontWeight: 700, fontSize: 11.5 }}
                   onClick={() => onSelectDatesClick(auditObj.stage)}
                 >
-                  Select Dates
+                  {auditObj.proposed_dates?.length === 1 ? 'Review Date' : 'Select Dates'}
                 </button>
               )}
             </div>
@@ -157,7 +157,7 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
           </div>
         ) : isAccepted ? (
           <div style={{ marginBottom: 12, padding: '10px 14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0', fontSize: 12, color: '#166534' }}>
-            <strong>Selected Dates:</strong> {auditObj.selected_dates?.map(d => new Date(d).toLocaleDateString()).join(' and ')}. Awaiting HFA admin to confirm the final date.
+            <strong>Confirmed Date:</strong> {auditObj.selected_dates?.map(d => new Date(d).toLocaleDateString()).join(' and ')}. Awaiting HFA admin to finalize.
           </div>
         ) : (
           <div style={{ marginBottom: 12, padding: '10px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 12, color: '#64748b' }}>
