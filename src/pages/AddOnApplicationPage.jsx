@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import {
   ArrowLeft, Award, PlusCircle, Trash2, FileText,
-  CheckCircle, AlertCircle, Package, X, Users, ChevronDown, ChevronUp, ArrowUpRight, Activity
+  CheckCircle, AlertCircle, Package, X, Users, ChevronDown, ChevronUp, ArrowUpRight, Activity,
+  UploadCloud, Paperclip, Lock, Edit
 } from 'lucide-react';
 
 const formatSiteName = (str) => {
@@ -86,19 +88,38 @@ const getClientStepIdx = (status) => {
 };
 
 
-const emptyProduct = () => ({ name: '', code: '', type: 'Add product', original_name: '', new_name: '', new_code: '' });
+const getRowTypeForAddonType = (aType) => {
+  if (aType === 'remove_product') return 'Remove product';
+  if (aType === 'change_ingredients') return 'Change ingredients';
+  return 'Add product';
+};
+
+const emptyProduct = (rowType = 'Add product') => ({
+  name: '',
+  code: '',
+  type: rowType,
+  original_name: '',
+  new_name: '',
+  new_code: '',
+  description: ''
+});
 
 export default function AddOnApplicationPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user, profile } = useAuth();
   const [certs, setCerts] = useState([]);
   const [sites, setSites] = useState([]);
   const [myApps, setMyApps] = useState([]);
   const [clientProducts, setClientProducts] = useState([]);
+  const [siteProducts, setSiteProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+
+  const [addonType, setAddonType] = useState('add_product');
+  const [attachments, setAttachments] = useState([]);
 
   const [form, setForm] = useState({
     site_id: '',
@@ -107,7 +128,7 @@ export default function AddOnApplicationPage() {
     contact_email: '',
     contact_phone: '',
     message: '',
-    products: [emptyProduct()]
+    products: [emptyProduct('Add product')]
   });
 
   const fetchData = async () => {
@@ -160,25 +181,118 @@ export default function AddOnApplicationPage() {
 
   useEffect(() => { fetchData(); }, []);
 
+  // Fetch site-specific products whenever form.site_id changes
+  useEffect(() => {
+    if (form.site_id) {
+      api.get(`/api/products?site_id=${form.site_id}`)
+        .then(res => {
+          const prods = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : []));
+          setSiteProducts(prods);
+        })
+        .catch(err => console.warn('Failed to load site products:', err.message));
+    } else {
+      setSiteProducts([]);
+    }
+  }, [form.site_id]);
+
+  const openFormWithType = (type = 'add_product') => {
+    const resolved = ['remove_product', 'change_ingredients', 'add_product'].includes(type) ? type : 'add_product';
+    setAddonType(resolved);
+    const rowType = getRowTypeForAddonType(resolved);
+    setAttachments([]);
+    setForm(f => ({
+      ...f,
+      contact_name: f.contact_name || profile?.full_name || profile?.contact_person || user?.full_name || '',
+      contact_phone: f.contact_phone || profile?.phone || user?.phone || '',
+      contact_email: f.contact_email || profile?.email || user?.email || '',
+      products: [emptyProduct(rowType)]
+    }));
+    if (sites.length === 1) {
+      handleSiteChange(sites[0].id || sites[0]._id);
+    }
+    setShowForm(true);
+  };
+
   // Auto-open the new application form when navigated with ?new=true
   useEffect(() => {
     if (searchParams.get('new') === 'true' && !loading) {
-      if (sites.length === 1) {
-        handleSiteChange(sites[0].id || sites[0]._id);
-      }
-      setShowForm(true);
-      // Remove the query param from the URL without a re-render
+      const qType = searchParams.get('type') || 'add_product';
+      openFormWithType(qType);
       navigate('/addon-applications', { replace: true });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
 
-  const selectedCert = certs.find(c => String(c._id || c.id) === String(form.certificate_id));
-  const certProducts = selectedCert?.products_covered || [];
-  const availableProductNames = Array.from(new Set([
-    ...certProducts,
-    ...clientProducts.map(p => p.name).filter(Boolean)
-  ]));
+  // Compute products specifically associated with the currently selected site / certificate
+  const siteSpecificProducts = useMemo(() => {
+    if (!form.site_id && !form.certificate_id) return [];
+
+    const matchedCert = certs.find(c => String(c._id || c.id) === String(form.certificate_id)) ||
+      certs.find(c => form.site_id && String(c.site_id?._id || c.site_id?.id || c.site_id) === String(form.site_id));
+
+    const certCoverage = Array.isArray(matchedCert?.products_covered) ? matchedCert.products_covered : [];
+    const certDetails = Array.isArray(matchedCert?.product_details) ? matchedCert.product_details : [];
+
+    // Filter products strictly matching this site
+    const matchedProducts = [...(siteProducts || []), ...(clientProducts || [])].filter(p => {
+      if (!p) return false;
+      if (form.site_id) {
+        const sId = p.site_id?._id || p.site_id?.id || p.site_id;
+        if (sId && String(sId) === String(form.site_id)) return true;
+      }
+      if (matchedCert) {
+        const certNum = matchedCert.certificate_number;
+        const certIdStr = matchedCert._id || matchedCert.id;
+        if (p.certificate_id && (p.certificate_id === certNum || String(p.certificate_id) === String(certIdStr))) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    const productMap = new Map();
+
+    // 1. Add from matched products
+    matchedProducts.forEach(p => {
+      const name = p.name?.trim();
+      if (name && !productMap.has(name)) {
+        productMap.set(name, {
+          name,
+          code: p.code || p.barcode || ''
+        });
+      }
+    });
+
+    // 2. Add from certificate product_details
+    certDetails.forEach(cd => {
+      const name = cd.name?.trim();
+      if (name) {
+        if (!productMap.has(name)) {
+          productMap.set(name, {
+            name,
+            code: cd.code || ''
+          });
+        } else if (!productMap.get(name).code && cd.code) {
+          productMap.get(name).code = cd.code;
+        }
+      }
+    });
+
+    // 3. Add from certificate products_covered
+    certCoverage.forEach(rawName => {
+      if (typeof rawName === 'string' && rawName.trim()) {
+        const name = rawName.trim();
+        if (!productMap.has(name)) {
+          productMap.set(name, {
+            name,
+            code: ''
+          });
+        }
+      }
+    });
+
+    return Array.from(productMap.values());
+  }, [form.site_id, form.certificate_id, certs, siteProducts, clientProducts]);
 
   const updateProduct = (idx, field, value) => {
     setForm(f => {
@@ -188,7 +302,24 @@ export default function AddOnApplicationPage() {
     });
   };
 
-  const addProduct = () => setForm(f => ({ ...f, products: [...f.products, emptyProduct()] }));
+  const handleSelectProduct = (idx, selectedName) => {
+    const matched = siteSpecificProducts.find(p => p.name === selectedName);
+    setForm(f => {
+      const products = [...f.products];
+      products[idx] = {
+        ...products[idx],
+        name: selectedName,
+        original_name: selectedName,
+        code: matched?.code || ''
+      };
+      return { ...f, products };
+    });
+  };
+
+  const addProduct = () => {
+    const rowType = getRowTypeForAddonType(addonType);
+    setForm(f => ({ ...f, products: [...f.products, emptyProduct(rowType)] }));
+  };
 
   const removeProduct = (idx) => {
     if (form.products.length === 1) return toast.error('At least one product is required.');
@@ -201,26 +332,53 @@ export default function AddOnApplicationPage() {
       const sId = c.site_id?._id || c.site_id?.id || c.site_id;
       return String(sId) === String(selectedSiteId);
     });
+    const rowType = getRowTypeForAddonType(addonType);
     setForm(f => ({
       ...f,
       site_id: selectedSiteId,
-      certificate_id: matchingCert ? (matchingCert._id || matchingCert.id) : (f.certificate_id || '')
+      certificate_id: matchingCert ? (matchingCert._id || matchingCert.id) : (f.certificate_id || ''),
+      // For remove_product or change_ingredients, reset product picks so client picks from the newly selected site
+      products: ['remove_product', 'change_ingredients'].includes(addonType)
+        ? [emptyProduct(rowType)]
+        : f.products
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.site_id && !form.certificate_id) return toast.error('Please select a site.');
-    if (!form.contact_email.trim()) return toast.error('Contact Person Email is required.');
+    if (!form.site_id && !form.certificate_id) return toast.error('Please select a manufacturing site.');
+    if (!form.contact_name?.trim()) return toast.error('Contact Person Name is required.');
+    if (!form.contact_phone?.trim()) return toast.error('Contact Person Phone Number is required.');
+    if (!form.contact_email?.trim()) return toast.error('Contact Person Email is required.');
     for (const [i, p] of form.products.entries()) {
-      if (!p.name.trim()) return toast.error(`Product row ${i + 1}: Product Name is required.`);
+      if (!p.name?.trim()) return toast.error(`Product row ${i + 1}: Please select or enter a Product Name.`);
       if (!p.type) return toast.error(`Product row ${i + 1}: Type is required.`);
     }
     setSubmitting(true);
     try {
-      await api.post('/api/add-on-applications', form);
-      toast.success('Add-on application submitted successfully!');
+      const formData = new FormData();
+      formData.append('addon_type', addonType);
+      if (form.site_id) formData.append('site_id', form.site_id);
+      if (form.certificate_id) formData.append('certificate_id', form.certificate_id);
+      formData.append('contact_name', form.contact_name);
+      formData.append('contact_email', form.contact_email);
+      if (form.contact_phone) formData.append('contact_phone', form.contact_phone);
+      if (form.message) formData.append('message', form.message);
+      formData.append('products', JSON.stringify(form.products));
+
+      for (const file of attachments) {
+        formData.append('attachments', file);
+      }
+
+      await api.post('/api/add-on-applications', formData);
+      const title = addonType === 'remove_product'
+        ? 'Request to remove product(s)'
+        : addonType === 'change_ingredients'
+        ? 'Request to change ingredients'
+        : 'Add-on product application';
+      toast.success(`${title} submitted successfully!`);
       setShowForm(false);
+      setAttachments([]);
       setForm({
         site_id: sites.length === 1 ? (sites[0].id || sites[0]._id) : '',
         certificate_id: certs.length === 1 ? (certs[0]._id || certs[0].id) : '',
@@ -228,7 +386,7 @@ export default function AddOnApplicationPage() {
         contact_email: '',
         contact_phone: '',
         message: '',
-        products: [emptyProduct()]
+        products: [emptyProduct(getRowTypeForAddonType(addonType))]
       });
       fetchData();
     } catch (err) {
@@ -274,18 +432,29 @@ export default function AddOnApplicationPage() {
             <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>Add, remove, or modify products covered under your business sites.</p>
           </div>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            if (sites.length === 1) {
-              handleSiteChange(sites[0].id || sites[0]._id);
-            }
-            setShowForm(true);
-          }}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', fontWeight: 700 }}
-        >
-          <PlusCircle size={16} /> New Add-on Application
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            className="btn btn-outline"
+            onClick={() => openFormWithType('remove_product')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', fontWeight: 700, color: '#dc2626', borderColor: '#fca5a5', background: '#fff' }}
+          >
+            <Trash2 size={15} /> Remove Product
+          </button>
+          <button
+            className="btn btn-outline"
+            onClick={() => openFormWithType('change_ingredients')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', fontWeight: 700, color: '#0284c7', borderColor: '#bae6fd', background: '#fff' }}
+          >
+            <Edit size={15} /> Change Ingredients
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => openFormWithType('add_product')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', fontWeight: 700, background: '#059669', borderColor: '#059669' }}
+          >
+            <PlusCircle size={16} /> + Add Product
+          </button>
+        </div>
       </div>
 
       {/* Info banner when no active cert but has submitted add-on apps (from new application) */}
@@ -498,7 +667,14 @@ export default function AddOnApplicationPage() {
                             {(app.products || []).map((p, i) => (
                               <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                 <td style={{ padding: '6px 10px', color: '#94a3b8' }}>{p.sn || i + 1}</td>
-                                <td style={{ padding: '6px 10px', fontWeight: 600, color: '#0f172a' }}>{p.new_name || p.name}</td>
+                                <td style={{ padding: '6px 10px', fontWeight: 600, color: '#0f172a' }}>
+                                  {p.new_name || p.name}
+                                  {p.description && (
+                                    <div style={{ fontSize: 11, fontWeight: 500, color: '#0284c7', marginTop: 2 }}>
+                                      Note: {p.description}
+                                    </div>
+                                  )}
+                                </td>
                                 <td style={{ padding: '6px 10px', color: '#64748b' }}>{p.new_code || p.code || '—'}</td>
                                 <td style={{ padding: '6px 10px' }}>
                                   <span style={{
@@ -539,7 +715,11 @@ export default function AddOnApplicationPage() {
         <div className="modal-overlay" style={{ zIndex: 1000 }}>
           <div className="modal" style={{ maxWidth: 840, maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
-              <span className="modal-title">New Add-on Product Application</span>
+              <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {addonType === 'remove_product' && <><Trash2 size={18} color="#dc2626" /> Request to Remove Product(s)</>}
+                {addonType === 'change_ingredients' && <><Edit size={18} color="#0284c7" /> Request to Change Product Ingredients</>}
+                {addonType === 'add_product' && <><PlusCircle size={18} color="#059669" /> New Add-on Product Application</>}
+              </span>
               <button className="modal-close" onClick={() => setShowForm(false)}><X size={18} /></button>
             </div>
             <form onSubmit={handleSubmit}>
@@ -588,12 +768,24 @@ export default function AddOnApplicationPage() {
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>2. Contact Person</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Contact Person Name</label>
-                      <input className="form-control" value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="e.g. Jane Smith" />
+                      <label className="form-label">Contact Person Name <span>*</span></label>
+                      <input
+                        className="form-control"
+                        value={form.contact_name}
+                        onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))}
+                        placeholder="e.g. Jane Smith"
+                        required
+                      />
                     </div>
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Contact Person Number</label>
-                      <input className="form-control" value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} placeholder="e.g. +44 7700 900077" />
+                      <label className="form-label">Contact Person Phone Number <span>*</span></label>
+                      <input
+                        className="form-control"
+                        value={form.contact_phone}
+                        onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))}
+                        placeholder="e.g. +44 7700 900077"
+                        required
+                      />
                     </div>
                   </div>
                   <div className="form-group" style={{ margin: '12px 0 0' }}>
@@ -613,6 +805,13 @@ export default function AddOnApplicationPage() {
                 {/* 4. Products Table */}
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>4. Products</div>
+
+                  {!form.site_id && !form.certificate_id && (
+                    <div style={{ padding: '10px 14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, fontSize: 12.5, color: '#1e40af', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <AlertCircle size={15} style={{ color: '#2563eb', flexShrink: 0 }} />
+                      <span>Please select a <strong>Manufacturing Site</strong> in Step 1 above to view the products active at that site.</span>
+                    </div>
+                  )}
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {form.products.map((p, idx) => (
@@ -647,16 +846,25 @@ export default function AddOnApplicationPage() {
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
                           <div>
-                            <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Action Type *</label>
-                            <select
-                              className="form-control"
-                              style={{ margin: 0, fontSize: 13 }}
-                              value={p.type}
-                              onChange={e => updateProduct(idx, 'type', e.target.value)}
-                              required
-                            >
-                              {PRODUCT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
+                            <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                              Action Type <Lock size={12} color="#64748b" title="Action type is fixed for this request" />
+                            </label>
+                            <div style={{
+                              padding: '8px 12px',
+                              borderRadius: 8,
+                              fontSize: 13,
+                              fontWeight: 700,
+                              background: p.type === 'Remove product' ? '#fef2f2' : p.type === 'Change ingredients' ? '#f0f9ff' : '#f0fdf4',
+                              color: p.type === 'Remove product' ? '#991b1b' : p.type === 'Change ingredients' ? '#0369a1' : '#166534',
+                              border: `1.5px solid ${p.type === 'Remove product' ? '#fecaca' : p.type === 'Change ingredients' ? '#bae6fd' : '#bbf7d0'}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6
+                            }}>
+                              <Lock size={12} />
+                              <span>{p.type}</span>
+                              <span style={{ fontSize: 10, opacity: 0.7, fontWeight: 500, marginLeft: 'auto' }}>(Fixed)</span>
+                            </div>
                           </div>
 
                           {p.type === 'Add product' && (
@@ -692,17 +900,30 @@ export default function AddOnApplicationPage() {
                                 className="form-control"
                                 style={{ margin: 0, fontSize: 13 }}
                                 value={p.name || p.original_name || ''}
-                                onChange={e => {
-                                  updateProduct(idx, 'name', e.target.value);
-                                  updateProduct(idx, 'original_name', e.target.value);
-                                }}
+                                onChange={e => handleSelectProduct(idx, e.target.value)}
+                                disabled={!form.site_id && !form.certificate_id}
                                 required
                               >
-                                <option value="">-- Select Product to Remove --</option>
-                                {availableProductNames.map(name => (
-                                  <option key={name} value={name}>{name}</option>
-                                ))}
+                                {!form.site_id && !form.certificate_id ? (
+                                  <option value="">-- Please select a manufacturing site first --</option>
+                                ) : siteSpecificProducts.length === 0 ? (
+                                  <option value="">-- No products found for this site --</option>
+                                ) : (
+                                  <>
+                                    <option value="">-- Select Product to Remove ({siteSpecificProducts.length} available at this site) --</option>
+                                    {siteSpecificProducts.map(prod => (
+                                      <option key={prod.name} value={prod.name}>
+                                        {prod.name} {prod.code ? `(${prod.code})` : ''}
+                                      </option>
+                                    ))}
+                                  </>
+                                )}
                               </select>
+                              {p.code && (
+                                <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                                  Product Code: <code>{p.code}</code>
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -714,16 +935,24 @@ export default function AddOnApplicationPage() {
                                   className="form-control"
                                   style={{ margin: 0, fontSize: 13 }}
                                   value={p.original_name || p.name || ''}
-                                  onChange={e => {
-                                    updateProduct(idx, 'original_name', e.target.value);
-                                    updateProduct(idx, 'name', e.target.value);
-                                  }}
+                                  onChange={e => handleSelectProduct(idx, e.target.value)}
+                                  disabled={!form.site_id && !form.certificate_id}
                                   required
                                 >
-                                  <option value="">-- Select Existing Product --</option>
-                                  {availableProductNames.map(name => (
-                                    <option key={name} value={name}>{name}</option>
-                                  ))}
+                                  {!form.site_id && !form.certificate_id ? (
+                                    <option value="">-- Please select a manufacturing site first --</option>
+                                  ) : siteSpecificProducts.length === 0 ? (
+                                    <option value="">-- No products found for this site --</option>
+                                  ) : (
+                                    <>
+                                      <option value="">-- Select Existing Product ({siteSpecificProducts.length} available at this site) --</option>
+                                      {siteSpecificProducts.map(prod => (
+                                        <option key={prod.name} value={prod.name}>
+                                          {prod.name} {prod.code ? `(${prod.code})` : ''}
+                                        </option>
+                                      ))}
+                                    </>
+                                  )}
                                 </select>
                               </div>
                               <div>
@@ -758,26 +987,39 @@ export default function AddOnApplicationPage() {
                                   className="form-control"
                                   style={{ margin: 0, fontSize: 13 }}
                                   value={p.original_name || p.name || ''}
-                                  onChange={e => {
-                                    updateProduct(idx, 'original_name', e.target.value);
-                                    updateProduct(idx, 'name', e.target.value);
-                                  }}
+                                  onChange={e => handleSelectProduct(idx, e.target.value)}
+                                  disabled={!form.site_id && !form.certificate_id}
                                   required
                                 >
-                                  <option value="">-- Select Product --</option>
-                                  {availableProductNames.map(name => (
-                                    <option key={name} value={name}>{name}</option>
-                                  ))}
+                                  {!form.site_id && !form.certificate_id ? (
+                                    <option value="">-- Please select a manufacturing site first --</option>
+                                  ) : siteSpecificProducts.length === 0 ? (
+                                    <option value="">-- No products found for this site --</option>
+                                  ) : (
+                                    <>
+                                      <option value="">-- Select Product ({siteSpecificProducts.length} available at this site) --</option>
+                                      {siteSpecificProducts.map(prod => (
+                                        <option key={prod.name} value={prod.name}>
+                                          {prod.name} {prod.code ? `(${prod.code})` : ''}
+                                        </option>
+                                      ))}
+                                    </>
+                                  )}
                                 </select>
+                                {p.code && (
+                                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                                    Product Code: <code>{p.code}</code>
+                                  </div>
+                                )}
                               </div>
                               <div>
                                 <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Notes / Ingredient Changes</label>
                                 <input
                                   className="form-control"
                                   style={{ margin: 0, fontSize: 13 }}
-                                  value={p.code || ''}
-                                  onChange={e => updateProduct(idx, 'code', e.target.value)}
-                                  placeholder="e.g. Revised oil formulation"
+                                  value={p.description || ''}
+                                  onChange={e => updateProduct(idx, 'description', e.target.value)}
+                                  placeholder="e.g. Revised oil formulation or changed ingredient supplier"
                                 />
                               </div>
                             </>
@@ -790,11 +1032,114 @@ export default function AddOnApplicationPage() {
                     <PlusCircle size={13} /> Add Another Product
                   </button>
                 </div>
+
+                {/* 5. Supporting Documents */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      5. Supporting Documents {addonType !== 'add_product' && <span style={{ color: '#0284c7' }}>(Attach As Many As Needed)</span>}
+                    </div>
+                    <label style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12,
+                      color: '#0284c7',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      background: '#f0f9ff',
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      border: '1px solid #bae6fd'
+                    }}>
+                      <UploadCloud size={14} /> Add Documents
+                      <input
+                        type="file"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          if (e.target.files) {
+                            setAttachments(prev => [...prev, ...Array.from(e.target.files)]);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>
+                    Upload specifications, recipes, product data sheets, removal authorization letters, or ingredient declarations.
+                  </div>
+
+                  {attachments.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {attachments.map((file, fIdx) => (
+                        <div key={fIdx} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          padding: '8px 12px',
+                          borderRadius: 8,
+                          fontSize: 12
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            <FileText size={14} color="#0284c7" />
+                            <span style={{ fontWeight: 600, color: '#0f172a', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              {file.name}
+                            </span>
+                            <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                              ({(file.size / 1024).toFixed(1)} KB)
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setAttachments(prev => prev.filter((_, i) => i !== fIdx))}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: 2 }}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{
+                      border: '1.5px dashed #cbd5e1',
+                      borderRadius: 8,
+                      padding: '16px',
+                      textAlign: 'center',
+                      background: '#fafafa'
+                    }}>
+                      <label style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                        <UploadCloud size={20} color="#94a3b8" />
+                        <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Click to select and attach multiple documents</span>
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>PDF, DOCX, XLSX, Images accepted (can attach as many as needed)</span>
+                        <input
+                          type="file"
+                          multiple
+                          style={{ display: 'none' }}
+                          onChange={e => {
+                            if (e.target.files) {
+                              setAttachments(prev => [...prev, ...Array.from(e.target.files)]);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)} disabled={submitting}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={submitting}>
-                  {submitting ? 'Submitting...' : 'Submit Add-on Application'}
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={submitting}
+                  style={{
+                    background: addonType === 'remove_product' ? '#dc2626' : addonType === 'change_ingredients' ? '#0284c7' : '#059669',
+                    borderColor: addonType === 'remove_product' ? '#dc2626' : addonType === 'change_ingredients' ? '#0284c7' : '#059669'
+                  }}
+                >
+                  {submitting ? 'Submitting...' : addonType === 'remove_product' ? 'Submit Remove Request' : addonType === 'change_ingredients' ? 'Submit Change Ingredients Request' : 'Submit Add-on Application'}
                 </button>
               </div>
             </form>

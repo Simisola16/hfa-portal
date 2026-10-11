@@ -197,16 +197,29 @@ export default function ProductsPage({ openNew: openNewProp }) {
           </div>
         )}
 
-        <button
-          className="btn btn-outline"
-          onClick={() => navigate('/addon-applications')}
-          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}
-        >
-          <Package size={15} /> Add-on Requests <ArrowRight size={14} />
-        </button>
-        <button className="btn btn-primary" onClick={() => navigate('/addon-applications?new=true')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#059669', borderColor: '#059669' }}>
-          <Plus size={15} /> Add Product
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            className="btn btn-outline"
+            onClick={() => navigate('/addon-applications?new=true&type=remove_product')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#dc2626', borderColor: '#fca5a5', background: '#fff', fontWeight: 600 }}
+          >
+            <Trash2 size={15} /> Remove Product
+          </button>
+          <button
+            className="btn btn-outline"
+            onClick={() => navigate('/addon-applications?new=true&type=change_ingredients')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0284c7', borderColor: '#bae6fd', background: '#fff', fontWeight: 600 }}
+          >
+            <Edit size={15} /> Change Ingredients
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate('/addon-applications?new=true&type=add_product')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#059669', borderColor: '#059669', fontWeight: 700 }}
+          >
+            <Plus size={15} /> Add Product
+          </button>
+        </div>
       </div>
 
       <div className="card">

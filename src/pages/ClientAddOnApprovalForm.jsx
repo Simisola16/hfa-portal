@@ -86,7 +86,7 @@ export default function ClientAddOnApprovalForm() {
         <AlertCircle size={48} style={{ color: '#ef4444', margin: '0 auto 16px' }} />
         <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b' }}>Application Not Found</h2>
         <button className="btn btn-outline" style={{ marginTop: 16 }} onClick={() => navigate('/addon-applications')}>
-          <ArrowLeft size={16} /> Back to Add-on Applications
+          <ArrowLeft size={16} /> Back
         </button>
       </div>
     );
