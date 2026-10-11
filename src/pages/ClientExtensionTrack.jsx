@@ -12,7 +12,7 @@ const CLIENT_STAGES = [
   { key: 'submitted', title: 'Submit Extension Form', desc: 'Extension form submitted to certification committee' },
   { key: 'under_review_1', title: 'Under Review', desc: 'Initial review of facility justification and audit history' },
   { key: 'under_review_2', title: 'Under Review', desc: 'Executive committee evaluation & signature processing' },
-  { key: 'extension_approved', title: 'Extension Certificate Approve', desc: 'Certificate approved and updated validity issued' }
+  { key: 'extension_approved', title: 'Extension Certificate Accepted', desc: 'Certificate accepted and updated validity issued' }
 ];
 
 export default function ClientExtensionTrack() {
@@ -141,7 +141,7 @@ export default function ClientExtensionTrack() {
                 background: '#059669', color: 'white', padding: '8px 16px', borderRadius: 12,
                 display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13
               }}>
-                <CheckCircle size={16} /> Extension Approved
+                <CheckCircle size={16} /> Extension Accepted
               </div>
             ) : isRejected ? (
               <div style={{
@@ -364,8 +364,8 @@ export default function ClientExtensionTrack() {
                 },
                 {
                   key: 'extension_approved',
-                  title: 'Extension Certificate Approved',
-                  defaultNote: app.certificate_number ? `Certificate approved and issued (${app.certificate_number}).` : 'Certificate approved and updated validity issued.',
+                  title: 'Extension Certificate Accepted',
+                  defaultNote: app.certificate_number ? `Certificate accepted and issued (${app.certificate_number}).` : 'Certificate accepted and updated validity issued.',
                   matchStatuses: ['extension_approved'],
                   order: 4
                 }

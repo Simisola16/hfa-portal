@@ -14,7 +14,7 @@ const STATUS_CONFIG = {
   under_review: { label: 'Under Review', bg: '#eff6ff', color: '#1e40af', border: '#bfdbfe', icon: Clock },
   logsheet_created: { label: 'Under Review', bg: '#eff6ff', color: '#1e40af', border: '#bfdbfe', icon: Clock },
   waiting_signature: { label: 'Under Review', bg: '#eff6ff', color: '#1e40af', border: '#bfdbfe', icon: Clock },
-  extension_approved: { label: 'Extension Certificate Approved', bg: '#dcfce7', color: '#166534', border: '#bbf7d0', icon: CheckCircle },
+  extension_approved: { label: 'Extension Certificate Accepted', bg: '#dcfce7', color: '#166534', border: '#bbf7d0', icon: CheckCircle },
   rejected: { label: 'Rejected', bg: '#fee2e2', color: '#991b1b', border: '#fecaca', icon: AlertCircle }
 };
 
@@ -205,7 +205,7 @@ export default function ExtensionApplicationPage() {
           {[
             { id: 'all', label: 'All Requests' },
             { id: 'under_review', label: 'Under Review' },
-            { id: 'extension_approved', label: 'Approved' },
+            { id: 'extension_approved', label: 'Accepted' },
             { id: 'rejected', label: 'Rejected' },
           ].map(tab => (
             <button
