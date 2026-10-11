@@ -134,7 +134,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           if (a.finalized_date) return false;
           if (['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(a.status)) return false;
           if (a.status === 'dates_proposed') return true;
-          if (Array.isArray(a.proposed_dates) && a.proposed_dates.length === 3 && (!a.selected_dates || a.selected_dates.length === 0) && !a.finalized_date) {
+          if (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0 && (!a.selected_dates || a.selected_dates.length === 0) && !a.finalized_date) {
             return true;
           }
           return false;
@@ -173,10 +173,10 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
             audit: targetAudit,
             type: 'audit',
             mode: 'select_dates',
-            title: `Select Preferred Audit Dates${stageBadge}`,
-            tag: isDualStageApp ? `Stage ${stageNum} Dates` : 'Audit Dates',
-            desc: `Select 2 preferred audit visit dates for ${facilityName}${stageBadge}`,
-            buttonText: 'Select Dates',
+            title: `Confirm Proposed Audit Date${stageBadge}`,
+            tag: isDualStageApp ? `Stage ${stageNum} Date` : 'Audit Date',
+            desc: `Confirm audit visit date or report unavailability for ${facilityName}${stageBadge}`,
+            buttonText: 'Review Date',
             buttonBg: '#0284c7',
             icon: <Calendar size={16} />
           });
@@ -385,7 +385,7 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
         if (a.finalized_date) return false;
         if (['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(a.status)) return false;
         if (a.status === 'dates_proposed') return true;
-        if (Array.isArray(a.proposed_dates) && a.proposed_dates.length === 3 && (!a.selected_dates || a.selected_dates.length === 0)) {
+        if (Array.isArray(a.proposed_dates) && a.proposed_dates.length > 0 && (!a.selected_dates || a.selected_dates.length === 0)) {
           return true;
         }
         return false;
@@ -418,10 +418,10 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
           audit: aud,
           type: 'audit',
           mode: 'select_dates',
-          title: `Select Preferred Audit Dates${stageBadge}`,
-          tag: isGso ? `Stage ${stageNum} Dates` : 'Audit Dates',
-          desc: `Select 2 preferred audit visit dates for ${facilityName}${stageBadge}`,
-          buttonText: 'Select Dates',
+          title: `Confirm Proposed Audit Date${stageBadge}`,
+          tag: isGso ? `Stage ${stageNum} Date` : 'Audit Date',
+          desc: `Confirm audit visit date or report unavailability for ${facilityName}${stageBadge}`,
+          buttonText: 'Review Date',
           buttonBg: '#0284c7',
           icon: <Calendar size={16} />
         });

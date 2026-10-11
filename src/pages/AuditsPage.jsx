@@ -1,4 +1,4 @@
-﻿import { getPdfUrl } from '../lib/pdfUtils';
+import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Calendar, Search, RefreshCw, AlertTriangle, CheckCircle2, Clock, 
@@ -285,7 +285,7 @@ export default function AuditsPage() {
                     ? new Date(audit.finalized_date).toLocaleDateString('en-GB')
                     : (audit.scheduled_date 
                       ? new Date(audit.scheduled_date).toLocaleDateString('en-GB')
-                      : (audit.proposed_dates?.length > 0 ? `${audit.proposed_dates.length} Dates Proposed` : 'TBD'));
+                      : (audit.proposed_dates?.length > 0 ? (audit.proposed_dates.length === 1 ? new Date(audit.proposed_dates[0]).toLocaleDateString('en-GB') : `${audit.proposed_dates.length} Dates Proposed`) : 'TBD'));
 
                   return (
                     <React.Fragment key={auditId}>
