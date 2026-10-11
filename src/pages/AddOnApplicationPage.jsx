@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import {
   ArrowLeft, Award, PlusCircle, Trash2, FileText,
   CheckCircle, AlertCircle, Package, X, Users, ChevronDown, ChevronUp, ArrowUpRight, Activity,
@@ -105,10 +106,12 @@ const emptyProduct = (rowType = 'Add product') => ({
 export default function AddOnApplicationPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user, profile } = useAuth();
   const [certs, setCerts] = useState([]);
   const [sites, setSites] = useState([]);
   const [myApps, setMyApps] = useState([]);
   const [clientProducts, setClientProducts] = useState([]);
+  const [siteProducts, setSiteProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -177,6 +180,20 @@ export default function AddOnApplicationPage() {
 
   useEffect(() => { fetchData(); }, []);
 
+  // Fetch site-specific products whenever form.site_id changes
+  useEffect(() => {
+    if (form.site_id) {
+      api.get(`/api/products?site_id=${form.site_id}`)
+        .then(res => {
+          const prods = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : []));
+          setSiteProducts(prods);
+        })
+        .catch(err => console.warn('Failed to load site products:', err.message));
+    } else {
+      setSiteProducts([]);
+    }
+  }, [form.site_id]);
+
   const openFormWithType = (type = 'add_product') => {
     const resolved = ['remove_product', 'change_ingredients', 'add_product'].includes(type) ? type : 'add_product';
     setAddonType(resolved);
@@ -184,6 +201,9 @@ export default function AddOnApplicationPage() {
     setAttachments([]);
     setForm(f => ({
       ...f,
+      contact_name: f.contact_name || profile?.full_name || profile?.contact_person || user?.full_name || '',
+      contact_phone: f.contact_phone || profile?.phone || user?.phone || '',
+      contact_email: f.contact_email || profile?.email || user?.email || '',
       products: [emptyProduct(rowType)]
     }));
     if (sites.length === 1) {
@@ -202,12 +222,76 @@ export default function AddOnApplicationPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
 
-  const selectedCert = certs.find(c => String(c._id || c.id) === String(form.certificate_id));
-  const certProducts = selectedCert?.products_covered || [];
-  const availableProductNames = Array.from(new Set([
-    ...certProducts,
-    ...clientProducts.map(p => p.name).filter(Boolean)
-  ]));
+  // Compute products specifically associated with the currently selected site / certificate
+  const siteSpecificProducts = useMemo(() => {
+    if (!form.site_id && !form.certificate_id) return [];
+
+    const matchedCert = certs.find(c => String(c._id || c.id) === String(form.certificate_id)) ||
+      certs.find(c => form.site_id && String(c.site_id?._id || c.site_id?.id || c.site_id) === String(form.site_id));
+
+    const certCoverage = Array.isArray(matchedCert?.products_covered) ? matchedCert.products_covered : [];
+    const certDetails = Array.isArray(matchedCert?.product_details) ? matchedCert.product_details : [];
+
+    // Filter products strictly matching this site
+    const matchedProducts = [...(siteProducts || []), ...(clientProducts || [])].filter(p => {
+      if (!p) return false;
+      if (form.site_id) {
+        const sId = p.site_id?._id || p.site_id?.id || p.site_id;
+        if (sId && String(sId) === String(form.site_id)) return true;
+      }
+      if (matchedCert) {
+        const certNum = matchedCert.certificate_number;
+        const certIdStr = matchedCert._id || matchedCert.id;
+        if (p.certificate_id && (p.certificate_id === certNum || String(p.certificate_id) === String(certIdStr))) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    const productMap = new Map();
+
+    // 1. Add from matched products
+    matchedProducts.forEach(p => {
+      const name = p.name?.trim();
+      if (name && !productMap.has(name)) {
+        productMap.set(name, {
+          name,
+          code: p.code || p.barcode || ''
+        });
+      }
+    });
+
+    // 2. Add from certificate product_details
+    certDetails.forEach(cd => {
+      const name = cd.name?.trim();
+      if (name) {
+        if (!productMap.has(name)) {
+          productMap.set(name, {
+            name,
+            code: cd.code || ''
+          });
+        } else if (!productMap.get(name).code && cd.code) {
+          productMap.get(name).code = cd.code;
+        }
+      }
+    });
+
+    // 3. Add from certificate products_covered
+    certCoverage.forEach(rawName => {
+      if (typeof rawName === 'string' && rawName.trim()) {
+        const name = rawName.trim();
+        if (!productMap.has(name)) {
+          productMap.set(name, {
+            name,
+            code: ''
+          });
+        }
+      }
+    });
+
+    return Array.from(productMap.values());
+  }, [form.site_id, form.certificate_id, certs, siteProducts, clientProducts]);
 
   const updateProduct = (idx, field, value) => {
     setForm(f => {
@@ -215,6 +299,15 @@ export default function AddOnApplicationPage() {
       products[idx] = { ...products[idx], [field]: value };
       return { ...f, products };
     });
+  };
+
+  const handleSelectProduct = (idx, selectedName) => {
+    const matched = siteSpecificProducts.find(p => p.name === selectedName);
+    updateProduct(idx, 'name', selectedName);
+    updateProduct(idx, 'original_name', selectedName);
+    if (matched?.code) {
+      updateProduct(idx, 'code', matched.code);
+    }
   };
 
   const addProduct = () => {
@@ -233,19 +326,26 @@ export default function AddOnApplicationPage() {
       const sId = c.site_id?._id || c.site_id?.id || c.site_id;
       return String(sId) === String(selectedSiteId);
     });
+    const rowType = getRowTypeForAddonType(addonType);
     setForm(f => ({
       ...f,
       site_id: selectedSiteId,
-      certificate_id: matchingCert ? (matchingCert._id || matchingCert.id) : (f.certificate_id || '')
+      certificate_id: matchingCert ? (matchingCert._id || matchingCert.id) : (f.certificate_id || ''),
+      // For remove_product or change_ingredients, reset product picks so client picks from the newly selected site
+      products: ['remove_product', 'change_ingredients'].includes(addonType)
+        ? [emptyProduct(rowType)]
+        : f.products
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.site_id && !form.certificate_id) return toast.error('Please select a site.');
-    if (!form.contact_email.trim()) return toast.error('Contact Person Email is required.');
+    if (!form.site_id && !form.certificate_id) return toast.error('Please select a manufacturing site.');
+    if (!form.contact_name?.trim()) return toast.error('Contact Person Name is required.');
+    if (!form.contact_phone?.trim()) return toast.error('Contact Person Phone Number is required.');
+    if (!form.contact_email?.trim()) return toast.error('Contact Person Email is required.');
     for (const [i, p] of form.products.entries()) {
-      if (!p.name.trim()) return toast.error(`Product row ${i + 1}: Product Name is required.`);
+      if (!p.name?.trim()) return toast.error(`Product row ${i + 1}: Please select or enter a Product Name.`);
       if (!p.type) return toast.error(`Product row ${i + 1}: Type is required.`);
     }
     setSubmitting(true);
@@ -655,12 +755,24 @@ export default function AddOnApplicationPage() {
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>2. Contact Person</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Contact Person Name</label>
-                      <input className="form-control" value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="e.g. Jane Smith" />
+                      <label className="form-label">Contact Person Name <span>*</span></label>
+                      <input
+                        className="form-control"
+                        value={form.contact_name}
+                        onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))}
+                        placeholder="e.g. Jane Smith"
+                        required
+                      />
                     </div>
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Contact Person Number</label>
-                      <input className="form-control" value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} placeholder="e.g. +44 7700 900077" />
+                      <label className="form-label">Contact Person Phone Number <span>*</span></label>
+                      <input
+                        className="form-control"
+                        value={form.contact_phone}
+                        onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))}
+                        placeholder="e.g. +44 7700 900077"
+                        required
+                      />
                     </div>
                   </div>
                   <div className="form-group" style={{ margin: '12px 0 0' }}>
@@ -680,6 +792,13 @@ export default function AddOnApplicationPage() {
                 {/* 4. Products Table */}
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>4. Products</div>
+
+                  {!form.site_id && !form.certificate_id && (
+                    <div style={{ padding: '10px 14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, fontSize: 12.5, color: '#1e40af', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <AlertCircle size={15} style={{ color: '#2563eb', flexShrink: 0 }} />
+                      <span>Please select a <strong>Manufacturing Site</strong> in Step 1 above to view the products active at that site.</span>
+                    </div>
+                  )}
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {form.products.map((p, idx) => (
@@ -768,17 +887,30 @@ export default function AddOnApplicationPage() {
                                 className="form-control"
                                 style={{ margin: 0, fontSize: 13 }}
                                 value={p.name || p.original_name || ''}
-                                onChange={e => {
-                                  updateProduct(idx, 'name', e.target.value);
-                                  updateProduct(idx, 'original_name', e.target.value);
-                                }}
+                                onChange={e => handleSelectProduct(idx, e.target.value)}
+                                disabled={!form.site_id && !form.certificate_id}
                                 required
                               >
-                                <option value="">-- Select Product to Remove --</option>
-                                {availableProductNames.map(name => (
-                                  <option key={name} value={name}>{name}</option>
-                                ))}
+                                {!form.site_id && !form.certificate_id ? (
+                                  <option value="">-- Please select a manufacturing site first --</option>
+                                ) : siteSpecificProducts.length === 0 ? (
+                                  <option value="">-- No products found for this site --</option>
+                                ) : (
+                                  <>
+                                    <option value="">-- Select Product to Remove ({siteSpecificProducts.length} available at this site) --</option>
+                                    {siteSpecificProducts.map(prod => (
+                                      <option key={prod.name} value={prod.name}>
+                                        {prod.name} {prod.code ? `(${prod.code})` : ''}
+                                      </option>
+                                    ))}
+                                  </>
+                                )}
                               </select>
+                              {p.code && (
+                                <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                                  Product Code: <code>{p.code}</code>
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -790,16 +922,24 @@ export default function AddOnApplicationPage() {
                                   className="form-control"
                                   style={{ margin: 0, fontSize: 13 }}
                                   value={p.original_name || p.name || ''}
-                                  onChange={e => {
-                                    updateProduct(idx, 'original_name', e.target.value);
-                                    updateProduct(idx, 'name', e.target.value);
-                                  }}
+                                  onChange={e => handleSelectProduct(idx, e.target.value)}
+                                  disabled={!form.site_id && !form.certificate_id}
                                   required
                                 >
-                                  <option value="">-- Select Existing Product --</option>
-                                  {availableProductNames.map(name => (
-                                    <option key={name} value={name}>{name}</option>
-                                  ))}
+                                  {!form.site_id && !form.certificate_id ? (
+                                    <option value="">-- Please select a manufacturing site first --</option>
+                                  ) : siteSpecificProducts.length === 0 ? (
+                                    <option value="">-- No products found for this site --</option>
+                                  ) : (
+                                    <>
+                                      <option value="">-- Select Existing Product ({siteSpecificProducts.length} available at this site) --</option>
+                                      {siteSpecificProducts.map(prod => (
+                                        <option key={prod.name} value={prod.name}>
+                                          {prod.name} {prod.code ? `(${prod.code})` : ''}
+                                        </option>
+                                      ))}
+                                    </>
+                                  )}
                                 </select>
                               </div>
                               <div>
@@ -834,26 +974,39 @@ export default function AddOnApplicationPage() {
                                   className="form-control"
                                   style={{ margin: 0, fontSize: 13 }}
                                   value={p.original_name || p.name || ''}
-                                  onChange={e => {
-                                    updateProduct(idx, 'original_name', e.target.value);
-                                    updateProduct(idx, 'name', e.target.value);
-                                  }}
+                                  onChange={e => handleSelectProduct(idx, e.target.value)}
+                                  disabled={!form.site_id && !form.certificate_id}
                                   required
                                 >
-                                  <option value="">-- Select Product --</option>
-                                  {availableProductNames.map(name => (
-                                    <option key={name} value={name}>{name}</option>
-                                  ))}
+                                  {!form.site_id && !form.certificate_id ? (
+                                    <option value="">-- Please select a manufacturing site first --</option>
+                                  ) : siteSpecificProducts.length === 0 ? (
+                                    <option value="">-- No products found for this site --</option>
+                                  ) : (
+                                    <>
+                                      <option value="">-- Select Product ({siteSpecificProducts.length} available at this site) --</option>
+                                      {siteSpecificProducts.map(prod => (
+                                        <option key={prod.name} value={prod.name}>
+                                          {prod.name} {prod.code ? `(${prod.code})` : ''}
+                                        </option>
+                                      ))}
+                                    </>
+                                  )}
                                 </select>
+                                {p.code && (
+                                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                                    Product Code: <code>{p.code}</code>
+                                  </div>
+                                )}
                               </div>
                               <div>
                                 <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>Notes / Ingredient Changes</label>
                                 <input
                                   className="form-control"
                                   style={{ margin: 0, fontSize: 13 }}
-                                  value={p.code || ''}
-                                  onChange={e => updateProduct(idx, 'code', e.target.value)}
-                                  placeholder="e.g. Revised oil formulation"
+                                  value={p.description || p.code || ''}
+                                  onChange={e => updateProduct(idx, 'description', e.target.value)}
+                                  placeholder="e.g. Revised oil formulation or changed ingredient supplier"
                                 />
                               </div>
                             </>
