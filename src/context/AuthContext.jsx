@@ -90,10 +90,25 @@ export function AuthProvider({ children }) {
     }, 1000);
   };
 
-  const updateProfile = (newProfile) => setProfile(newProfile);
+  const updateProfile = (newProfile) => {
+    setProfile(newProfile);
+    setUser(newProfile);
+  };
+
+  const refreshUser = async () => {
+    try {
+      const data = await api.get('/api/auth/profile');
+      if (data?.user) {
+        setUser(data.user);
+        setProfile(data.user);
+        return data.user;
+      }
+    } catch (_) {}
+    return null;
+  };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, logout, endImpersonation, updateProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, login, logout, endImpersonation, updateProfile, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
