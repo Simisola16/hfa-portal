@@ -1145,8 +1145,21 @@ export default function AddOnApplicationPage() {
                       </div>
                     ))}
                   </div>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={addProduct} style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--primary)', borderColor: 'var(--primary)' }}>
-                    <PlusCircle size={13} /> Add Another Product
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={addProduct}
+                    style={{
+                      marginTop: 12,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12,
+                      color: addonType === 'remove_product' ? '#dc2626' : 'var(--primary)',
+                      borderColor: addonType === 'remove_product' ? '#fca5a5' : 'var(--primary)'
+                    }}
+                  >
+                    <PlusCircle size={13} /> {addonType === 'remove_product' ? 'Remove Another Product' : 'Add Another Product'}
                   </button>
                 </div>
 
