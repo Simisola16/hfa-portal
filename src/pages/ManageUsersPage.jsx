@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { 
   Users, Plus, X, Trash2, Edit3, Shield, Key, 
   Copy, Check, Eye, EyeOff, AlertCircle, Sparkles,
-  Crown, ArrowRightLeft
+  Crown, ArrowRightLeft, Lock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -611,16 +611,37 @@ export default function ManageUsersPage() {
             <form onSubmit={handleUpdateUser}>
               <div className="modal-body" style={{ padding: 24, display: 'grid', gap: 16 }}>
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, display: 'block' }}>
+                  <label className="form-label" style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
                     Full Name
+                    {editingUser?.is_owner && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: 4, border: '1px solid #e2e8f0' }}>
+                        <Lock size={10} /> Locked
+                      </span>
+                    )}
                   </label>
                   <input 
                     className="form-control" 
                     value={editForm.full_name} 
                     onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} 
+                    readOnly={editingUser?.is_owner}
+                    disabled={editingUser?.is_owner}
                     required 
-                    style={{ borderRadius: 8, height: 42 }}
+                    style={{
+                      borderRadius: 8,
+                      height: 42,
+                      background: editingUser?.is_owner ? '#f8fafc' : '#fff',
+                      color: editingUser?.is_owner ? '#475569' : '#0f172a',
+                      cursor: editingUser?.is_owner ? 'not-allowed' : 'text',
+                      borderColor: '#e2e8f0',
+                      fontWeight: editingUser?.is_owner ? 600 : 400
+                    }}
+                    title={editingUser?.is_owner ? 'Primary Account Holder name is certified on file and cannot be modified.' : ''}
                   />
+                  {editingUser?.is_owner && (
+                    <span style={{ fontSize: 11, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                      <Lock size={10} /> Primary account holder name is certified on record and cannot be edited.
+                    </span>
+                  )}
                 </div>
 
                 <div className="form-group" style={{ margin: 0 }}>
