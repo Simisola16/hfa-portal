@@ -26,7 +26,8 @@ export default function ProcessingTimeline({
   initialProduct = null,
   appId = null,
   audits = [],
-  app = null
+  app = null,
+  allInvoices = []
 }) {
   const navigate = useNavigate();
   const isRejected = status === 'rejected';
