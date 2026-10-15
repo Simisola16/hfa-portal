@@ -227,10 +227,16 @@ export default function CertificatesPage() {
       toast.error('Please enter the contact person phone number.');
       return;
     }
+    const siteObj = renewModal.site_id && typeof renewModal.site_id === 'object' ? renewModal.site_id : null;
+    const certSiteId = siteObj?._id || siteObj?.id || (typeof renewModal.site_id === 'string' ? renewModal.site_id : '');
+    const certSiteName = siteObj?.name || siteObj?.est_name || renewModal.site_name || renewModal.sites?.name || renewModal.application_id?.site_name || '';
+
     setRenewSubmitting(true);
     try {
       await api.post('/api/applications/renew', {
         certificate_id: renewModal._id || renewModal.id,
+        site_id: certSiteId || undefined,
+        site_name: certSiteName || undefined,
         contact_person: renewForm.contact_person.trim(),
         contact_email: renewForm.contact_email.trim(),
         contact_phone: renewForm.contact_phone.trim()
@@ -609,6 +615,9 @@ export default function CertificatesPage() {
                 </div>
                 <p style={{ color: '#94a3b8', margin: 0, fontSize: 13 }}>
                   Certificate <strong style={{ color: '#e2e8f0' }}>{renewModal.certificate_number}</strong>
+                  {(renewModal.site_name || renewModal.site_id?.name || renewModal.site_id?.est_name || renewModal.sites?.name) && (
+                    <> &nbsp;·&nbsp; Site: <strong style={{ color: '#67e8f9' }}>{renewModal.site_name || renewModal.site_id?.name || renewModal.site_id?.est_name || renewModal.sites?.name}</strong></>
+                  )}
                   {renewModal.expiry_date && (
                     <> &nbsp;·&nbsp; Expired/Expiring: <strong style={{ color: '#fca5a5' }}>{new Date(renewModal.expiry_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></>
                   )}
