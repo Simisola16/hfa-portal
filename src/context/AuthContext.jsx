@@ -52,7 +52,15 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password) => {
-    const data = await api.post('/api/auth/login', { email, password });
+    let clientTimezone = '';
+    try {
+      clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {}
+    const data = await api.post('/api/auth/login', { 
+      email, 
+      password,
+      client_timezone: clientTimezone,
+    });
     const userRole = data.user?.role || 'client';
     if (userRole !== 'client' && !data.user?.is_impersonation) {
       throw new Error('Staff and administrator accounts cannot log in here. Please use the HFA Admin Portal.');
