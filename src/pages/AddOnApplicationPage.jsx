@@ -1164,6 +1164,7 @@ export default function AddOnApplicationPage() {
                 </div>
 
                 {/* 5. Supporting Documents */}
+                {addonType !== 'add_product' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <div style={{ fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -1257,6 +1258,7 @@ export default function AddOnApplicationPage() {
                     </div>
                   )}
                 </div>
+                )}
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)} disabled={submitting}>Cancel</button>
