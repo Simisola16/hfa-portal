@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import {
-  Save, Lock, ShieldCheck, Info, Eye, EyeOff, Key, CheckCircle2,
+  Save, ShieldCheck, Info, Eye, EyeOff, Key, CheckCircle2,
 } from 'lucide-react';
 
 // ── Password strength helper ──────────────────────────────────────────────────
@@ -62,10 +62,26 @@ export default function ProfilePage() {
   // ── Submit profile update ────────────────────────────────────────────────────
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
+    if (!form.full_name?.trim()) {
+      toast.error('Full Name is required.');
+      return;
+    }
+    if (!form.company_name?.trim()) {
+      toast.error('Company / Organisation Name is required.');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const { phone, address, postcode, country } = form;
-      const data = await api.put('/api/auth/profile', { phone, address, postcode, country });
+      const { full_name, company_name, phone, address, postcode, country } = form;
+      const data = await api.put('/api/auth/profile', {
+        full_name,
+        company_name,
+        phone,
+        address,
+        postcode,
+        country
+      });
       updateProfile(data.profile || data.user);
       toast.success('Profile updated successfully! All HFA staff have been notified.');
     } catch (err) {
@@ -133,33 +149,29 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Compliance Notice */}
+            {/* Staff Notification Notice */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 8, background: '#f8fafc', border: '1px solid #e2e8f0', marginBottom: 20, fontSize: 12.5, color: '#475569', lineHeight: 1.5 }}>
               <Info size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} />
               <div>
-                <strong>Staff Notification:</strong> When you save changes, all HFA staff are automatically notified of your updated details to keep certification records accurate. Your <strong>Company Name</strong> and <strong>Full Name</strong> are locked — contact your HFA Account Executive or open a support ticket to request changes.
+                <strong>Staff Notification:</strong> You can edit your <strong>Full Name</strong>, <strong>Company / Organisation Name</strong>, and contact details below. Whenever you save changes, all HFA staff are automatically notified of your updated details so your certification records and files remain accurate.
               </div>
             </div>
 
-            {/* Full Name (locked) & Phone */}
+            {/* Full Name & Phone */}
             <div className="form-grid">
               <div className="form-group">
-                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  Full Name
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: 4, border: '1px solid #e2e8f0' }}>
-                    <Lock size={10} /> Locked
-                  </span>
+                <label className="form-label">
+                  Full Name <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input
                   className="form-control"
                   value={form.full_name}
-                  readOnly
-                  disabled
-                  style={{ background: '#f8fafc', color: '#475569', cursor: 'not-allowed', borderColor: '#e2e8f0', fontWeight: 600 }}
-                  title="Full name is locked. Contact HFA to request updates."
+                  onChange={set('full_name')}
+                  placeholder="e.g. Lekan Ola"
+                  required
                 />
-                <span style={{ fontSize: 11, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                  <Lock size={10} /> Certified primary contact on file
+                <span style={{ fontSize: 11, color: '#64748b', display: 'block', marginTop: 4 }}>
+                  Certified primary contact on file
                 </span>
               </div>
               <div className="form-group">
@@ -168,24 +180,20 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Company Name (locked) */}
+            {/* Company / Organisation Name */}
             <div className="form-group">
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                Company / Organisation Name
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: 4, border: '1px solid #e2e8f0' }}>
-                  <Lock size={10} /> Locked
-                </span>
+              <label className="form-label">
+                Company / Organisation Name <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input
                 className="form-control"
                 value={form.company_name}
-                readOnly
-                disabled
-                style={{ background: '#f8fafc', color: '#475569', cursor: 'not-allowed', borderColor: '#e2e8f0', fontWeight: 600 }}
-                title="Company name is locked. Contact HFA to request updates."
+                onChange={set('company_name')}
+                placeholder="e.g. Anike International Ltd"
+                required
               />
-              <span style={{ fontSize: 11, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                <Lock size={10} /> Registered company name matching your HFA certification agreements
+              <span style={{ fontSize: 11, color: '#64748b', display: 'block', marginTop: 4 }}>
+                Registered company name matching your HFA certification agreements
               </span>
             </div>
 
