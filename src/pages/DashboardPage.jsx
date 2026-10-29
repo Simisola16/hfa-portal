@@ -267,12 +267,18 @@ export default function DashboardPage() {
   });
 
   // ── Action Items Calculation (Interactive & Real-time) ─────────────────────
+  const ACTION_REQUIRED_CUTOFF = new Date('2026-10-01T00:00:00Z');
   const actionItems = useMemo(() => {
     const items = [];
     const currentTime = new Date();
+    const getItemDate = (obj) => new Date(
+      obj?.created_at || obj?.createdAt || obj?.client_sign_date ||
+      obj?.due_date || obj?.audit_date || obj?.updatedAt || 0
+    );
 
     // 1. Unpaid Invoices
     (invoices || []).forEach(inv => {
+      if (getItemDate(inv) < ACTION_REQUIRED_CUTOFF) return;
       const isUnpaid = inv.status !== 'paid' && inv.status !== 'settled';
       if (isUnpaid) {
         if (inv.status === 'client_paid') {
@@ -313,6 +319,7 @@ export default function DashboardPage() {
 
     // 2. Agreements Awaiting Client Signature
     (agreements || []).forEach(agr => {
+      if (getItemDate(agr) < ACTION_REQUIRED_CUTOFF) return;
       const isPendingSign = agr.status === 'sent' && !agr.client_signed && !agr.signed_agreement_url;
       if (isPendingSign) {
         items.push({
@@ -343,6 +350,7 @@ export default function DashboardPage() {
 
     // 3. Proposals Awaiting Acceptance
     (proposals || []).forEach(prop => {
+      if (getItemDate(prop) < ACTION_REQUIRED_CUTOFF) return;
       if (prop.status === 'pending' || prop.status === 'sent') {
         const estCost = prop.estimated_cost || prop.amount;
         const costStr = estCost ? `(Est: £${Number(estCost).toLocaleString('en-GB')})` : '';
@@ -374,6 +382,7 @@ export default function DashboardPage() {
 
     // 4. Initial Products submitted / PAF Form
     (initialProducts || []).forEach(ip => {
+      if (getItemDate(ip) < ACTION_REQUIRED_CUTOFF) return;
       const isPafEnabled = ip.status === 'paf_enabled';
       const isSubmitted = ip.status === 'submitted' || ip.status === 'paf_client_submitted';
       const isUnderReview = ip.status === 'under_review' || ip.status === 'in_review';
@@ -430,6 +439,7 @@ export default function DashboardPage() {
 
     // 5. Add-on Applications submitted / PAF Form
     (addOnApps || []).forEach(ao => {
+      if (getItemDate(ao) < ACTION_REQUIRED_CUTOFF) return;
       const isPafEnabled = ao.status === 'paf_enabled';
       const isSubmitted = ao.status === 'submitted' || ao.status === 'paf_client_submitted';
       const isUnderReview = ao.status === 'under_review' || ao.status === 'in_review';
@@ -486,6 +496,7 @@ export default function DashboardPage() {
 
     // 6. Scope Extension Applications
     (extensionApps || []).forEach(ext => {
+      if (getItemDate(ext) < ACTION_REQUIRED_CUTOFF) return;
       const isPending = !['approved', 'rejected', 'completed'].includes((ext.status || '').toLowerCase());
       if (isPending) {
         const extRef = ext.application_number ? `#${ext.application_number}` : '';
@@ -518,6 +529,7 @@ export default function DashboardPage() {
 
     // 7. Audits: Dates Proposed or Open NCs
     (audits || []).forEach(aud => {
+      if (getItemDate(aud) < ACTION_REQUIRED_CUTOFF) return;
       if (aud.status === 'dates_proposed') {
         items.push({
           id: `aud_${aud._id || aud.id}`,
@@ -632,6 +644,7 @@ export default function DashboardPage() {
 
     // 10. Applications Across Processing Timeline Stages
     (data.applications || []).forEach(app => {
+      if (getItemDate(app) < ACTION_REQUIRED_CUTOFF) return;
       const st = app.status;
       const appRef = app.application_number ? `#${app.application_number}` : 'N/A';
       const siteName = app.site_name || app.establishment_name || 'Main Facility';
@@ -776,6 +789,7 @@ export default function DashboardPage() {
 
     // 11. Support Tickets with Staff Replies
     (tickets || []).forEach(t => {
+      if (getItemDate(t) < ACTION_REQUIRED_CUTOFF) return;
       if ((t.status === 'open' || t.status === 'in_progress') && Array.isArray(t.responses) && t.responses.length > 0) {
         const lastResp = t.responses[t.responses.length - 1];
         const isStaffReply = (lastResp.user_role || '').toLowerCase().includes('staff') ||
