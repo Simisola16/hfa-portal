@@ -1,4 +1,4 @@
-﻿import { getPdfUrl } from '../lib/pdfUtils';
+import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, FileText, CheckCircle, Download, Upload, ShieldCheck } from 'lucide-react';
 import api from '../lib/api';
@@ -131,7 +131,7 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
       <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FileText size={20} style={{ color: 'var(--primary)' }} /> Sign & Upload Certification Agreement
+            <FileText size={20} style={{ color: 'var(--primary)' }} /> Certification Agreement
           </div>
           <button type="button" className="modal-close" onClick={onClose}><X size={18} /></button>
         </div>
@@ -151,7 +151,7 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
               <div style={{ background: '#f8fafc', padding: '16px 18px', borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 20 }}>
                 <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', margin: 0 }}>{agreement.title || 'Certification Agreement'}</h3>
                 <p style={{ fontSize: 12.5, color: '#64748b', marginTop: 4, marginBottom: 12, lineHeight: 1.5 }}>
-                  Please download the agreement document, have it signed by an authorized signatory, and upload the signed agreement copy below.
+                  You can view and download your official certification agreement document below.
                 </p>
 
                 {agreement.agreement_url && (
@@ -179,7 +179,7 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
               )}
 
               {agreement.details && (
-                <div style={{ marginBottom: 20, background: '#fff', border: '1px solid #e2e8f0', padding: 14, borderRadius: 10 }}>
+                <div style={{ marginBottom: 10, background: '#fff', border: '1px solid #e2e8f0', padding: 14, borderRadius: 10 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>
                     Agreement Terms / Instructions
                   </div>
@@ -188,120 +188,11 @@ export default function ClientAgreementModal({ isOpen, onClose, agreement: propA
                   </div>
                 </div>
               )}
-
-              {/* If Agreement is already signed, display verified confirmation */}
-              {agreement.client_signed ? (
-                <div style={{ border: '1.5px dashed #bbf7d0', background: '#f0fdf4', borderRadius: 12, padding: 18, marginBottom: 20 }}>
-                  <div style={{ fontSize: 11, color: '#15803d', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CheckCircle size={16} /> Signed Agreement Verified
-                  </div>
-                  <div style={{ fontSize: 13.5, color: '#1e293b' }}>
-                    <div>Signed by: <strong style={{ fontWeight: 700 }}>{agreement.client_sign_name || 'Authorized Signatory'}</strong></div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                      Date: {agreement.client_sign_date ? new Date(agreement.client_sign_date).toLocaleString('en-GB') : (agreement.updatedAt ? new Date(agreement.updatedAt).toLocaleString('en-GB') : 'N/A')}
-                    </div>
-                  </div>
-                  {agreement.signed_agreement_url && (
-                    <div style={{ marginTop: 14 }}>
-                      <a
-                        href={getPdfUrl(agreement.signed_agreement_url)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-outline btn-sm"
-                        style={{ borderColor: '#86efac', color: '#15803d', background: '#fff', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                      >
-                        <Download size={14} /> Download / View Signed Document
-                      </a>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* Signing Form */
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div className="form-group">
-                    <label className="form-label">Full Name of Authorized Signee <span>*</span></label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="e.g. Jane Smith (Managing Director)"
-                      value={signName}
-                      onChange={e => setSignName(e.target.value)}
-                      disabled={submitting}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Upload Signed Agreement Document (PDF / Document) <span>*</span></label>
-                    <div
-                      onClick={() => document.getElementById('client-signed-agreement-upload').click()}
-                      style={{
-                        border: '2px dashed #cbd5e1',
-                        padding: '24px 20px',
-                        borderRadius: 12,
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        background: signedFile ? '#f0fdf4' : '#fff',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseOver={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                      onMouseOut={e => e.currentTarget.style.borderColor = '#cbd5e1'}
-                    >
-                      <Upload size={32} style={{ color: signedFile ? '#16a34a' : '#94a3b8', margin: '0 auto 8px' }} />
-                      <div style={{ fontSize: 13.5, fontWeight: 700, color: signedFile ? '#15803d' : '#334155' }}>
-                        {signedFile ? signedFile.name : 'Click to select signed agreement file'}
-                      </div>
-                      <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4 }}>
-                        Supported formats: PDF, DOC, DOCX, PNG, JPG
-                      </div>
-                      <input
-                        id="client-signed-agreement-upload"
-                        type="file"
-                        accept=".pdf,application/pdf,image/*,.doc,.docx"
-                        style={{ display: 'none' }}
-                        onChange={e => {
-                          if (e.target.files && e.target.files[0]) {
-                            setSignedFile(e.target.files[0]);
-                          }
-                        }}
-                        disabled={submitting}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Comments / Additional Notes (Optional)</label>
-                    <textarea
-                      className="form-control"
-                      rows={2}
-                      placeholder="Any notes regarding the signed agreement..."
-                      value={comment}
-                      onChange={e => setComment(e.target.value)}
-                      disabled={submitting}
-                    />
-                  </div>
-                </form>
-              )}
             </>
           )}
         </div>
         <div className="modal-footer">
-          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={submitting}>Cancel</button>
-          {agreement?.client_signed ? (
-            <span className="badge badge-green" style={{ padding: '8px 16px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <CheckCircle size={16} /> ✓ Agreement Already Signed
-            </span>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleSubmit}
-              disabled={submitting || !agreement || loading}
-              style={{ background: '#0e7490', borderColor: '#0e7490' }}
-            >
-              {submitting ? 'Submitting Agreement...' : 'Upload & Submit Signed Agreement'}
-            </button>
-          )}
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Close</button>
         </div>
       </div>
     </div>

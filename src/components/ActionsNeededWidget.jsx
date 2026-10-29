@@ -303,22 +303,6 @@ export default function ActionsNeededWidget({ onActionCompleted }) {
             });
             break;
 
-          case 'agreement_sent':
-            actionList.push({
-              id: `app-ag-${appId}`,
-              category: 'agreements',
-              app,
-              agreement: linkedAgreement,
-              type: 'agreement',
-              title: 'Certification Agreement Ready to Sign',
-              tag: 'Agreement',
-              desc: `Review & electronically sign certification agreement contract for ${facilityName}`,
-              buttonText: 'Sign Agreement',
-              buttonBg: '#2563eb',
-              icon: <PenTool size={16} />
-            });
-            break;
-
           case 'final_invoice_sent': {
             if (linkedInvoice) processedInvoiceIds.add(String(linkedInvoice._id || linkedInvoice.id));
             const isPaid = (linkedInvoice && ['paid', 'client_paid', 'settled'].includes((linkedInvoice.status || '').toLowerCase())) ||

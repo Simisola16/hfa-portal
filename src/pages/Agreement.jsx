@@ -1,4 +1,4 @@
-﻿import { getPdfUrl } from '../lib/pdfUtils';
+import { getPdfUrl } from '../lib/pdfUtils';
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
@@ -79,7 +79,7 @@ export default function AgreementPage() {
       <div className="card">
         <div className="card-header">
           <div className="card-title">My Received Agreements ({agreements.length})</div>
-          <div className="card-subtitle">Review, sign, and view all certification agreements with HFA</div>
+          <div className="card-subtitle">View and download certification agreements sent by HFA</div>
         </div>
         <div className="table-wrap">
           {loading ? (
@@ -88,7 +88,7 @@ export default function AgreementPage() {
             <div className="empty-state">
               <FileCheck size={48} style={{ opacity: 0.1, marginBottom: 16 }} />
               <div className="empty-state-title">No Agreements Found</div>
-              <div className="empty-state-text">Agreements sent by HFA will appear here for your review and sign-off</div>
+              <div className="empty-state-text">Agreements sent by HFA will appear here for you to view and download</div>
             </div>
           ) : (
             <table>
@@ -110,20 +110,24 @@ export default function AgreementPage() {
                     <td>{a.application_id?.site_name || a.application_id?.establishment_name || '—'}</td>
                     <td>{new Date(a.createdAt || a.created_at).toLocaleDateString('en-GB')}</td>
                     <td>
-                      <span className={`badge ${
-                        a.client_signed ? 'badge-green' : 'badge-yellow'
-                      }`} style={{ textTransform: 'capitalize' }}>
-                        {a.client_signed ? 'Signed' : 'Pending Signature'}
+                      <span className="badge badge-green" style={{ textTransform: 'capitalize' }}>
+                        Received
                       </span>
                     </td>
-                    <td>
-                      <button className="btn btn-ghost btn-sm" onClick={() => {
-                        setSelected(a);
-                        setSignName(a.client_sign_name || '');
-                        setSignedFile(null);
-                        setComment(a.client_comment || '');
-                      }}>
-                        {a.client_signed ? 'View Details' : 'View & Sign'}
+                    <td style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {a.agreement_url && (
+                        <a
+                          href={getPdfUrl(a.agreement_url)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline btn-sm"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                        >
+                          <Download size={13} /> Download PDF
+                        </a>
+                      )}
+                      <button className="btn btn-ghost btn-sm" onClick={() => setSelected(a)}>
+                        View Details
                       </button>
                     </td>
                   </tr>
@@ -135,11 +139,11 @@ export default function AgreementPage() {
       </div>
 
       {selected && (
-        <div className="modal-overlay" onClick={() => !submitting && setSelected(null)}>
-          <div className="modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={() => setSelected(null)}>
+          <div className="modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <FileText size={18} style={{ color: 'var(--primary)' }} /> Review &amp; Sign Agreement
+                <FileText size={18} style={{ color: 'var(--primary)' }} /> Certification Agreement Details
               </span>
               <button type="button" className="modal-close" onClick={() => setSelected(null)}><X size={18} /></button>
             </div>
@@ -162,156 +166,33 @@ export default function AgreementPage() {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: selected.agreement_url ? 'repeat(auto-fit, minmax(200px, 1fr))' : '1fr', gap: 12, marginBottom: 20 }}>
-                {selected.agreement_url && (
-                  <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: 14, borderRadius: 10 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Agreement Document</div>
-                    <a 
-                      href={getPdfUrl(selected.agreement_url)} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="btn btn-outline btn-sm"
-                      style={{ width: '100%', marginTop: 8, justifyContent: 'center' }}
-                    >
-                      <Download size={14} /> Download Agreement (PDF)
-                    </a>
-                  </div>
-                )}
-                {selected.signed_agreement_url && (
-                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: 14, borderRadius: 10 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#15803d', textTransform: 'uppercase', marginBottom: 4 }}>Signed Copy Uploaded</div>
-                    <a 
-                      href={getPdfUrl(selected.signed_agreement_url)} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="btn btn-outline btn-sm"
-                      style={{ width: '100%', marginTop: 8, justifyContent: 'center', borderColor: '#16a34a', color: '#16a34a' }}
-                    >
-                      <Download size={14} /> View Signed Document
-                    </a>
-                  </div>
-                )}
-                {selected.final_agreement_url && (
-                  <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', padding: 14, borderRadius: 10 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', textTransform: 'uppercase', marginBottom: 4 }}>Final Countersigned Copy</div>
-                    <a 
-                      href={getPdfUrl(selected.final_agreement_url)} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="btn btn-outline btn-sm"
-                      style={{ width: '100%', marginTop: 8, justifyContent: 'center', borderColor: '#0284c7', color: '#0284c7' }}
-                    >
-                      <Download size={14} /> Download Countersigned Copy
-                    </a>
-                  </div>
-                )}
-              </div>
+              {selected.agreement_url && (
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: 14, borderRadius: 10, marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>Agreement Document</div>
+                  <a 
+                    href={getPdfUrl(selected.agreement_url)} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="btn btn-outline btn-sm"
+                    style={{ width: '100%', marginTop: 8, justifyContent: 'center' }}
+                  >
+                    <Download size={14} /> Download Agreement (PDF)
+                  </a>
+                </div>
+              )}
 
               {selected.details && (
-                <div style={{ marginBottom: 20, background: '#fff', border: '1px solid #e2e8f0', padding: 14, borderRadius: 10 }}>
+                <div style={{ marginBottom: 10, background: '#fff', border: '1px solid #e2e8f0', padding: 14, borderRadius: 10 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 8 }}>Agreement Terms / Details</div>
                   <div style={{ fontSize: 13, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
                     {selected.details}
                   </div>
                 </div>
               )}
-
-              {/* IF ALREADY SIGNED */}
-              {selected.client_signed ? (
-                <div style={{ border: '1.5px dashed #bbf7d0', background: '#f0fdf4', borderRadius: 12, padding: 18, marginBottom: 20 }}>
-                  <div style={{ fontSize: 11, color: '#15803d', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CheckCircle size={15} /> Signed Agreement Verified
-                  </div>
-                  <div style={{ fontSize: 13.5, color: '#1e293b' }}>
-                    <div>Signed by: <strong style={{ fontWeight: 700 }}>{selected.client_sign_name}</strong></div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                      Date: {selected.client_sign_date ? new Date(selected.client_sign_date).toLocaleString('en-GB') : 'N/A'}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* SIGNING & DOCUMENT UPLOAD FORM */
-                <form onSubmit={handleSignAgreement} style={{ background: '#f8fafc', padding: 18, borderRadius: 14, border: '1px solid #e2e8f0', marginBottom: 20 }}>
-                  <h4 style={{ fontSize: 14, fontWeight: 800, color: '#334155', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Upload size={16} style={{ color: 'var(--primary)' }} /> Upload Signed Agreement Document
-                  </h4>
-
-                  <div className="form-group" style={{ marginBottom: 14 }}>
-                    <label className="form-label">Full Name of Authorized Signee <span>*</span></label>
-                    <input 
-                      type="text" 
-                      className="form-control"
-                      value={signName}
-                      onChange={e => setSignName(e.target.value)}
-                      placeholder="e.g. John Doe (Managing Director)"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group" style={{ marginBottom: 14 }}>
-                    <label className="form-label">Upload Signed Agreement Document (PDF / Document) <span>*</span></label>
-                    <div
-                      onClick={() => document.getElementById('page-signed-agreement-upload').click()}
-                      style={{
-                        border: '2px dashed #cbd5e1',
-                        padding: '22px 18px',
-                        borderRadius: 10,
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        background: signedFile ? '#f0fdf4' : '#fff',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseOver={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                      onMouseOut={e => e.currentTarget.style.borderColor = '#cbd5e1'}
-                    >
-                      <Upload size={28} style={{ color: signedFile ? '#16a34a' : '#94a3b8', margin: '0 auto 6px' }} />
-                      <div style={{ fontSize: 13, fontWeight: 700, color: signedFile ? '#15803d' : '#334155' }}>
-                        {signedFile ? signedFile.name : 'Click to select signed agreement file'}
-                      </div>
-                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                        Supported formats: PDF, DOC, DOCX, PNG, JPG
-                      </div>
-                      <input 
-                        id="page-signed-agreement-upload"
-                        type="file" 
-                        accept=".pdf,application/pdf,image/*,.doc,.docx" 
-                        style={{ display: 'none' }}
-                        onChange={e => {
-                          if (e.target.files && e.target.files[0]) {
-                            setSignedFile(e.target.files[0]);
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Feedback / Client Comments (Optional)</label>
-                    <textarea 
-                      className="form-control"
-                      rows={2}
-                      value={comment}
-                      onChange={e => setComment(e.target.value)}
-                      placeholder="Add any comments or notes regarding this agreement..."
-                    />
-                  </div>
-                </form>
-              )}
             </div>
 
-            <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
-              <button type="button" className="btn btn-ghost" onClick={() => setSelected(null)} disabled={submitting}>Close</button>
-              {!selected.client_signed && (
-                <button 
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleSignAgreement}
-                  disabled={submitting}
-                  style={{ background: '#0e7490', borderColor: '#0e7490' }}
-                >
-                  {submitting ? 'Uploading Signed Copy...' : 'Upload & Submit Signed Agreement'}
-                </button>
-              )}
+            <div className="modal-footer" style={{ justifyContent: 'flex-end' }}>
+              <button type="button" className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
             </div>
           </div>
         </div>
