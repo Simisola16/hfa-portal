@@ -12,7 +12,7 @@ export default function InvoiceCard({ app, invoice, status, isInitial, isFinal, 
   const isAvailable = isFastTrack
     ? Boolean(invoice) || ['logsheet_signed', 'application_successful', 'ready_for_certificate', 'invoice_sent', 'payment_received', 'certificate_issued'].includes(normStatus)
     : isFinal
-    ? Boolean(invoice) || ['agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(normStatus)
+    ? Boolean(invoice) || ['agreement_sent', 'agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(normStatus)
     : Boolean(invoice) || ['proposal_approved', 'invoice_sent', 'payment_received', 'initial_product_approved', 'dates_proposed', 'dates_accepted', 'date_finalized', 'audit_assigned', 'nc_flagged', 'nc_closed', 'audit_report_submitted', 'on_hold', 'audit_successful', 'logsheet_created', 'logsheet_signed', 'application_successful', 'agreement_sent', 'agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(normStatus);
 
   const cardTitle = isSurv
@@ -29,7 +29,7 @@ export default function InvoiceCard({ app, invoice, status, isInitial, isFinal, 
         <Lock size={20} style={{ color: '#94a3b8', margin: '0 auto 8px' }} />
         <div style={{ fontWeight: 700, fontSize: 13, color: '#64748b' }}>{cardTitle} (Locked)</div>
         <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-          {isFastTrack ? 'Available once application is successful & committee review is completed' : isFinal ? 'Available once final agreement is signed' : 'Available once proposal is accepted'}
+          {isFastTrack ? 'Available once application is successful & committee review is completed' : isFinal ? 'Available once certification agreement is sent' : 'Available once proposal is accepted'}
         </div>
       </div>
     );

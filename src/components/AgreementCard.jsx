@@ -1,4 +1,4 @@
-﻿import { getPdfUrl } from '../lib/pdfUtils';
+import { getPdfUrl } from '../lib/pdfUtils';
 import React from 'react';
 import { FileCheck, Download, Lock } from 'lucide-react';
 
@@ -30,14 +30,14 @@ export default function AgreementCard({ agreement, status, onSignClick }) {
     <div style={{ background: 'white', borderRadius: 20, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
       <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FileCheck size={18} style={{ color: '#2563eb' }} />
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FileCheck size={18} style={{ color: '#10b981' }} />
           </div>
           <div>
             <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Certification Agreement</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              Status: <span style={{ fontWeight: 700 }}>
-                {agreement.final_agreement_url ? 'Finalized (Countersigned)' : (agreement.client_signed ? 'Signed' : 'Awaiting Signature')}
+              Status: <span style={{ fontWeight: 700, color: '#15803d' }}>
+                Agreement Received
               </span>
             </div>
           </div>
@@ -45,28 +45,13 @@ export default function AgreementCard({ agreement, status, onSignClick }) {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {agreement.agreement_url && (
             <a href={getPdfUrl(agreement.agreement_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
-              <Download size={13} /> View Original PDF
+              <Download size={13} /> View &amp; Download Agreement PDF
             </a>
-          )}
-          {agreement.signed_agreement_url && (
-            <a href={getPdfUrl(agreement.signed_agreement_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ color: '#15803d', borderColor: '#bbf7d0' }}>
-              <Download size={13} /> View Signed Copy
-            </a>
-          )}
-          {agreement.final_agreement_url && (
-            <a href={getPdfUrl(agreement.final_agreement_url)} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm" style={{ color: '#0284c7', borderColor: '#bae6fd', background: '#f0f9ff' }}>
-              <Download size={13} /> View Final Countersigned PDF
-            </a>
-          )}
-          {status === 'agreement_sent' && !agreement.client_signed && (
-            <button className="btn btn-primary btn-sm" style={{ background: '#0e7490' }} onClick={onSignClick}>
-              Sign Agreement
-            </button>
           )}
         </div>
       </div>
       <div style={{ padding: '20px 24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: agreement.details ? 20 : 0 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 4 }}>Title</div>
             <div style={{ fontWeight: 600, fontSize: 14 }}>{agreement.title}</div>
@@ -78,40 +63,10 @@ export default function AgreementCard({ agreement, status, onSignClick }) {
         </div>
 
         {agreement.details && (
-          <div style={{ marginBottom: 20 }}>
+          <div>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Agreement Details</div>
             <div style={{ background: '#f8fafc', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
               {agreement.details}
-            </div>
-          </div>
-        )}
-
-        {agreement.client_signed && agreement.client_signature_url && (
-          <div style={{ border: '1.5px dashed #bbf7d0', background: '#f0fdf4', borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 10, color: '#15803d', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
-              Digital Signature Verified
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <img
-                src={getPdfUrl(agreement.client_signature_url)}
-                alt="Signature"
-                style={{ maxHeight: 52, maxWidth: 160, objectFit: 'contain', background: 'white', padding: 4, borderRadius: 6, border: '1px solid #cbd5e1' }}
-              />
-              <div style={{ fontSize: 13 }}>
-                <div>Signed by: <strong style={{ fontWeight: 700 }}>{agreement.client_sign_name}</strong></div>
-                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                  Date: {agreement.client_sign_date ? new Date(agreement.client_sign_date).toLocaleString('en-GB') : 'N/A'}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {agreement.client_comment && (
-          <div style={{ marginTop: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Your Comments / Notes</div>
-            <div style={{ background: '#f8fafc', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13, fontStyle: 'italic' }}>
-              "{agreement.client_comment}"
             </div>
           </div>
         )}

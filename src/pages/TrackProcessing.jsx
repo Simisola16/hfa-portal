@@ -373,7 +373,7 @@ export default function TrackProcessing() {
   const showAuditDatesAccepted = !isAuditFinalized && (status === 'dates_accepted' || activeAudit?.status === 'dates_accepted');
   const showAuditScheduled = (status === 'date_finalized' || status === 'audit_assigned' || activeAudit?.status === 'date_finalized' || activeAudit?.status === 'auditors_assigned' || isAuditFinalized) && !showAuditAction;
   const showAuditComplete = ['audit_successful', 'audit_completed', 'logsheet_created', 'logsheet_signed', 'application_successful'].includes(status) && status !== 'agreement_sent';
-  const showAgreementAction = !isFastTrack && status === 'agreement_sent';
+  const showAgreementAction = false;
 
 
   return (
@@ -1122,7 +1122,7 @@ export default function TrackProcessing() {
           )}
 
           {/* Final Invoice Card (Standard only) */}
-          {!isFastTrack && (finalInvoice || ['agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(status)) && (
+          {!isFastTrack && (finalInvoice || ['agreement_sent', 'agreement_signed', 'agreement_finalised', 'final_invoice_sent', 'final_invoice_paid', 'ready_for_certificate', 'certificate_issued'].includes(status)) && (
             <InvoiceCard
               invoice={finalInvoice}
               status={status}
