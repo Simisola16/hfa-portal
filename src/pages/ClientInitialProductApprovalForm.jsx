@@ -294,30 +294,18 @@ export default function ClientInitialProductApprovalForm() {
           readOnly={isFormSubmitted && !moreInfo}
         />
 
-        {/* Supporting File Attachment */}
-        <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #e2e8f0' }}>
-          <label style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', display: 'block', marginBottom: 6 }}>
-            Additional Document / Spec Sheet Upload (PDF, Word, or Images)
-          </label>
-          <input
-            type="file"
-            disabled={isFormSubmitted && !moreInfo}
-            onChange={e => setFile(e.target.files[0])}
-            style={{ fontSize: 13 }}
-          />
-          {app.product_approval_form?.product_response?.response_url && (
-            <div style={{ marginTop: 8 }}>
-              <a
-                href={getPdfUrl(app.product_approval_form.product_response.response_url)}
-                target="_blank"
-                rel="noreferrer"
-                style={{ fontSize: 12.5, fontWeight: 700, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: 5 }}
-              >
-                <Download size={13} /> View Currently Uploaded Attachment
-              </a>
-            </div>
-          )}
-        </div>
+        {app.product_approval_form?.product_response?.response_url && (
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid #e2e8f0' }}>
+            <a
+              href={getPdfUrl(app.product_approval_form.product_response.response_url)}
+              target="_blank"
+              rel="noreferrer"
+              style={{ fontSize: 12.5, fontWeight: 700, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+            >
+              <Download size={13} /> View Previously Uploaded Attachment
+            </a>
+          </div>
+        )}
 
         {/* Footer Actions */}
         {!isFormSubmitted && (
