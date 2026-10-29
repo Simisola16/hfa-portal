@@ -271,10 +271,17 @@ export default function DashboardPage() {
   const actionItems = useMemo(() => {
     const items = [];
     const currentTime = new Date();
-    const getItemDate = (obj) => new Date(
-      obj?.created_at || obj?.createdAt || obj?.client_sign_date ||
-      obj?.due_date || obj?.audit_date || obj?.updatedAt || 0
-    );
+    // Helper: get the latest representative activity date for an item
+    const getItemDate = (obj) => {
+      const dates = [
+        obj?.updated_at, obj?.updatedAt,
+        obj?.client_sign_date,
+        obj?.audit_date,
+        obj?.due_date,
+        obj?.created_at, obj?.createdAt
+      ].filter(Boolean).map(d => new Date(d).getTime()).filter(t => !isNaN(t));
+      return dates.length > 0 ? new Date(Math.max(...dates)) : new Date(0);
+    };
 
     // 1. Unpaid Invoices
     (invoices || []).forEach(inv => {
