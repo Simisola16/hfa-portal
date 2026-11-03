@@ -948,13 +948,13 @@ export default function DashboardPage() {
           background: urgentActionCount > 0
             ? 'linear-gradient(135deg, #fff5f5 0%, #fef2f2 100%)'
             : actionItems.length > 0
-              ? 'linear-gradient(135deg, #fffbeb 0%, #fefce8 100%)'
-              : 'linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%)',
+              ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)'
+              : 'linear-gradient(135deg, #fefce8 0%, #fffbeb 100%)',
           border: urgentActionCount > 0
             ? '1.5px solid #fecaca'
             : actionItems.length > 0
-              ? '1.5px solid #fde68a'
-              : '1px solid #bbf7d0',
+              ? '1.5px solid #d97706'
+              : '1px solid #fde68a',
           boxShadow: urgentActionCount > 0 ? '0 4px 14px rgba(220, 38, 38, 0.08)' : '0 2px 8px rgba(0,0,0,0.04)',
           display: 'flex',
           alignItems: 'center',
@@ -972,7 +972,7 @@ export default function DashboardPage() {
             width: 38,
             height: 38,
             borderRadius: 10,
-            background: urgentActionCount > 0 ? '#dc2626' : actionItems.length > 0 ? '#d97706' : '#15803d',
+            background: urgentActionCount > 0 ? '#d97706' : actionItems.length > 0 ? '#b45309' : '#d97706',
             color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
@@ -992,7 +992,7 @@ export default function DashboardPage() {
                 fontWeight: 800,
                 padding: '2px 8px',
                 borderRadius: 12,
-                background: urgentActionCount > 0 ? '#dc2626' : actionItems.length > 0 ? '#d97706' : '#15803d',
+                background: urgentActionCount > 0 ? '#d97706' : actionItems.length > 0 ? '#b45309' : '#d97706',
                 color: '#ffffff'
               }}>
                 {actionItems.length === 0 ? 'All Caught Up' : `${actionItems.length} Pending`}
@@ -1011,7 +1011,7 @@ export default function DashboardPage() {
           onClick={(e) => { e.stopPropagation(); setShowActionModal(true); }}
           className="btn btn-sm"
           style={{
-            background: urgentActionCount > 0 ? '#dc2626' : actionItems.length > 0 ? 'var(--primary, #15803d)' : '#ffffff',
+            background: urgentActionCount > 0 ? '#b45309' : actionItems.length > 0 ? '#b45309' : '#ffffff',
             color: actionItems.length > 0 ? '#ffffff' : '#334155',
             border: actionItems.length > 0 ? 'none' : '1px solid #cbd5e1',
             fontWeight: 700,
@@ -1072,8 +1072,8 @@ export default function DashboardPage() {
             {/* Modal Header */}
             <div style={{
               background: urgentActionCount > 0
-                ? 'linear-gradient(135deg, #991b1b 0%, #dc2626 50%, #b91c1c 100%)'
-                : 'linear-gradient(135deg, #064e3b 0%, #15803d 50%, #047857 100%)',
+                ? 'linear-gradient(135deg, #78350f 0%, #b45309 50%, #d97706 100%)'
+                : 'linear-gradient(135deg, #78350f 0%, #92400e 50%, #b45309 100%)',
               padding: '22px 28px',
               color: '#ffffff',
               display: 'flex',
@@ -1241,10 +1241,10 @@ export default function DashboardPage() {
                       type="button"
                       onClick={() => setActionFilterTab(t.id)}
                       style={{
-                        background: actionFilterTab === t.id ? 'var(--primary, #15803d)' : '#ffffff',
+                        background: actionFilterTab === t.id ? '#b45309' : '#ffffff',
                         color: actionFilterTab === t.id ? '#ffffff' : '#475569',
                         border: '1px solid',
-                        borderColor: actionFilterTab === t.id ? 'var(--primary, #15803d)' : '#cbd5e1',
+                        borderColor: actionFilterTab === t.id ? '#b45309' : '#cbd5e1',
                         padding: '4px 11px',
                         borderRadius: 16,
                         fontSize: 11,
@@ -1387,7 +1387,7 @@ export default function DashboardPage() {
                           }}
                           className="btn btn-sm"
                           style={{
-                            background: item.urgency === 'urgent' ? '#dc2626' : 'var(--primary, #15803d)',
+                            background: item.urgency === 'urgent' ? '#d97706' : '#b45309',
                             color: '#ffffff',
                             fontWeight: 700,
                             fontSize: 12,
