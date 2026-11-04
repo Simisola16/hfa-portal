@@ -3,6 +3,7 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { Plus, MapPin, Edit, Trash2, X } from 'lucide-react';
 import FirstSiteCreatedModal from '../components/FirstSiteCreatedModal';
+import { COUNTRIES, PHONE_DIAL_CODES } from '../lib/countries';
 
 export default function SitesPage() {
   const initialForm = {
@@ -196,10 +197,9 @@ export default function SitesPage() {
                     <div className="form-group">
                       <label className="form-label">Country <span>*</span></label>
                       <select className="form-control" value={form.country} onChange={set('country')} required>
-                        <option value="United Kingdom">United Kingdom</option>
-                        <option value="Nigeria">Nigeria</option>
-                        <option value="United Arab Emirates">United Arab Emirates</option>
-                        <option value="Saudi Arabia">Saudi Arabia</option>
+                        {COUNTRIES.map(c => (
+                          <option key={c.name} value={c.name}>{c.name}</option>
+                        ))}
                       </select>
                     </div>
                     <div className="form-group">
@@ -211,10 +211,9 @@ export default function SitesPage() {
                     <label className="form-label">Contact Number <span>*</span></label>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <select className="form-control" style={{ width: 100 }} value={form.contact_phone_code} onChange={set('contact_phone_code')}>
-                        <option value="+44">+44</option>
-                        <option value="+234">+234</option>
-                        <option value="+971">+971</option>
-                        <option value="+966">+966</option>
+                        {PHONE_DIAL_CODES.map(code => (
+                          <option key={code} value={code}>{code}</option>
+                        ))}
                       </select>
                       <input className="form-control" style={{ flex: 1 }} placeholder="7123 456789" value={form.contact_phone_number} onChange={set('contact_phone_number')} required />
                     </div>
