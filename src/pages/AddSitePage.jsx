@@ -4,6 +4,7 @@ import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { MapPin, Shield, Building } from 'lucide-react';
 import FirstSiteCreatedModal from '../components/FirstSiteCreatedModal';
+import { COUNTRIES, PHONE_DIAL_CODES } from '../lib/countries';
 
 export default function AddSitePage() {
   const initialForm = {
@@ -167,10 +168,9 @@ export default function AddSitePage() {
                   onChange={set('country')} 
                   required
                 >
-                  <option value="United Kingdom">United Kingdom</option>
-                  <option value="Nigeria">Nigeria</option>
-                  <option value="United Arab Emirates">United Arab Emirates</option>
-                  <option value="Saudi Arabia">Saudi Arabia</option>
+                  {COUNTRIES.map(c => (
+                    <option key={c.name} value={c.name}>{c.name}</option>
+                  ))}
                 </select>
                 {errors.country && <span style={{ color: '#ef4444', fontSize: 11, marginTop: 4, display: 'block' }}>{errors.country}</span>}
               </div>
@@ -196,10 +196,9 @@ export default function AddSitePage() {
                   value={form.contact_phone_code} 
                   onChange={set('contact_phone_code')}
                 >
-                  <option value="+44">+44</option>
-                  <option value="+234">+234</option>
-                  <option value="+971">+971</option>
-                  <option value="+966">+966</option>
+                  {PHONE_DIAL_CODES.map(code => (
+                    <option key={code} value={code}>{code}</option>
+                  ))}
                 </select>
                 <input 
                   className={`form-control ${errors.contact_phone_number ? 'error' : ''}`}
