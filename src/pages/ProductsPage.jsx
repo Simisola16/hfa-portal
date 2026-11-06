@@ -55,8 +55,10 @@ export default function ProductsPage({ openNew: openNewProp }) {
   const fetch = () => {
     setLoading(true);
     Promise.all([
-      api.get('/api/products').then(d => {
+      api.get('/api/products?sort=asc').then(d => {
         const list = Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : (Array.isArray(d?.data?.data) ? d.data.data : []));
+        // Sort ascending by creation time so new products stay at the bottom
+        list.sort((a, b) => new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0));
         setProducts(list);
       }).catch(() => toast.error('Failed to load products')),
       api.get('/api/sites').then(d => {
