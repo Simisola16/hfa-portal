@@ -47,6 +47,7 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
       nc_flagged: 'NC Flagged',
       nc_closed: 'NC Closed',
       audit_report_submitted: 'Audit Report Submitted',
+      cancelled: 'Date Cancelled',
     };
     if (statusMap[s]) return statusMap[s];
     return s
@@ -113,7 +114,7 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
 
   const renderSingleStageBlock = (auditObj, stageLabel = null) => {
     if (!auditObj) return null;
-    const isFinalized = Boolean(auditObj.finalized_date || ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(auditObj.status));
+    const isFinalized = Boolean(auditObj.finalized_date || ['date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed'].includes(auditObj.status));
     const isProposed = !isFinalized && (auditObj.status === 'dates_proposed' || (Array.isArray(auditObj.proposed_dates) && auditObj.proposed_dates.length > 0 && !['dates_accepted', 'date_finalized', 'audit_assigned', 'auditors_assigned', 'completed', 'audit_completed', 'cancelled'].includes(auditObj.status)));
     const isAccepted = !isFinalized && auditObj.status === 'dates_accepted';
 
@@ -135,6 +136,16 @@ export default function AuditCard({ audits: propAudits, app, status, onSelectDat
             <span style={{ fontSize: 13, color: '#15803d', fontWeight: 700 }}>
               Confirmed Audit Date: {new Date(auditObj.finalized_date).toDateString()}
             </span>
+          </div>
+        ) : auditObj.status === 'cancelled' ? (
+          <div style={{ marginBottom: 12, padding: '12px 14px', background: '#fef2f2', borderRadius: 10, border: '1px solid #fecaca' }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#991b1b', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertCircle size={15} style={{ color: '#dc2626' }} />
+              <span>Audit Date Cancelled</span>
+            </div>
+            <div style={{ fontSize: 12, color: '#7f1d1d', marginTop: 4, lineHeight: 1.45 }}>
+              The previously scheduled audit date was cancelled. The HFA administration team is preparing a new audit schedule for your facility.
+            </div>
           </div>
         ) : isProposed ? (
           <div style={{ marginBottom: 12, padding: '12px 14px', background: '#fefce8', borderRadius: 10, border: '1px solid #fde68a' }}>
