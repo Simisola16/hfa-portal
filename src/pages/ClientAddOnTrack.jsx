@@ -340,9 +340,9 @@ export default function ClientAddOnTrack() {
             )}
             {app.status === 'completed' && (
               app.addon_type === 'change_ingredients'
-                ? 'Change of ingredients request accepted and completed!'
+                ? 'Ingredients Update request accepted and completed!'
                 : app.addon_type === 'change_supplier'
-                ? 'Change of supplier/manufacturer request accepted and completed!'
+                ? 'Supplier/Manufacturer Update request accepted and completed!'
                 : 'Add-on request complete! Your Halal Certificate products list has been successfully updated.'
             )}
             {app.status === 'rejected' && (app.rejection_reason ? `Application Rejected: ${app.rejection_reason}` : 'Application rejected by administration.')}
@@ -449,7 +449,11 @@ export default function ClientAddOnTrack() {
                               color: p.type === 'Add product' ? '#166534' : p.type === 'Remove product' ? '#991b1b' : '#0369a1',
                               border: p.type === 'Add product' ? '1px solid #bbf7d0' : p.type === 'Remove product' ? '1px solid #fecaca' : '1px solid #bae6fd'
                             }}>
-                              {p.type}
+                              {p.type && (String(p.type).toLowerCase() === 'change ingredients' || String(p.type).toLowerCase() === 'change ingredient')
+                                ? 'Ingredients Update'
+                                : p.type && (String(p.type).toLowerCase() === 'change supplier/manufacturer' || String(p.type).toLowerCase() === 'change supplier')
+                                  ? 'Supplier/Manufacturer Update'
+                                  : p.type}
                             </span>
                           </td>
                           <td style={{ padding: '12px', textAlign: 'right' }}>

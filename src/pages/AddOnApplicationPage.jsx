@@ -95,6 +95,14 @@ const getRowTypeForAddonType = (aType) => {
   return 'Add product';
 };
 
+const formatActionType = (type) => {
+  if (!type) return '';
+  const low = String(type).toLowerCase();
+  if (low === 'change ingredients' || low === 'change ingredient') return 'Ingredients Update';
+  if (low === 'change supplier/manufacturer' || low === 'change supplier' || low === 'change manufacturer') return 'Supplier/Manufacturer Update';
+  return type;
+};
+
 const emptyProduct = (rowType = 'Add product') => ({
   name: '',
   code: '',
@@ -387,9 +395,9 @@ export default function AddOnApplicationPage() {
       const title = addonType === 'remove_product'
         ? 'Request to remove product(s)'
         : addonType === 'change_ingredients'
-        ? 'Request to change ingredients'
+        ? 'Ingredients Update request'
         : addonType === 'change_supplier'
-        ? 'Request to change supplier/manufacturer'
+        ? 'Supplier/Manufacturer Update request'
         : 'Add-on product application';
       toast.success(`${title} submitted successfully!`);
       setShowForm(false);
@@ -530,7 +538,7 @@ export default function AddOnApplicationPage() {
                     <Beaker size={16} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Change Ingredients</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Ingredients Update</div>
                     <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Update recipe formulation (No certificate required)</div>
                   </div>
                 </button>
@@ -561,7 +569,7 @@ export default function AddOnApplicationPage() {
                     <Building2 size={16} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Change Supplier/Manufacturer</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Supplier/Manufacturer Update</div>
                     <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Update material supplier or facility (No certificate required)</div>
                   </div>
                 </button>
@@ -646,7 +654,7 @@ export default function AddOnApplicationPage() {
                             color: p.type === 'Add product' ? '#166534' : p.type === 'Remove product' ? '#991b1b' : '#0369a1',
                             border: `1px solid ${p.type === 'Add product' ? '#bbf7d0' : p.type === 'Remove product' ? '#fecaca' : '#bae6fd'}`
                           }}>
-                            {p.sn || i + 1}. {p.new_name || p.name} <span style={{ opacity: 0.6 }}>({p.type})</span>
+                            {p.sn || i + 1}. {p.new_name || p.name} <span style={{ opacity: 0.6 }}>({formatActionType(p.type)})</span>
                           </span>
                         ))}
                       </div>
@@ -796,7 +804,7 @@ export default function AddOnApplicationPage() {
                                     background: p.type === 'Add product' ? '#f0fdf4' : p.type === 'Remove product' ? '#fef2f2' : '#f0f9ff',
                                     color: p.type === 'Add product' ? '#166534' : p.type === 'Remove product' ? '#991b1b' : '#0369a1'
                                   }}>
-                                    {p.type}
+                                    {formatActionType(p.type)}
                                   </span>
                                 </td>
                               </tr>
@@ -831,8 +839,8 @@ export default function AddOnApplicationPage() {
             <div className="modal-header">
               <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {addonType === 'remove_product' && <><Trash2 size={18} color="#dc2626" /> Request to Remove Product(s)</>}
-                {addonType === 'change_ingredients' && <><Edit size={18} color="#0284c7" /> Request to Change Product Ingredients</>}
-                {addonType === 'change_supplier' && <><Building2 size={18} color="#0284c7" /> Request to Change Supplier / Manufacturer</>}
+                {addonType === 'change_ingredients' && <><Edit size={18} color="#0284c7" /> Ingredients Update Request</>}
+                {addonType === 'change_supplier' && <><Building2 size={18} color="#0284c7" /> Supplier/Manufacturer Update Request</>}
                 {addonType === 'add_product' && <><PlusCircle size={18} color="#059669" /> New Add-on Product Application</>}
               </span>
               <button className="modal-close" onClick={() => setShowForm(false)}><X size={18} /></button>
@@ -977,7 +985,7 @@ export default function AddOnApplicationPage() {
                               gap: 6
                             }}>
                               <Lock size={12} />
-                              <span>{p.type}</span>
+                              <span>{formatActionType(p.type)}</span>
                               <span style={{ fontSize: 10, opacity: 0.7, fontWeight: 500, marginLeft: 'auto' }}>(Fixed)</span>
                             </div>
                           </div>
@@ -1271,7 +1279,7 @@ export default function AddOnApplicationPage() {
                     borderColor: addonType === 'remove_product' ? '#dc2626' : (addonType === 'change_ingredients' || addonType === 'change_supplier') ? '#0284c7' : '#059669'
                   }}
                 >
-                  {submitting ? 'Submitting...' : addonType === 'remove_product' ? 'Submit Remove Request' : addonType === 'change_ingredients' ? 'Submit Change Ingredients Request' : addonType === 'change_supplier' ? 'Submit Change Supplier/Manufacturer Request' : 'Submit Add-on Application'}
+                  {submitting ? 'Submitting...' : addonType === 'remove_product' ? 'Submit Remove Request' : addonType === 'change_ingredients' ? 'Submit Ingredients Update' : addonType === 'change_supplier' ? 'Submit Supplier/Manufacturer Update' : 'Submit Add-on Application'}
                 </button>
               </div>
             </form>

@@ -291,7 +291,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
                     <Beaker size={16} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Change Ingredients</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Ingredients Update</div>
                     <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Update recipe formulation (No certificate required)</div>
                   </div>
                 </button>
@@ -322,7 +322,7 @@ export default function ProductsPage({ openNew: openNewProp }) {
                     <Building2 size={16} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Change Supplier/Manufacturer</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Supplier/Manufacturer Update</div>
                     <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Update material supplier or facility (No certificate required)</div>
                   </div>
                 </button>
