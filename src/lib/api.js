@@ -13,6 +13,8 @@ function isTokenImpersonated(token) {
   }
 }
 
+const SERVER_UNAVAILABLE_MSG = 'Unable to connect to the backend server, please try again in a few seconds.';
+
 async function request(method, path, body, isFormData = false) {
   const token = getToken();
   const headers = {};
@@ -20,11 +22,16 @@ async function request(method, path, body, isFormData = false) {
   const isForm = isFormData || (typeof FormData !== 'undefined' && body instanceof FormData);
   if (!isForm) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(`${API_URL}${path}`, {
-    method,
-    headers,
-    body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
+    });
+  } catch {
+    throw new Error(SERVER_UNAVAILABLE_MSG);
+  }
 
   if (res.status === 401 && token && isTokenImpersonated(token)) {
     localStorage.removeItem('hfa_token');
@@ -41,11 +48,19 @@ async function request(method, path, body, isFormData = false) {
     try {
       data = JSON.parse(text);
     } catch {
-      data = { error: text || res.statusText || 'Request failed' };
+      const isHtml = contentType.includes('text/html') || /^\s*</.test(text);
+      data = {
+        error: (res.status >= 500 || isHtml)
+          ? SERVER_UNAVAILABLE_MSG
+          : (text || res.statusText || 'Request failed'),
+      };
     }
   }
 
-  if (!res.ok) throw new Error(data?.error || data?.message || `Request failed with status ${res.status}`);
+  if (!res.ok) {
+    const fallback = res.status >= 500 ? SERVER_UNAVAILABLE_MSG : `Request failed with status ${res.status}`;
+    throw new Error(data?.error || data?.message || fallback);
+  }
   return data;
 }
 
@@ -61,14 +76,20 @@ export const api = {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(`${API_URL}${path}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    let res;
+    try {
+      res = await fetch(`${API_URL}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch {
+      throw new Error(SERVER_UNAVAILABLE_MSG);
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Request failed with status ${res.status}`);
+      const fallback = res.status >= 500 ? SERVER_UNAVAILABLE_MSG : `Request failed with status ${res.status}`;
+      throw new Error(err.error || err.message || fallback);
     }
     return res.blob();
   },
