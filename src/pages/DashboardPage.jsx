@@ -2,14 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
-import { 
-  FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, 
-  RefreshCw, Download, X, MapPin, RotateCcw, ChevronRight, CreditCard, 
-  FileSignature, Calendar, MessageSquare, AlertTriangle, ArrowRight, 
-  CheckCircle2, ChevronDown, ChevronUp, BellRing, Sparkles, Search
-} from 'lucide-react';
-import toast from 'react-hot-toast';
-import PaymentModal from '../components/PaymentModal';
+import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, RefreshCw, Download, X, MapPin, RotateCcw, ChevronRight, Calendar } from 'lucide-react';
 import { getCertificateDownloadUrl } from '../lib/pdfUtils';
 import FirstSiteCreatedModal from '../components/FirstSiteCreatedModal';
 import NewUserSitePromptModal from '../components/NewUserSitePromptModal';
@@ -1767,8 +1760,8 @@ export default function DashboardPage() {
               { label: 'New Application', icon: <FileText size={20} />, path: '/applications?type=new', color: '#15803d', bg: '#dcfce7' },
               { label: 'View Certificates', icon: <Award size={20} />, path: '/certificates', color: '#7c3aed', bg: '#f3e8ff' },
               { label: 'Add Product', icon: <Package size={20} />, path: '/products/new', color: '#d97706', bg: '#fef3c7' },
-              { label: 'Export Certificate', icon: <Ship size={20} />, path: '/export/new', color: '#0891b2', bg: '#e0f2fe' },
-              { label: 'Download Forms', icon: <Download size={20} />, onClick: () => setShowForms(true), color: '#334155', bg: '#f1f5f9' },
+              { label: 'Add Site', icon: <MapPin size={20} />, path: '/add-site', color: '#0891b2', bg: '#e0f2fe' },
+              { label: 'Audits', icon: <Calendar size={20} />, path: '/audits', color: '#334155', bg: '#f1f5f9' },
               { label: 'Send Message', icon: <RefreshCw size={20} />, path: '/messages/inbox', color: '#dc2626', bg: '#fee2e2' },
             ].map(a => (
               a.path ? (
