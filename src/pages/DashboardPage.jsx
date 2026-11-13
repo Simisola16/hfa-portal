@@ -2,7 +2,14 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
-import { FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, RefreshCw, Download, X, MapPin, RotateCcw, ChevronRight, Calendar } from 'lucide-react';
+import { 
+  FileText, Award, Package, Ship, Clock, CheckCircle, AlertCircle, Plus, 
+  RefreshCw, Download, X, MapPin, RotateCcw, ChevronRight, CreditCard, 
+  FileSignature, Calendar, MessageSquare, AlertTriangle, ArrowRight, 
+  CheckCircle2, ChevronDown, ChevronUp, BellRing, Sparkles, Search
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+import PaymentModal from '../components/PaymentModal';
 import { getCertificateDownloadUrl } from '../lib/pdfUtils';
 import FirstSiteCreatedModal from '../components/FirstSiteCreatedModal';
 import NewUserSitePromptModal from '../components/NewUserSitePromptModal';
