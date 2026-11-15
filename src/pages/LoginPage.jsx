@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Eye, EyeOff, LogIn, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ReCaptcha from '../components/ReCaptcha';
+import { RECAPTCHA_ENABLED } from '../lib/recaptcha';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState('');
+  const recaptchaRef = useRef(null);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -23,12 +27,16 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) return toast.error('Please fill in all fields');
+    if (RECAPTCHA_ENABLED && !recaptchaToken) {
+      return toast.error('Please complete the "I\'m not a robot" verification');
+    }
     setLoading(true);
     try {
-      await login(email, password);
+      await login(email, password, recaptchaToken);
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (err) {
+      recaptchaRef.current?.reset();
       toast.error(err.message || 'Login failed');
     } finally {
       setLoading(false);
@@ -106,10 +114,12 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                 <input type="checkbox" id="keep-logged" style={{ width: 16, height: 16 }} />
                 <label htmlFor="keep-logged" style={{ margin: 0, fontSize: 13, color: '#64748b', cursor: 'pointer' }}>Keep me logged in</label>
               </div>
+
+              <ReCaptcha ref={recaptchaRef} onChange={setRecaptchaToken} />
 
               <button type="submit" className="auth-btn-primary" disabled={loading}>
                 {loading ? <span className="spinner-white" /> : <><LogIn size={18} /> Login</>}

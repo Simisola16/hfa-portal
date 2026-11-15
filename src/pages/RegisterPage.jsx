@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, ArrowLeft, UserPlus, Building2, User, Lock, Globe, Check, BookOpen, Mail, RefreshCw } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
+import ReCaptcha from '../components/ReCaptcha';
+import { RECAPTCHA_ENABLED } from '../lib/recaptcha';
 
 export default function RegisterPage() {
   const [step, setStep] = useState(1);
@@ -22,6 +24,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0); // seconds remaining
+  const [recaptchaToken, setRecaptchaToken] = useState('');
+  const recaptchaRef = useRef(null);
   const navigate = useNavigate();
 
   // Countdown timer for resend cooldown
@@ -49,6 +53,9 @@ export default function RegisterPage() {
     if (form.password !== form.confirm_password) return toast.error('Passwords do not match');
     if (form.password.length < 6) return toast.error('Password must be at least 6 characters');
     if (!form.declared) return toast.error('Please accept the declaration');
+    if (RECAPTCHA_ENABLED && !recaptchaToken) {
+      return toast.error('Please complete the "I\'m not a robot" verification');
+    }
 
     setLoading(true);
     try {
@@ -59,13 +66,15 @@ export default function RegisterPage() {
         company_name: form.company_name,
         phone: form.contact_phone,
         company_phone: form.company_phone,
-        country: form.country
+        country: form.country,
+        recaptchaToken
       });
 
       setRegisteredEmail(form.email);
       setResendCooldown(60);
       setStep(3);
     } catch (err) {
+      recaptchaRef.current?.reset();
       toast.error(err.response?.data?.error || err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
@@ -199,7 +208,9 @@ export default function RegisterPage() {
                     </label>
                   </div>
 
-                  <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+                  <ReCaptcha ref={recaptchaRef} onChange={setRecaptchaToken} />
+
+                  <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
                     <button type="button" onClick={prevStep} className="btn-ghost" style={{ flex: 1, padding: 12 }}>
                       <ArrowLeft size={18} /> Back
                     </button>

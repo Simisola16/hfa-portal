@@ -51,7 +51,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, recaptchaToken) => {
     let clientTimezone = '';
     let clientIp = '';
     let clientCity = '';
@@ -82,6 +82,7 @@ export function AuthProvider({ children }) {
     const data = await api.post('/api/auth/login', { 
       email, 
       password,
+      recaptchaToken,
       client_timezone: clientTimezone,
       client_ip: clientIp,
       client_city: clientCity,
